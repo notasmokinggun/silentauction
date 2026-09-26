@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Redirecting…</title></head>
+<body>
+<script>
+  // The bid flow now lives in index.html. Kept only so QR codes printed
+  // before this change (pointing at item.html?id=...) still work.
+  location.replace('index.html' + location.search);
+</script>
+</body>
+</html>

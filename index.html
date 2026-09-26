@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>JASHN — Silent Auction</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0D0A08; --bg-2:#151110; --card:#191412; --card-2:#1E1815;
+  --line:#2A231D; --line-soft:#241E19;
+  --gold:#C79A4B; --gold-soft:#E7C888;
+  --cream:#F3ECDC; --paper:#F6F1E4;
+  --ink:#0D0A08; --muted:#9C9284; --muted-2:#6F675B;
+  --green:#5C9A76; --red:#C1594A;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;background:var(--bg);color:var(--cream);height:100%;overflow-x:hidden;
+  font-family:'Inter',sans-serif; -webkit-tap-highlight-color:transparent;}
+h1,h2,h3{font-family:'Fraunces',serif;font-weight:600;margin:0;}
+a{color:inherit;text-decoration:none;}
+button{font-family:inherit;}
+img{-webkit-user-drag:none;}
+.screen{display:none;min-height:100%;min-height:100dvh;flex-direction:column;}
+.screen.active{display:flex;}
+
+/* ---------- shared bits ---------- */
+.icon-btn{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:var(--cream);cursor:pointer;flex:none;}
+.icon-btn svg{width:17px;height:17px;}
+.pill-btn{display:block;width:100%;text-align:center;padding:15px;border-radius:999px;border:none;
+  font-size:15px;font-weight:600;cursor:pointer;}
+.pill-gold{background:var(--gold);color:#20150A;}
+.pill-cream{background:var(--cream);color:var(--ink);}
+.pill-outline{background:transparent;color:var(--cream);border:1px solid rgba(243,236,220,.3);}
+.pill-dark{background:var(--card-2);color:var(--cream);border:1px solid var(--line);}
+.pill-btn[disabled]{opacity:.4;pointer-events:none;}
+.tag{display:inline-flex;align-items:center;padding:6px 12px;border-radius:999px;font-size:12px;
+  font-weight:600;background:var(--card-2);border:1px solid var(--line);color:var(--cream);}
+.hairline{height:1px;background:var(--line);border:none;margin:0;}
+
+/* ---------- bottom nav ---------- */
+.bottomnav{display:flex;border-top:1px solid var(--line);background:var(--bg-2);
+  padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));}
+.bottomnav button{flex:1;background:none;border:none;color:var(--muted-2);display:flex;flex-direction:column;
+  align-items:center;gap:4px;font-size:11px;cursor:pointer;padding:4px;}
+.bottomnav button.active{color:var(--gold-soft);}
+.bottomnav svg{width:21px;height:21px;}
+
+/* ---------- SPLASH ---------- */
+#screen-splash{position:relative;background:#000;color:var(--cream);}
+.splash-bg{position:absolute;inset:0;background-size:cover;background-position:center;
+  filter:saturate(.85) brightness(.6);}
+.splash-scrim{position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(13,10,8,.55) 0%,rgba(13,10,8,.35) 40%,rgba(13,10,8,.97) 92%);}
+.splash-inner{position:relative;z-index:1;display:flex;flex-direction:column;min-height:100vh;min-height:100dvh;
+  padding:calc(26px + env(safe-area-inset-top,0px)) 24px calc(28px + env(safe-area-inset-bottom,0px));}
+.splash-logo{font-family:'Fraunces',serif;font-size:20px;letter-spacing:.14em;font-weight:600;}
+.splash-mid{flex:1;display:flex;align-items:flex-end;}
+.splash-headline{font-size:44px;line-height:1.06;font-weight:600;margin:0 0 16px;}
+.splash-sub{font-size:14px;line-height:1.55;color:#D8CFBD;max-width:360px;margin:0 0 26px;}
+.adminlink{display:block;text-align:center;margin-top:12px;font-size:12px;color:#7C8A7F;}
+
+/* ---------- CATALOG ---------- */
+#screen-catalog{background:var(--bg);}
+.cat-header{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:calc(20px + env(safe-area-inset-top,0px)) 20px 4px;}
+.cat-logo{font-family:'Fraunces',serif;font-size:19px;letter-spacing:.1em;font-weight:600;}
+.cat-search-wrap{padding:14px 20px 0;}
+.cat-search{display:none;width:100%;padding:11px 14px;border-radius:12px;background:var(--card);
+  border:1px solid var(--line);color:var(--cream);font-size:14px;font-family:inherit;}
+.tabs{display:flex;gap:8px;padding:14px 20px 4px;overflow-x:auto;scrollbar-width:none;}
+.tabs::-webkit-scrollbar{display:none;}
+.tab{flex:none;padding:9px 16px;border-radius:999px;font-size:13px;font-weight:600;
+  background:var(--card);color:var(--muted);border:1px solid var(--line);cursor:pointer;}
+.tab.active{background:var(--cream);color:var(--ink);border-color:var(--cream);}
+.grid{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:16px 20px 12px;
+  overflow-y:auto;align-content:start;}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;cursor:pointer;}
+.card-img-wrap{position:relative;aspect-ratio:1/1;background:var(--card-2);}
+.card-img-wrap img{width:100%;height:100%;object-fit:cover;display:block;}
+.card-heart{position:absolute;top:8px;right:8px;width:28px;height:28px;border-radius:50%;
+  background:rgba(13,10,8,.55);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;}
+.card-heart svg{width:14px;height:14px;}
+.card-closed-flag{position:absolute;left:8px;top:8px;background:rgba(193,89,74,.92);color:#fff;
+  font-size:10px;font-weight:700;padding:4px 8px;border-radius:999px;}
+.card-body{padding:10px 12px 14px;}
+.card-title{font-size:13.5px;font-weight:600;line-height:1.3;margin:0 0 6px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.card-price{font-size:13px;color:var(--gold-soft);font-weight:600;margin:0 0 2px;}
+.card-time{font-size:11px;color:var(--muted-2);}
+.empty-state{margin:auto;text-align:center;color:var(--muted);padding:40px 20px;font-size:14px;}
+
+/* ---------- DETAIL ---------- */
+#screen-detail{background:var(--bg);}
+.detail-topbar{position:relative;}
+.detail-hero{width:100%;aspect-ratio:4/3;object-fit:cover;background:var(--card-2);display:block;}
+.detail-actions{position:absolute;top:calc(16px + env(safe-area-inset-top,0px));left:16px;right:16px;
+  display:flex;justify-content:space-between;}
+.detail-actions .grp{display:flex;gap:8px;}
+.detail-body{padding:20px 20px 4px;flex:1;}
+.detail-title{font-size:24px;line-height:1.2;margin-bottom:6px;}
+.detail-sub{font-size:13px;color:var(--muted);margin-bottom:14px;}
+.detail-tags{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.detail-desc{font-size:14px;line-height:1.65;color:#CFC6B5;margin-bottom:20px;}
+.detail-status{display:flex;justify-content:space-between;border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);padding:16px 0;margin-bottom:16px;}
+.detail-status .label{font-size:12px;color:var(--muted-2);margin:0 0 4px;}
+.detail-status .value{font-size:22px;font-weight:700;color:var(--gold-soft);font-family:'Fraunces',serif;}
+.detail-status.closed .value{color:var(--red);}
+.detail-meta-row{display:flex;justify-content:space-between;margin-bottom:22px;}
+.detail-meta-row .k{font-size:12px;color:var(--muted-2);margin:0 0 4px;}
+.detail-meta-row .v{font-size:15px;font-weight:600;}
+.detail-footer{padding:0 20px calc(22px + env(safe-area-inset-bottom,0px));}
+.feed-box{margin-bottom:20px;}
+.feed-box h3{font-size:13px;color:var(--muted);font-weight:600;font-family:'Inter',sans-serif;margin-bottom:8px;}
+.feed-row{display:flex;justify-content:space-between;font-size:13px;padding:7px 0;border-bottom:1px solid var(--line-soft);}
+.feed-row .amt{color:var(--gold-soft);font-weight:600;}
+.feed-empty{color:var(--muted-2);font-size:13px;padding:4px 0;}
+
+/* ---------- BID SHEET (modal) ---------- */
+#sheet-overlay{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.6);display:none;
+  align-items:flex-end;justify-content:center;}
+#sheet-overlay.active{display:flex;}
+.sheet{width:100%;max-width:560px;background:var(--bg-2);border-top-left-radius:22px;border-top-right-radius:22px;
+  padding:22px 20px calc(22px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);}
+.sheet-head{display:flex;align-items:center;gap:12px;margin-bottom:18px;}
+.sheet-head img{width:52px;height:52px;border-radius:10px;object-fit:cover;background:var(--card-2);flex:none;}
+.sheet-head .t{flex:1;min-width:0;}
+.sheet-head h2{font-size:17px;margin:0 0 2px;}
+.sheet-head .sub{font-size:12px;color:var(--muted-2);}
+.sheet-close{width:30px;height:30px;border-radius:50%;background:var(--card);border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;color:var(--cream);}
+.sheet-box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:14px;}
+.sheet-box-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:13px;}
+.sheet-box-row + .sheet-box-row{border-top:1px solid var(--line-soft);}
+.sheet-box-row .k{color:var(--muted);}
+.sheet-box-row .v{font-weight:700;}
+.sheet-box-row.min .v{color:var(--gold-soft);}
+.amount-field{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);
+  border-radius:14px;padding:14px 16px;margin-bottom:12px;}
+.amount-field .cur{font-size:20px;color:var(--gold-soft);font-weight:600;}
+.amount-field input{flex:1;background:none;border:none;color:var(--cream);font-size:22px;font-weight:600;
+  font-family:'Fraunces',serif;outline:none;width:100%;}
+.quick-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px;}
+.quickbtn{padding:11px 4px;border-radius:10px;background:var(--card);border:1px solid var(--line);
+  color:var(--cream);font-size:13px;font-weight:600;cursor:pointer;}
+.name-field{margin-bottom:14px;}
+.name-field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;}
+.name-field input{width:100%;background:var(--card);border:1px solid var(--line);border-radius:12px;
+  padding:12px 14px;color:var(--cream);font-size:15px;font-family:inherit;}
+.g-row{display:flex;align-items:center;gap:10px;margin:2px 0 12px;font-size:11px;color:var(--muted-2);}
+.g-row .line{flex:1;height:1px;background:var(--line);}
+.gbtn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px;
+  border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--cream);
+  font-family:inherit;font-size:13px;cursor:pointer;margin-bottom:12px;}
+.signedin{font-size:12px;color:var(--green);margin-bottom:12px;}
+.err{color:var(--red);font-size:13px;margin-top:10px;min-height:14px;}
+
+/* ---------- SUCCESS ---------- */
+#screen-success{background:radial-gradient(circle at 50% 30%,#241A0E 0%,var(--bg) 62%);align-items:center;
+  justify-content:center;text-align:center;padding:32px 26px;}
+.badge-ok{width:100px;height:100px;border-radius:50%;background:var(--gold);color:#1B140A;
+  display:flex;align-items:center;justify-content:center;margin:0 auto 26px;
+  box-shadow:0 0 0 10px rgba(199,154,75,.12), 0 0 40px rgba(199,154,75,.25);}
+.badge-ok svg{width:42px;height:42px;}
+#screen-success h1{font-size:25px;margin:0 0 12px;}
+#screen-success .sub{font-size:14px;color:#CFC6AC;margin-bottom:30px;max-width:320px;line-height:1.55;}
+.success-actions{width:100%;max-width:320px;display:flex;flex-direction:column;gap:10px;}
+.linklike{display:block;text-align:center;margin-top:4px;font-size:13px;color:var(--muted);cursor:pointer;}
+
+/* ---------- MY BIDS ---------- */
+#screen-mybids{background:var(--bg);}
+.mb-header{padding:calc(24px + env(safe-area-inset-top,0px)) 20px 10px;}
+.mb-header h1{font-size:24px;}
+.mb-tabs{display:flex;gap:8px;padding:8px 20px 16px;}
+.mb-tab{flex:1;text-align:center;padding:9px 4px;border-radius:10px;font-size:12.5px;font-weight:600;
+  background:var(--card);color:var(--muted);border:1px solid var(--line);cursor:pointer;}
+.mb-tab.active{background:var(--gold);color:#20150A;border-color:var(--gold);}
+.mb-list{flex:1;overflow-y:auto;padding:0 20px 12px;}
+.mb-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line-soft);cursor:pointer;}
+.mb-row img{width:56px;height:56px;border-radius:10px;object-fit:cover;background:var(--card-2);flex:none;}
+.mb-row .body{flex:1;min-width:0;}
+.mb-row .t{font-size:14px;font-weight:600;margin:0 0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mb-row .p{font-size:14px;color:var(--gold-soft);font-weight:700;margin:0 0 2px;}
+.mb-row .s{font-size:11px;color:var(--muted-2);}
+.mb-row .chev{color:var(--muted-2);flex:none;}
+.mb-row .s.won{color:var(--green);}
+.mb-row .s.lost{color:var(--red);}
+
+@media (min-width:600px){
+  body{display:flex;justify-content:center;background:#000;}
+  .app-shell{width:420px;min-height:100vh;background:var(--bg);box-shadow:0 0 60px rgba(0,0,0,.6);}
+}
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+<!-- SPLASH -->
+<section class="screen active" id="screen-splash">
+  <div class="splash-bg" id="splash-bg"></div>
+  <div class="splash-scrim"></div>
+  <div class="splash-inner">
+    <div class="splash-logo">JASHN</div>
+    <div class="splash-mid">
+      <div>
+        <h1 class="splash-headline">Bid.<br>Support.<br>Create<br>Change.</h1>
+        <p class="splash-sub" id="splash-sub">Exclusive items. Meaningful impact. Every bid supports the cause behind this auction.</p>
+      </div>
+    </div>
+    <button class="pill-cream" id="explore-btn">Explore Items →</button>
+    <a class="adminlink" href="admin.html">Auction organizer? Open admin</a>
+  </div>
+</section>
+
+<!-- CATALOG -->
+<section class="screen" id="screen-catalog">
+  <div class="cat-header">
+    <div class="cat-logo">JASHN</div>
+    <button class="icon-btn" id="search-toggle" aria-label="Search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    </button>
+  </div>
+  <div class="cat-search-wrap">
+    <input class="cat-search" id="cat-search" placeholder="Search items…">
+  </div>
+  <div class="tabs" id="cat-tabs"></div>
+  <div class="grid" id="cat-grid"></div>
+  <nav class="bottomnav">
+    <button class="active" data-nav="catalog">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>
+      Home
+    </button>
+    <button data-nav="mybids">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h5"/></svg>
+      My Bids
+    </button>
+    <button data-nav="profile">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.6-4 5-6 8-6s6.4 2 8 6"/></svg>
+      Profile
+    </button>
+  </nav>
+</section>
+
+<!-- DETAIL -->
+<section class="screen" id="screen-detail">
+  <div class="detail-topbar">
+    <img class="detail-hero" id="d-img">
+    <div class="detail-actions">
+      <div class="grp">
+        <button class="icon-btn" id="d-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
+      </div>
+      <div class="grp">
+        <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.5l6.8-3.8M8.6 13.5l6.8 3.8"/></svg></button>
+        <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 8.6c0 4-4.4 7.2-8.8 10.8C7.6 15.8 3.2 12.6 3.2 8.6a4.8 4.8 0 018.8-2.6 4.8 4.8 0 018.8 2.6z"/></svg></button>
+      </div>
+    </div>
+  </div>
+  <div class="detail-body">
+    <p class="num" id="d-num" style="font-size:12px;color:var(--muted-2);margin:14px 0 4px;"></p>
+    <h1 class="detail-title" id="d-title"></h1>
+    <p class="detail-sub" id="d-sub"></p>
+    <div class="detail-tags" id="d-tags"></div>
+    <p class="detail-desc" id="d-desc"></p>
+    <div class="detail-status" id="d-status">
+      <div><p class="label" id="d-status-label">Current bid</p><p class="value" id="d-value"></p></div>
+      <div style="text-align:right;"><p class="label" id="d-time-label">Time Left</p><p class="value" id="d-time" style="font-size:16px;"></p></div>
+    </div>
+    <div class="detail-meta-row">
+      <div><p class="k">Total Bids</p><p class="v" id="d-bidcount"></p></div>
+      <div style="text-align:right;"><p class="k" id="d-lead-label">Leading</p><p class="v" id="d-leader"></p></div>
+    </div>
+    <div class="feed-box">
+      <h3>Recent bids</h3>
+      <div id="d-feed"></div>
+    </div>
+  </div>
+  <div class="detail-footer">
+    <button class="pill-gold" id="d-bid-btn">Place a Bid</button>
+  </div>
+</section>
+
+<!-- BID SHEET -->
+<div id="sheet-overlay">
+  <div class="sheet">
+    <div class="sheet-head">
+      <img id="s-img">
+      <div class="t"><h2>Place a Bid</h2><div class="sub" id="s-title"></div></div>
+      <button class="sheet-close" id="s-close">✕</button>
+    </div>
+    <div class="sheet-box">
+      <div class="sheet-box-row"><span class="k">Current Bid</span><span class="v" id="s-current"></span></div>
+      <div class="sheet-box-row min"><span class="k">Your Bid Must Be At Least</span><span class="v" id="s-min"></span></div>
+    </div>
+    <div class="amount-field">
+      <span class="cur">₹</span>
+      <input id="s-amount" type="number" inputmode="numeric">
+    </div>
+    <div class="quick-row" id="s-quick"></div>
+    <div class="g-row"><div class="line"></div>optional<div class="line"></div></div>
+    <div id="s-signin-area"></div>
+    <div class="name-field">
+      <label for="s-name">Your name (required)</label>
+      <input id="s-name" placeholder="Full name" maxlength="79">
+    </div>
+    <button class="pill-gold" id="s-confirm">Confirm Bid</button>
+    <div class="err" id="s-err"></div>
+  </div>
+</div>
+
+<!-- SUCCESS -->
+<section class="screen" id="screen-success">
+  <div class="badge-ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 13l5 5L20 6"/></svg></div>
+  <h1>Bid Placed Successfully!</h1>
+  <p class="sub" id="success-msg"></p>
+  <div class="success-actions">
+    <button class="pill-cream" id="success-view">View Item</button>
+    <span class="linklike" id="success-browse">Keep Browsing</span>
+  </div>
+</section>
+
+<!-- MY BIDS -->
+<section class="screen" id="screen-mybids">
+  <div class="mb-header"><h1>My Bids</h1></div>
+  <div class="mb-tabs">
+    <div class="mb-tab active" data-tab="active">Active <span id="mb-count-active"></span></div>
+    <div class="mb-tab" data-tab="won">Won <span id="mb-count-won"></span></div>
+    <div class="mb-tab" data-tab="lost">Lost <span id="mb-count-lost"></span></div>
+  </div>
+  <div class="mb-list" id="mb-list"></div>
+  <nav class="bottomnav">
+    <button data-nav="catalog">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>
+      Home
+    </button>
+    <button class="active" data-nav="mybids">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h5"/></svg>
+      My Bids
+    </button>
+    <button data-nav="profile">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.6-4 5-6 8-6s6.4 2 8 6"/></svg>
+      Profile
+    </button>
+  </nav>
+</section>
+
+<!-- PROFILE -->
+<section class="screen" id="screen-profile">
+  <div class="mb-header"><h1>Profile</h1></div>
+  <div class="detail-body" style="flex:1;">
+    <div class="name-field">
+      <label for="p-name">Your name</label>
+      <input id="p-name" placeholder="Full name" maxlength="79">
+    </div>
+    <div id="p-signin-area" style="margin-bottom:16px;"></div>
+    <hr class="hairline" style="margin:20px 0;">
+    <a class="pill-dark" style="display:block;text-align:center;padding:13px;" href="admin.html">Auction organizer? Open admin</a>
+  </div>
+  <nav class="bottomnav">
+    <button data-nav="catalog">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>
+      Home
+    </button>
+    <button data-nav="mybids">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h5"/></svg>
+      My Bids
+    </button>
+    <button class="active" data-nav="profile">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.6-4 5-6 8-6s6.4 2 8 6"/></svg>
+      Profile
+    </button>
+  </nav>
+</section>
+
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="firebase-init.js"></script>
+<script>
+// ---------------------------------------------------------------
+// State
+// ---------------------------------------------------------------
+let lots = [];
+let activeTab = 'All';
+let searchQ = '';
+let detailLotId = null;
+let sheetLotId = null;
+let currentDetailItem = null;
+let googleUser = null;
+let unsubDetail = null, unsubFeed = null, lastFeedSnap = null;
+const imgCache = new Map();
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === id));
+}
+
+function myBids() {
+  try { return JSON.parse(localStorage.getItem('auction_my_bids') || '{}'); } catch (e) { return {}; }
+}
+function recordMyBid(lotId, amount) {
+  const mb = myBids();
+  mb[lotId] = { amount, ts: Date.now() };
+  localStorage.setItem('auction_my_bids', JSON.stringify(mb));
+}
+
+// ---------------------------------------------------------------
+// Auth
+// ---------------------------------------------------------------
+auth.getRedirectResult().then(res => {
+  if (res.user) { googleUser = res.user; renderSigninAreas(); }
+}).catch(() => {});
+auth.onAuthStateChanged(u => { if (u) googleUser = u; renderSigninAreas(); });
+
+function signinHtml() {
+  return googleUser
+    ? '<p class="signedin">Signed in as ' + (googleUser.displayName || googleUser.email) + '</p>'
+    : '<button class="gbtn" data-google-signin>Sign in with Google</button>';
+}
+function renderSigninAreas() {
+  ['s-signin-area', 'p-signin-area'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = signinHtml();
+    const btn = el.querySelector('[data-google-signin]');
+    if (btn) btn.onclick = () => auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());
+  });
+  const nameFields = [document.getElementById('s-name'), document.getElementById('p-name')];
+  nameFields.forEach(f => { if (f && !f.value && googleUser) f.value = googleUser.displayName || ''; });
+}
+
+// ---------------------------------------------------------------
+// Load lots
+// ---------------------------------------------------------------
+const params = new URLSearchParams(location.search);
+const directId = params.get('id');
+const savedName = localStorage.getItem('auction_name') || '';
+document.getElementById('s-name').value = savedName;
+document.getElementById('p-name').value = savedName;
+document.getElementById('p-name').addEventListener('input', e => localStorage.setItem('auction_name', e.target.value));
+
+db.collection('items').orderBy('lotNumber').onSnapshot(snap => {
+  lots = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  lots.forEach(it => {
+    if (it.imageUrl && !imgCache.has(it.id)) { const img = new Image(); img.src = it.imageUrl; imgCache.set(it.id, img); }
+  });
+  if (lots.length && lots[0].imageUrl) document.getElementById('splash-bg').style.backgroundImage = 'url(' + lots[0].imageUrl + ')';
+  renderTabs();
+  renderGrid();
+  renderMyBids();
+  if (currentDetailItem) {
+    const fresh = lots.find(l => l.id === currentDetailItem.id);
+    if (fresh) renderDetail(fresh);
+  }
+  if (directId && !detailLotId) {
+    const it = lots.find(l => l.id === directId);
+    if (it) { showScreen('screen-catalog'); openDetail(it.id); }
+  }
+});
+
+function categories() {
+  const set = new Set();
+  lots.forEach(it => set.add(it.category || 'Item'));
+  return ['All', ...Array.from(set)];
+}
+
+function renderTabs() {
+  const cats = categories();
+  if (!cats.includes(activeTab)) activeTab = 'All';
+  document.getElementById('cat-tabs').innerHTML = cats.map(c =>
+    '<button class="tab' + (c === activeTab ? ' active' : '') + '" data-cat="' + c + '">' + c + '</button>').join('');
+  document.querySelectorAll('.tab').forEach(b => b.onclick = () => { activeTab = b.dataset.cat; renderTabs(); renderGrid(); });
+}
+
+function renderGrid() {
+  const grid = document.getElementById('cat-grid');
+  let list = lots.filter(it => activeTab === 'All' || (it.category || 'Item') === activeTab);
+  if (searchQ) list = list.filter(it => (it.title || '').toLowerCase().includes(searchQ));
+  if (!list.length) { grid.innerHTML = ''; grid.insertAdjacentHTML('beforeend', '<div class="empty-state" style="grid-column:1/-1;">No lots here yet — check back shortly.</div>'); return; }
+  grid.innerHTML = list.map(it => {
+    const st = lotStatus(it);
+    return '<div class="card" data-id="' + it.id + '">' +
+      '<div class="card-img-wrap">' +
+        (st.state !== 'live' ? '<div class="card-closed-flag" style="' + (st.state === 'notstarted' ? 'background:rgba(156,146,132,.9);' : '') + '">' + (st.state === 'notstarted' ? 'SOON' : 'CLOSED') + '</div>' : '') +
+        '<img src="' + (it.imageUrl || '') + '" onerror="this.style.visibility=\'hidden\'">' +
+        '<div class="card-heart"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M20.8 8.6c0 4-4.4 7.2-8.8 10.8C7.6 15.8 3.2 12.6 3.2 8.6a4.8 4.8 0 018.8-2.6 4.8 4.8 0 018.8 2.6z"/></svg></div>' +
+      '</div>' +
+      '<div class="card-body">' +
+        '<p class="card-title">' + escapeHtml(it.title || '') + '</p>' +
+        '<p class="card-price">' + money(it.currentBid) + '</p>' +
+        '<p class="card-time">' + (st.state === 'notstarted' ? 'Not started yet' : (st.state === 'closed' ? 'Bidding closed' : st.label)) + '</p>' +
+      '</div></div>';
+  }).join('');
+  grid.querySelectorAll('.card').forEach(c => c.onclick = () => openDetail(c.dataset.id));
+}
+
+document.getElementById('search-toggle').onclick = () => {
+  const s = document.getElementById('cat-search');
+  s.style.display = s.style.display === 'block' ? 'none' : 'block';
+  if (s.style.display === 'block') s.focus();
+};
+document.getElementById('cat-search').addEventListener('input', e => { searchQ = e.target.value.trim().toLowerCase(); renderGrid(); });
+
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ---------------------------------------------------------------
+// Detail screen
+// ---------------------------------------------------------------
+function openDetail(id) {
+  detailLotId = id;
+  showScreen('screen-detail');
+  const it = lots.find(l => l.id === id);
+  if (it) renderDetail(it);
+
+  if (unsubDetail) unsubDetail();
+  if (unsubFeed) unsubFeed();
+  const ref = db.collection('items').doc(id);
+  unsubDetail = ref.onSnapshot(doc => { if (doc.exists) renderDetail({ id: doc.id, ...doc.data() }); });
+  unsubFeed = ref.collection('bids').orderBy('timestamp', 'desc').limit(8)
+    .onSnapshot(snap => { lastFeedSnap = snap; renderDetailFeed(); });
+}
+
+function renderDetail(it) {
+  currentDetailItem = it;
+  const st = lotStatus(it);
+  const closed = st.state === 'closed';
+  document.getElementById('d-img').src = it.imageUrl || '';
+  document.getElementById('d-num').textContent = 'LOT ' + String(it.lotNumber).padStart(3, '0');
+  document.getElementById('d-title').textContent = it.title || '';
+  document.getElementById('d-sub').textContent = it.subtitle || (it.category ? it.category + ' lot' : '');
+  document.getElementById('d-tags').innerHTML =
+    '<span class="tag">' + escapeHtml(it.category || 'Item') + '</span>' +
+    '<span class="tag">' + (it.bidCount ? it.bidCount + ' bid' + (it.bidCount === 1 ? '' : 's') : 'No bids yet') + '</span>';
+  document.getElementById('d-desc').textContent = it.description || '';
+  document.getElementById('d-status').classList.toggle('closed', closed);
+  document.getElementById('d-status-label').textContent = closed ? 'Winning bid' : 'Current Bid';
+  document.getElementById('d-value').textContent = money(it.currentBid);
+  document.getElementById('d-time-label').textContent = closed ? 'Status' : (st.state === 'notstarted' ? 'Status' : 'Time Left');
+  document.getElementById('d-time').textContent = st.state === 'notstarted' ? 'Starts soon' : st.label;
+  document.getElementById('d-bidcount').textContent = it.bidCount || 0;
+  document.getElementById('d-lead-label').textContent = closed ? 'Won by' : 'Leading';
+  document.getElementById('d-leader').textContent = it.currentBidderName || '— none yet —';
+  const btn = document.getElementById('d-bid-btn');
+  btn.disabled = st.state !== 'live';
+  btn.textContent = st.state === 'notstarted' ? 'Bidding Not Started' : (closed ? 'Bidding Closed' : 'Place a Bid');
+}
+
+// Tick the visible countdown every second without waiting on Firestore.
+setInterval(() => {
+  if (!currentDetailItem || !document.getElementById('screen-detail').classList.contains('active')) return;
+  const st = lotStatus(currentDetailItem);
+  if (st.state === 'live') document.getElementById('d-time').textContent = st.label;
+}, 1000);
+
+function renderDetailFeed() {
+  const el = document.getElementById('d-feed');
+  if (lastFeedSnap && !lastFeedSnap.empty) {
+    el.innerHTML = lastFeedSnap.docs.map(d => {
+      const b = d.data();
+      return '<div class="feed-row"><span>' + escapeHtml(b.name) + '</span><span class="amt">' + money(b.amount) + '</span></div>';
+    }).join('');
+  } else {
+    el.innerHTML = '<div class="feed-empty">No bids yet — be the first.</div>';
+  }
+}
+
+document.getElementById('d-back').onclick = () => {
+  if (unsubDetail) unsubDetail();
+  if (unsubFeed) unsubFeed();
+  showScreen('screen-catalog');
+};
+document.getElementById('d-bid-btn').onclick = () => openSheet(detailLotId);
+
+// ---------------------------------------------------------------
+// Bid sheet
+// ---------------------------------------------------------------
+function openSheet(id) {
+  const it = lots.find(l => l.id === id);
+  if (!it || lotStatus(it).state !== 'live') return;
+  sheetLotId = id;
+  document.getElementById('s-img').src = it.imageUrl || '';
+  document.getElementById('s-title').textContent = it.title || '';
+  document.getElementById('s-current').textContent = money(it.currentBid);
+  const minNext = it.currentBid + it.increment;
+  document.getElementById('s-min').textContent = money(minNext);
+  document.getElementById('s-amount').value = minNext;
+  document.getElementById('s-amount').placeholder = String(minNext);
+  document.getElementById('s-quick').innerHTML = [it.increment, it.increment * 2, it.increment * 4].map(inc =>
+    '<button class="quickbtn" data-inc="' + inc + '">+' + money(inc) + '</button>').join('');
+  document.querySelectorAll('.quickbtn').forEach(b => b.onclick = () => {
+    const cur = Number(document.getElementById('s-amount').value) || minNext;
+    document.getElementById('s-amount').value = cur + Number(b.dataset.inc);
+  });
+  document.getElementById('s-name').value = localStorage.getItem('auction_name') || (googleUser ? (googleUser.displayName || '') : '');
+  document.getElementById('s-err').textContent = '';
+  renderSigninAreas();
+  document.getElementById('sheet-overlay').classList.add('active');
+}
+document.getElementById('s-close').onclick = () => document.getElementById('sheet-overlay').classList.remove('active');
+
+document.getElementById('s-confirm').onclick = async () => {
+  const errEl = document.getElementById('s-err');
+  errEl.textContent = '';
+  const name = document.getElementById('s-name').value.trim();
+  const amount = Number(document.getElementById('s-amount').value);
+  const it = lots.find(l => l.id === sheetLotId);
+  if (!name) { errEl.textContent = 'Enter your name to bid.'; return; }
+  if (!it) { errEl.textContent = 'This lot could not be found.'; return; }
+  const minNext = it.currentBid + it.increment;
+  if (!amount || amount < minNext) { errEl.textContent = 'Bid must be at least ' + money(minNext) + '.'; return; }
+
+  const btn = document.getElementById('s-confirm');
+  btn.disabled = true;
+  localStorage.setItem('auction_name', name);
+  const itemRef = db.collection('items').doc(sheetLotId);
+  const bidRef = itemRef.collection('bids').doc();
+  try {
+    await db.runTransaction(async (tx) => {
+      const doc = await tx.get(itemRef);
+      if (!doc.exists) throw new Error('This lot no longer exists.');
+      const d = doc.data();
+      if (lotStatus(d).state !== 'live') throw new Error('Bidding on this lot has just closed.');
+      const need = d.currentBid + d.increment;
+      if (amount < need) throw new Error('Someone beat you to it — bid must now be at least ' + money(need) + '.');
+      tx.update(itemRef, {
+        currentBid: amount, currentBidderName: name,
+        currentBidderUid: googleUser ? googleUser.uid : null,
+        bidCount: (d.bidCount || 0) + 1,
+      });
+      tx.set(bidRef, {
+        name, amount, uid: googleUser ? googleUser.uid : null, isGoogle: !!googleUser,
+        deviceId: getDeviceId(), timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+    });
+    recordMyBid(sheetLotId, amount);
+    document.getElementById('sheet-overlay').classList.remove('active');
+    document.getElementById('success-msg').textContent =
+      'Your bid of ' + money(amount) + ' has been placed on ' + (it.title || 'this item') + '.';
+    showScreen('screen-success');
+  } catch (e) {
+    errEl.textContent = e.message || 'Could not place that bid — try again.';
+  } finally {
+    btn.disabled = false;
+  }
+};
+
+// ---------------------------------------------------------------
+// Success screen
+// ---------------------------------------------------------------
+document.getElementById('success-view').onclick = () => showScreen('screen-detail');
+document.getElementById('success-browse').onclick = () => showScreen('screen-catalog');
+
+// ---------------------------------------------------------------
+// Bottom nav
+// ---------------------------------------------------------------
+document.querySelectorAll('[data-nav]').forEach(b => b.onclick = () => {
+  const nav = b.dataset.nav;
+  if (nav === 'catalog') showScreen('screen-catalog');
+  if (nav === 'mybids') { renderMyBids(); showScreen('screen-mybids'); }
+  if (nav === 'profile') { renderSigninAreas(); showScreen('screen-profile'); }
+});
+document.getElementById('explore-btn').onclick = () => showScreen('screen-catalog');
+
+// ---------------------------------------------------------------
+// My Bids
+// ---------------------------------------------------------------
+let mbActiveTab = 'active';
+document.querySelectorAll('.mb-tab').forEach(t => t.onclick = () => {
+  mbActiveTab = t.dataset.tab;
+  document.querySelectorAll('.mb-tab').forEach(x => x.classList.toggle('active', x === t));
+  renderMyBids();
+});
+
+function classifyMyBids() {
+  const mb = myBids();
+  const active = [], won = [], lost = [];
+  Object.keys(mb).forEach(lotId => {
+    const it = lots.find(l => l.id === lotId);
+    if (!it) return;
+    const mine = mb[lotId];
+    if (lotStatus(it).state === 'closed') {
+      const isWinner = it.winnerName && Math.abs((it.winnerAmount || 0) - mine.amount) < 0.5 &&
+        it.winnerName === (localStorage.getItem('auction_name') || '');
+      (isWinner ? won : lost).push({ it, mine });
+    } else {
+      active.push({ it, mine });
+    }
+  });
+  return { active, won, lost };
+}
+
+function renderMyBids() {
+  const { active, won, lost } = classifyMyBids();
+  document.getElementById('mb-count-active').textContent = '(' + active.length + ')';
+  document.getElementById('mb-count-won').textContent = '(' + won.length + ')';
+  document.getElementById('mb-count-lost').textContent = '(' + lost.length + ')';
+  const map = { active, won, lost };
+  const rows = map[mbActiveTab] || [];
+  const list = document.getElementById('mb-list');
+  if (!rows.length) { list.innerHTML = '<div class="empty-state">Nothing here yet.</div>'; return; }
+  list.innerHTML = rows.map(({ it, mine }) => {
+    let statusText, statusClass = '';
+    if (mbActiveTab === 'active') {
+      const leading = it.currentBidderName === (localStorage.getItem('auction_name') || '');
+      statusText = (leading ? 'Current highest bid' : 'Outbid — you bid ' + money(mine.amount)) + (timeLeft(it.closesAt) ? ' · ' + timeLeft(it.closesAt) : '');
+    } else if (mbActiveTab === 'won') { statusText = 'Won — congratulations!'; statusClass = 'won'; }
+    else { statusText = 'Final bid: ' + money(mine.amount); statusClass = 'lost'; }
+    return '<div class="mb-row" data-id="' + it.id + '">' +
+      '<img src="' + (it.imageUrl || '') + '" onerror="this.style.visibility=\'hidden\'">' +
+      '<div class="body"><p class="t">' + escapeHtml(it.title || '') + '</p>' +
+      '<p class="p">' + money(mbActiveTab === 'active' ? it.currentBid : mine.amount) + '</p>' +
+      '<p class="s ' + statusClass + '">' + statusText + '</p></div>' +
+      '<span class="chev">›</span></div>';
+  }).join('');
+  list.querySelectorAll('.mb-row').forEach(r => r.onclick = () => openDetail(r.dataset.id));
+}
+</script>
+</body>
+</html>

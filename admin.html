@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>JASHN — Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0D0A08; --bg-2:#131010; --sidebar:#120E0C; --card:#171310; --card-2:#1D1713;
+  --line:#2A231D; --line-soft:#221C17;
+  --gold:#C79A4B; --gold-soft:#E7C888;
+  --cream:#F3ECDC; --ink:#0D0A08;
+  --muted:#9C9284; --muted-2:#6F675B;
+  --green:#5C9A76; --red:#C1594A;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;background:var(--bg);color:var(--cream);font-family:'Inter',sans-serif;min-height:100%;}
+h1,h2,h3{font-family:'Fraunces',serif;font-weight:600;margin:0;}
+button{font-family:inherit;}
+a{color:inherit;}
+input,textarea,select{font-family:inherit;}
+
+/* ---------- gate screens ---------- */
+.gate{max-width:420px;margin:14vh auto;text-align:center;padding:0 20px;}
+.gate .logo{font-family:'Fraunces',serif;font-size:22px;letter-spacing:.1em;margin-bottom:26px;}
+.gbtn{padding:13px 24px;border-radius:10px;border:1px solid var(--line);background:var(--card);
+  color:var(--cream);font-size:14px;cursor:pointer;}
+.uid{font-family:monospace;background:var(--card);border:1px solid var(--line);padding:10px;
+  word-break:break-all;font-size:12.5px;margin:16px 0;border-radius:8px;color:var(--gold-soft);}
+
+/* ---------- app layout ---------- */
+.app{display:none;min-height:100vh;}
+.app.on{display:flex;}
+.sidebar{width:240px;flex:none;background:var(--sidebar);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;padding:22px 14px;}
+.sb-logo{font-family:'Fraunces',serif;font-size:19px;letter-spacing:.1em;padding:6px 12px 22px;}
+.sb-nav{display:flex;flex-direction:column;gap:2px;flex:1;}
+.sb-item{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:10px;cursor:pointer;
+  color:var(--muted);font-size:14px;}
+.sb-item svg{width:17px;height:17px;flex:none;}
+.sb-item.active{background:var(--card);color:var(--cream);}
+.sb-item:hover{color:var(--cream);}
+
+.main{flex:1;min-width:0;display:flex;flex-direction:column;}
+.topbar{display:flex;align-items:center;gap:16px;padding:18px 28px;border-bottom:1px solid var(--line);}
+.topbar-search{flex:1;position:relative;max-width:420px;}
+.topbar-search input{width:100%;padding:10px 14px 10px 38px;border-radius:10px;background:var(--card);
+  border:1px solid var(--line);color:var(--cream);font-size:13.5px;}
+.topbar-search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--muted-2);}
+.topbar-right{display:flex;align-items:center;gap:14px;margin-left:auto;}
+.iconbtn{width:36px;height:36px;border-radius:50%;background:var(--card);border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--cream);}
+.iconbtn svg{width:16px;height:16px;}
+.admin-chip{display:flex;align-items:center;gap:8px;cursor:pointer;padding:5px 10px 5px 5px;
+  border-radius:999px;background:var(--card);border:1px solid var(--line);}
+.admin-chip .av{width:26px;height:26px;border-radius:50%;background:var(--gold);color:#20150A;
+  display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;}
+.admin-chip .name{font-size:13px;}
+.btn-add{display:flex;align-items:center;gap:6px;padding:10px 16px;border-radius:10px;background:var(--cream);
+  color:var(--ink);font-weight:600;font-size:13.5px;border:none;cursor:pointer;}
+.content{flex:1;overflow-y:auto;padding:26px 28px 60px;}
+.page{display:none;}
+.page.on{display:block;}
+.page-head{margin-bottom:22px;}
+.page-head p{font-size:13px;color:var(--muted);margin-top:4px;}
+
+/* ---------- stat cards ---------- */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
+.stat-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;}
+.stat-card .ic{width:34px;height:34px;border-radius:9px;background:var(--card-2);display:flex;
+  align-items:center;justify-content:center;margin-bottom:14px;color:var(--gold-soft);}
+.stat-card .ic svg{width:17px;height:17px;}
+.stat-card .lbl{font-size:12px;color:var(--muted);margin-bottom:4px;}
+.stat-card .val{font-size:24px;font-weight:700;font-family:'Fraunces',serif;}
+
+.panels{display:grid;grid-template-columns:1.3fr 1fr;gap:18px;align-items:start;}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;}
+.panel h3{font-size:15px;margin-bottom:14px;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{text-align:left;color:var(--muted-2);font-weight:600;font-size:11.5px;text-transform:uppercase;
+  letter-spacing:.03em;padding:0 8px 10px;border-bottom:1px solid var(--line);}
+td{padding:10px 8px;border-bottom:1px solid var(--line-soft);}
+tr:last-child td{border-bottom:none;}
+.chart-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+canvas{width:100%;display:block;}
+
+/* ---------- items / form ---------- */
+.layout{display:grid;grid-template-columns:360px 1fr;gap:22px;align-items:start;}
+fieldset{border:1px solid var(--line);border-radius:16px;margin:0;padding:18px;background:var(--card);}
+legend{font-weight:700;font-size:15px;padding:0 6px;font-family:'Fraunces',serif;}
+label{display:block;font-size:12px;color:var(--muted);margin:12px 0 5px;}
+label .hint{font-weight:400;color:var(--muted-2);}
+input,textarea,select{width:100%;font-size:13.5px;padding:10px 12px;border-radius:10px;
+  border:1px solid var(--line);background:var(--bg-2);color:var(--cream);}
+input:focus,textarea:focus,select:focus{outline:1px solid var(--gold);}
+textarea{resize:vertical;min-height:70px;}
+.charcount{font-size:11px;color:var(--muted-2);text-align:right;margin-top:2px;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.preset-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+.preset-row button{padding:6px 11px;border-radius:999px;border:1px solid var(--line);background:var(--bg-2);
+  color:var(--muted);font-size:11.5px;cursor:pointer;}
+.preset-row button.on{background:var(--gold);border-color:var(--gold);color:#1B140A;}
+.status-badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;display:inline-block;}
+.status-badge.notstarted{background:rgba(156,146,132,.16);color:var(--muted);}
+.status-badge.live{background:rgba(92,154,118,.16);color:var(--green);}
+.status-badge.closed{background:rgba(193,89,74,.16);color:var(--red);}
+
+.photo-picker{display:flex;gap:12px;align-items:center;margin-top:6px;}
+.photo-preview{width:64px;height:64px;border-radius:10px;object-fit:cover;background:var(--card-2);
+  flex:none;border:1px solid var(--line);}
+.photo-picker-controls{flex:1;}
+.filebtn{display:inline-block;padding:9px 13px;border-radius:8px;border:1px solid var(--line);
+  background:var(--bg-2);font-size:12.5px;cursor:pointer;color:var(--cream);}
+.filebtn input{display:none;}
+.urltoggle{display:inline-block;margin-left:8px;font-size:11.5px;color:var(--muted);
+  text-decoration:underline;cursor:pointer;background:none;border:none;}
+.upload-status{font-size:12px;color:var(--gold-soft);margin-top:6px;}
+
+.form-actions{display:flex;gap:10px;margin-top:16px;}
+button.primary{padding:12px 18px;background:var(--gold);border:none;border-radius:10px;
+  color:#1B140A;font-weight:700;font-size:13.5px;cursor:pointer;flex:1;}
+button.primary[disabled]{opacity:.5;cursor:default;}
+button.cancel-edit{padding:12px 16px;border-radius:10px;background:none;border:1px solid var(--line);
+  color:var(--cream);font-size:13.5px;cursor:pointer;display:none;}
+button.ghost{padding:9px 13px;border-radius:8px;background:var(--bg-2);border:1px solid var(--line);
+  font-size:11.5px;cursor:pointer;color:var(--cream);}
+button.danger{color:var(--red);border-color:rgba(193,89,74,.4);}
+#addErr{color:var(--red);font-size:13px;margin-top:8px;}
+
+.list-col h2{font-size:16px;margin:0 0 12px;}
+.lotcard{border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px;background:var(--card);
+  display:flex;gap:12px;}
+.lotcard img{width:60px;height:60px;border-radius:10px;object-fit:cover;background:var(--card-2);flex:none;}
+.lotcard .body{flex:1;min-width:0;}
+.lotcard .title{font-weight:700;font-size:14.5px;}
+.lotcard .meta{font-size:12px;color:var(--muted);margin:5px 0 10px;line-height:1.5;}
+.lotcard .actions{display:flex;gap:7px;flex-wrap:wrap;}
+.closed-tag{color:var(--red);font-weight:600;}
+.winner-tag{color:var(--green);font-weight:600;}
+.empty-state{color:var(--muted);padding:24px 0;text-align:center;font-size:13.5px;}
+
+.bidlist{margin-top:12px;border-top:1px solid var(--line);padding-top:10px;display:none;}
+.bidlist.open{display:block;}
+.bidrow{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;border-bottom:1px solid var(--line-soft);}
+.bidrow .rank{width:20px;color:var(--muted-2);flex:none;}
+.bidrow .who{flex:1;}
+.bidrow .who .g{font-size:11px;color:var(--muted-2);}
+.bidrow .amt{font-weight:700;width:74px;text-align:right;flex:none;color:var(--gold-soft);}
+.bidrow.iswinner{background:rgba(199,154,75,.1);border-radius:8px;}
+.bidrow button{flex:none;padding:5px 9px;font-size:11px;border-radius:7px;border:1px solid var(--line);
+  background:var(--bg-2);color:var(--cream);cursor:pointer;}
+.bidrow button.set{background:var(--gold);border-color:var(--gold);color:#1B140A;}
+.bidlist .empty{font-size:13px;color:var(--muted-2);padding:6px 0;}
+
+#qrsheet{display:none;}
+@media print{
+  body *{visibility:hidden;}
+  #qrsheet, #qrsheet *{visibility:visible;background:#fff !important;color:#000 !important;}
+  #qrsheet{display:grid !important;position:absolute;top:0;left:0;width:100%;grid-template-columns:repeat(3,1fr);gap:20px;}
+  .qrtile{text-align:center;}
+}
+
+@media (max-width:900px){
+  .app.on{flex-direction:column;}
+  .sidebar{width:100%;flex-direction:row;overflow-x:auto;padding:10px;}
+  .sb-nav{flex-direction:row;}
+  .stats{grid-template-columns:1fr 1fr;}
+  .panels{grid-template-columns:1fr;}
+  .layout{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- GATE -->
+<div class="gate" id="gate">
+  <div class="logo">JASHN ADMIN</div>
+  <p>Sign in with the Google account approved as an organizer.</p>
+  <button class="gbtn" id="signin" style="margin-top:16px;">Sign in with Google</button>
+</div>
+
+<div class="gate" id="denied" style="display:none;">
+  <div class="logo">JASHN ADMIN</div>
+  <p>You're signed in, but this account isn't on the admin list yet.</p>
+  <p>Add this UID to <code>ADMIN_UIDS</code> in <code>firebase-init.js</code> and to <code>isAdmin()</code> in <code>firestore.rules</code>, then reload:</p>
+  <p class="uid" id="myuid"></p>
+</div>
+
+<!-- APP -->
+<div class="app" id="app">
+  <aside class="sidebar">
+    <div class="sb-logo">JASHN</div>
+    <nav class="sb-nav">
+      <div class="sb-item active" data-page="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>Dashboard</div>
+      <div class="sb-item" data-page="items"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>Items</div>
+      <div class="sb-item" data-page="bids"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>Bids</div>
+      <div class="sb-item" data-page="users"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c1-4 3.5-6 6.5-6s5.5 2 6.5 6"/><circle cx="18" cy="8" r="2.7"/><path d="M15.7 14.3c2.4.4 4 2.2 4.8 5.7"/></svg>Users</div>
+      <div class="sb-item" data-page="payments"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>Payments</div>
+      <div class="sb-item" data-page="analytics"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V9M11 19V4M18 19v-7"/></svg>Analytics</div>
+      <div class="sb-item" data-page="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.9 2.9l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.6V21a2 2 0 11-4 0v-.2a1.7 1.7 0 00-1-1.5 1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.9-2.9l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.6-1H3a2 2 0 110-4h.2a1.7 1.7 0 001.5-1 1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.9-2.9l.1.1a1.7 1.7 0 001.9.3H9a1.7 1.7 0 001-1.6V3a2 2 0 114 0v.2a1.7 1.7 0 001 1.5 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.9 2.9l-.1.1a1.7 1.7 0 00-.3 1.9V9a1.7 1.7 0 001.6 1H21a2 2 0 110 4h-.2a1.7 1.7 0 00-1.5 1z"/></svg>Settings</div>
+    </nav>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input id="global-search" placeholder="Search items, users, bids…">
+      </div>
+      <div class="topbar-right">
+        <button class="btn-add" id="add-item-btn"><span>+</span> Add Item</button>
+        <div class="iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg></div>
+        <div class="admin-chip" id="signout"><span class="av" id="admin-av">A</span><span class="name">Admin</span><span style="font-size:10px;">▾</span></div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <section class="page on" id="page-dashboard">
+        <div class="page-head"><h1>Dashboard</h1><p>Overview of your silent auction event</p></div>
+        <div class="stats">
+          <div class="stat-card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg></div><div class="lbl">Total Items</div><div class="val" id="stat-items">0</div></div>
+          <div class="stat-card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.5 6.5L21 9l-5 4.5L17.5 21 12 17l-5.5 4L8 13.5 3 9l6.5-.5z"/></svg></div><div class="lbl">Total Bids</div><div class="val" id="stat-bids">0</div></div>
+          <div class="stat-card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3z"/><path d="M3 7l9-4 9 4"/><circle cx="12" cy="13" r="2.5"/></svg></div><div class="lbl">Total Raised</div><div class="val" id="stat-raised">₹0</div></div>
+          <div class="stat-card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c1-4 3.5-6 6.5-6s5.5 2 6.5 6"/><circle cx="18" cy="8" r="2.7"/><path d="M15.7 14.3c2.4.4 4 2.2 4.8 5.7"/></svg></div><div class="lbl">Active Users</div><div class="val" id="stat-users">0</div></div>
+        </div>
+        <div class="panels">
+          <div class="panel">
+            <h3>Recent Bids</h3>
+            <table>
+              <thead><tr><th>Time</th><th>User</th><th>Item</th><th style="text-align:right;">Bid Amount</th></tr></thead>
+              <tbody id="recent-bids-body"></tbody>
+            </table>
+          </div>
+          <div class="panel">
+            <div class="chart-head"><h3 style="margin:0;">Bidding Activity</h3><span style="font-size:12px;color:var(--muted-2);">All time</span></div>
+            <canvas id="activity-chart" height="180"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- ITEMS -->
+      <section class="page" id="page-items">
+        <div class="page-head"><h1>Items</h1><p>Add, edit and manage every lot in the auction</p></div>
+        <div class="layout">
+          <div class="form-col">
+            <form id="lotForm">
+              <fieldset>
+                <legend id="form-legend">Add a lot</legend>
+                <label for="f-title">Title</label>
+                <input id="f-title" required maxlength="120">
+
+                <label for="f-category">Category</label>
+                <select id="f-category">
+                  <option>Art</option><option>Experiences</option><option>Sports</option><option>Collectibles</option><option>Other</option>
+                </select>
+
+                <label for="f-desc">Description <span class="hint">— one short paragraph</span></label>
+                <textarea id="f-desc" maxlength="500"></textarea>
+                <div class="charcount" id="desc-count">0 / 500</div>
+
+                <label>Photo</label>
+                <div class="photo-picker">
+                  <img class="photo-preview" id="photo-preview" alt="">
+                  <div class="photo-picker-controls">
+                    <label class="filebtn">Choose photo<input type="file" id="f-file" accept="image/*"></label>
+                    <button type="button" class="urltoggle" id="urltoggle">or paste an image URL</button>
+                    <div id="url-wrap" style="display:none;margin-top:8px;"><input id="f-img" placeholder="https://…"></div>
+                    <div class="upload-status" id="upload-status"></div>
+                  </div>
+                </div>
+
+                <div class="row2">
+                  <div><label for="f-start">Starting bid (₹)</label><input id="f-start" type="number" required></div>
+                  <div><label for="f-inc">Minimum increment (₹)</label><input id="f-inc" type="number" value="500" required></div>
+                </div>
+                <label for="f-duration">Bidding duration <span class="hint">— starts counting down the moment you hit "Start" on this lot</span></label>
+                <div class="row2">
+                  <input id="f-duration" type="number" min="0" placeholder="e.g. 30" style="grid-column:1/2;">
+                  <span style="align-self:center;font-size:12.5px;color:var(--muted);">minutes</span>
+                </div>
+                <div class="preset-row" id="duration-presets">
+                  <button type="button" data-min="10">10m</button>
+                  <button type="button" data-min="15">15m</button>
+                  <button type="button" data-min="20">20m</button>
+                  <button type="button" data-min="30">30m</button>
+                  <button type="button" data-min="45">45m</button>
+                  <button type="button" data-min="60">60m</button>
+                </div>
+
+                <label for="f-closes">Or a fixed close date/time <span class="hint">— optional, overrides the duration above</span></label>
+                <input id="f-closes" type="datetime-local">
+
+                <div class="form-actions">
+                  <button class="primary" id="submitLot" type="submit">Add lot</button>
+                  <button class="cancel-edit" id="cancelEdit" type="button">Cancel edit</button>
+                </div>
+                <div id="addErr"></div>
+              </fieldset>
+            </form>
+          </div>
+
+          <div class="list-col">
+            <h2 id="lots-heading">Lots</h2>
+            <div id="lots"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- BIDS -->
+      <section class="page" id="page-bids">
+        <div class="page-head"><h1>Bids</h1><p>Every lot's bid history, ranked highest to lowest — set a winner here</p></div>
+        <div id="bids-lots"></div>
+      </section>
+
+      <!-- USERS -->
+      <section class="page" id="page-users">
+        <div class="page-head"><h1>Users</h1><p>Everyone who has placed a bid so far</p></div>
+        <div class="panel">
+          <table>
+            <thead><tr><th>Bidder</th><th>Bids Placed</th><th>Highest Single Bid</th><th>Verification</th></tr></thead>
+            <tbody id="users-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- PAYMENTS -->
+      <section class="page" id="page-payments">
+        <div class="page-head"><h1>Payments</h1><p>Winners by lot — mark collected once payment is settled</p></div>
+        <div class="form-actions" style="margin-bottom:16px;max-width:280px;">
+          <button class="ghost" id="exportCsv" style="flex:1;">Export winners (CSV)</button>
+        </div>
+        <div class="panel">
+          <table>
+            <thead><tr><th>Lot</th><th>Winner</th><th style="text-align:right;">Amount</th><th>Status</th><th></th></tr></thead>
+            <tbody id="payments-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ANALYTICS -->
+      <section class="page" id="page-analytics">
+        <div class="page-head"><h1>Analytics</h1><p>How bidding is trending across the event</p></div>
+        <div class="panel" style="margin-bottom:18px;">
+          <h3>Bidding Activity</h3>
+          <canvas id="activity-chart-2" height="200"></canvas>
+        </div>
+        <div class="panel">
+          <h3>Bids per lot</h3>
+          <canvas id="perlot-chart" height="220"></canvas>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section class="page" id="page-settings">
+        <div class="page-head"><h1>Settings</h1><p>Event tools and organizer info</p></div>
+        <div class="panel" style="margin-bottom:16px;">
+          <h3>Your account</h3>
+          <p style="font-size:13px;color:var(--muted);margin-bottom:6px;">Signed in as</p>
+          <p style="font-size:14px;margin-bottom:14px;" id="settings-email"></p>
+          <button class="ghost" id="signout2">Sign out</button>
+        </div>
+        <div class="panel">
+          <h3>Event tools</h3>
+          <div class="form-actions" style="max-width:320px;">
+            <button class="ghost" id="printQr" style="flex:1;">Print all QR codes</button>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<div id="qrsheet"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="firebase-init.js"></script>
+<script>
+const gate = document.getElementById('gate');
+const denied = document.getElementById('denied');
+const app = document.getElementById('app');
+
+document.getElementById('signin').onclick = () => auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());
+document.getElementById('signout').onclick = () => auth.signOut();
+document.getElementById('signout2').onclick = () => auth.signOut();
+
+auth.getRedirectResult().catch(() => {});
+auth.onAuthStateChanged(u => {
+  gate.style.display = denied.style.display = 'none';
+  app.classList.remove('on');
+  if (!u) { gate.style.display = 'block'; return; }
+  if (!isAdminUid(u.uid)) {
+    denied.style.display = 'block';
+    document.getElementById('myuid').textContent = u.uid;
+    return;
+  }
+  app.classList.add('on');
+  document.getElementById('admin-av').textContent = (u.displayName || u.email || 'A').charAt(0).toUpperCase();
+  document.getElementById('settings-email').textContent = u.displayName ? (u.displayName + ' — ' + u.email) : u.email;
+  loadLots();
+});
+
+// ---------------------------------------------------------------
+// Sidebar navigation
+// ---------------------------------------------------------------
+document.querySelectorAll('.sb-item').forEach(item => item.onclick = () => {
+  document.querySelectorAll('.sb-item').forEach(i => i.classList.toggle('active', i === item));
+  document.querySelectorAll('.page').forEach(p => p.classList.toggle('on', p.id === 'page-' + item.dataset.page));
+  if (item.dataset.page === 'bids') renderBidsPage();
+  if (item.dataset.page === 'users') renderUsersPage();
+  if (item.dataset.page === 'payments') renderPaymentsPage();
+  if (item.dataset.page === 'analytics') renderAnalytics();
+});
+document.getElementById('add-item-btn').onclick = () => {
+  document.querySelector('.sb-item[data-page="items"]').click();
+  document.getElementById('f-title').focus();
+};
+document.getElementById('global-search').addEventListener('input', e => {
+  const q = e.target.value.trim().toLowerCase();
+  document.querySelectorAll('#lots .lotcard').forEach(card => {
+    card.style.display = card.dataset.search.includes(q) ? 'flex' : 'none';
+  });
+});
+
+// ---------------------------------------------------------------
+// Load + render lots
+// ---------------------------------------------------------------
+let lots = [];
+let allBids = []; // flattened cache from collectionGroup, refreshed on demand
+function loadLots() {
+  db.collection('items').orderBy('lotNumber').onSnapshot(snap => {
+    lots = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderLots();
+    renderDashboard();
+  });
+  refreshAllBids();
+}
+
+function refreshAllBids() {
+  db.collectionGroup('bids').orderBy('timestamp', 'desc').limit(300).get().then(snap => {
+    allBids = snap.docs.map(d => ({ id: d.id, itemId: d.ref.parent.parent.id, ...d.data() }));
+    renderDashboard();
+  }).catch(() => {});
+}
+
+function escapeHtml(s) { return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function lotLabel(it) { return 'LOT ' + String(it.lotNumber).padStart(3, '0') + ' — ' + it.title; }
+
+const openBidLists = new Set();
+const bidCache = new Map();
+
+function timerButtonsHtml(it, st) {
+  if (st.state === 'notstarted') {
+    return '<button class="ghost" style="background:var(--gold);border-color:var(--gold);color:#1B140A;" data-act="start-timer" data-id="' + it.id + '">Start ' + (it.durationMinutes || 30) + 'm timer</button>';
+  }
+  if (st.state === 'live' && closesAtMillis(it.closesAt) != null) {
+    return '<button class="ghost" data-act="extend" data-id="' + it.id + '">+5 min</button>' +
+           '<button class="ghost danger" data-act="end-now" data-id="' + it.id + '">End now</button>';
+  }
+  if (it.durationMinutes > 0 && st.state === 'closed' && it.active !== false) {
+    // Countdown ran out but the lot itself was never manually closed —
+    // offer a restart in case it's being reused for a second round.
+    return '<button class="ghost" data-act="start-timer" data-id="' + it.id + '">Restart ' + it.durationMinutes + 'm timer</button>';
+  }
+  return '';
+}
+
+// Countdown badges tick down live — re-render the Items list once a second
+// while that page is open (cheap: local data only, no network calls).
+setInterval(() => {
+  if (document.getElementById('page-items').classList.contains('on')) renderLots();
+}, 1000);
+
+function renderLots() {
+  const el = document.getElementById('lots');
+  document.getElementById('lots-heading').textContent = lots.length ? 'Lots (' + lots.length + ')' : 'Lots';
+  if (!lots.length) { el.innerHTML = '<p class="empty-state">No lots yet — add the first one on the left.</p>'; return; }
+
+  el.innerHTML = lots.map(it => {
+    const search = (it.title + ' ' + (it.category || '')).toLowerCase();
+    const st = lotStatus(it);
+    const timerBtns = timerButtonsHtml(it, st);
+    return '<div class="lotcard" data-search="' + escapeHtml(search) + '">' +
+      '<img src="' + (it.imageUrl || '') + '" onerror="this.style.visibility=\'hidden\'">' +
+      '<div class="body">' +
+        '<div class="title">' + escapeHtml(lotLabel(it)) + ' <span class="status-badge ' + st.state + '">' + escapeHtml(st.label) + '</span></div>' +
+        '<div class="meta">' + money(it.currentBid) + ' · ' + (it.bidCount || 0) + ' bid(s)' +
+          (it.winnerName ? ' · <span class="winner-tag">Winner: ' + escapeHtml(it.winnerName) + ' (' + money(it.winnerAmount) + ')</span>' : ' · leader: ' + escapeHtml(it.currentBidderName || '—')) + '</div>' +
+        '<div class="actions">' +
+          timerBtns +
+          '<a class="ghost" style="text-decoration:none;" href="index.html?id=' + it.id + '" target="_blank">View bid page</a>' +
+          '<button class="ghost" data-act="edit" data-id="' + it.id + '">Edit</button>' +
+          '<button class="ghost" data-act="toggle" data-id="' + it.id + '">' + (it.active === false ? 'Reopen' : 'Close bidding') + '</button>' +
+          '<button class="ghost" data-act="bids" data-id="' + it.id + '">' + (openBidLists.has(it.id) ? 'Hide bids' : 'Bids & winner') + '</button>' +
+          '<button class="ghost danger" data-act="delete" data-id="' + it.id + '">Delete</button>' +
+        '</div>' +
+        '<div class="bidlist ' + (openBidLists.has(it.id) ? 'open' : '') + '" id="bidlist-' + it.id + '"></div>' +
+      '</div></div>';
+  }).join('');
+
+  el.querySelectorAll('[data-act="edit"]').forEach(b => b.onclick = () => startEdit(b.dataset.id));
+  el.querySelectorAll('[data-act="toggle"]').forEach(b => b.onclick = () => {
+    const it = lots.find(l => l.id === b.dataset.id);
+    db.collection('items').doc(b.dataset.id).update({ active: it.active === false });
+  });
+  el.querySelectorAll('[data-act="start-timer"]').forEach(b => b.onclick = () => {
+    const it = lots.find(l => l.id === b.dataset.id);
+    const mins = it.durationMinutes || 30;
+    db.collection('items').doc(b.dataset.id).update({
+      active: true,
+      closesAt: firebase.firestore.Timestamp.fromDate(new Date(Date.now() + mins * 60000)),
+    });
+  });
+  el.querySelectorAll('[data-act="extend"]').forEach(b => b.onclick = () => {
+    const it = lots.find(l => l.id === b.dataset.id);
+    const base = closesAtMillis(it.closesAt) || Date.now();
+    db.collection('items').doc(b.dataset.id).update({
+      closesAt: firebase.firestore.Timestamp.fromDate(new Date(Math.max(base, Date.now()) + 5 * 60000)),
+    });
+  });
+  el.querySelectorAll('[data-act="end-now"]').forEach(b => b.onclick = () => {
+    db.collection('items').doc(b.dataset.id).update({ closesAt: firebase.firestore.Timestamp.fromDate(new Date()) });
+  });
+  el.querySelectorAll('[data-act="delete"]').forEach(b => b.onclick = () => {
+    if (confirm('Delete this lot and all its bids? This cannot be undone.')) {
+      db.collection('items').doc(b.dataset.id).delete();
+      if (editingId === b.dataset.id) resetForm();
+    }
+  });
+  el.querySelectorAll('[data-act="bids"]').forEach(b => b.onclick = () => toggleBidList(b.dataset.id));
+  openBidLists.forEach(id => renderBidList(id, 'bidlist-' + id));
+}
+
+async function toggleBidList(itemId) {
+  if (openBidLists.has(itemId)) { openBidLists.delete(itemId); }
+  else {
+    openBidLists.add(itemId);
+    const snap = await db.collection('items').doc(itemId).collection('bids').orderBy('amount', 'desc').limit(50).get();
+    bidCache.set(itemId, snap.docs.map(d => ({ id: d.id, ...d.data() })));
+  }
+  renderLots();
+}
+
+async function ensureBidCache(itemId) {
+  if (!bidCache.has(itemId)) {
+    const snap = await db.collection('items').doc(itemId).collection('bids').orderBy('amount', 'desc').limit(50).get();
+    bidCache.set(itemId, snap.docs.map(d => ({ id: d.id, ...d.data() })));
+  }
+  return bidCache.get(itemId);
+}
+
+function renderBidList(itemId, containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const it = lots.find(l => l.id === itemId);
+  const bids = bidCache.get(itemId) || [];
+  if (!bids.length) { container.innerHTML = '<p class="empty">No bids on this lot yet.</p>'; return; }
+  container.innerHTML = bids.map((b, i) => {
+    const isWinner = it && it.winnerBidId === b.id;
+    return '<div class="bidrow ' + (isWinner ? 'iswinner' : '') + '">' +
+      '<span class="rank">#' + (i + 1) + '</span>' +
+      '<span class="who">' + escapeHtml(b.name) + (b.isGoogle ? ' <span class="g">· Google verified</span>' : '') + '</span>' +
+      '<span class="amt">' + money(b.amount) + '</span>' +
+      '<button class="' + (isWinner ? '' : 'set') + '" data-set="' + b.id + '" data-item="' + itemId + '">' + (isWinner ? 'Winner ✓' : 'Set winner') + '</button>' +
+    '</div>';
+  }).join('');
+  container.querySelectorAll('[data-set]').forEach(btn => btn.onclick = () => {
+    const bids2 = bidCache.get(btn.dataset.item) || [];
+    const bid = bids2.find(b => b.id === btn.dataset.set);
+    db.collection('items').doc(btn.dataset.item).update({
+      winnerBidId: bid.id, winnerName: bid.name, winnerAmount: bid.amount,
+      winnerUid: bid.uid || null, winnerIsGoogle: !!bid.isGoogle,
+      winnerSetAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+  });
+}
+
+// ---------------------------------------------------------------
+// Add / edit lot form
+// ---------------------------------------------------------------
+let editingId = null;
+let pendingFile = null;
+const fTitle = document.getElementById('f-title');
+const fCategory = document.getElementById('f-category');
+const fDesc = document.getElementById('f-desc');
+const fImg = document.getElementById('f-img');
+const fStart = document.getElementById('f-start');
+const fInc = document.getElementById('f-inc');
+const fDuration = document.getElementById('f-duration');
+const fCloses = document.getElementById('f-closes');
+
+document.querySelectorAll('#duration-presets button').forEach(btn => btn.onclick = () => {
+  fDuration.value = btn.dataset.min;
+  document.querySelectorAll('#duration-presets button').forEach(b => b.classList.toggle('on', b === btn));
+});
+fDuration.addEventListener('input', () => {
+  document.querySelectorAll('#duration-presets button').forEach(b => b.classList.toggle('on', b.dataset.min === fDuration.value));
+});
+const fFile = document.getElementById('f-file');
+const photoPreview = document.getElementById('photo-preview');
+const urlWrap = document.getElementById('url-wrap');
+const submitBtn = document.getElementById('submitLot');
+const cancelEditBtn = document.getElementById('cancelEdit');
+const addErr = document.getElementById('addErr');
+
+fDesc.addEventListener('input', () => { document.getElementById('desc-count').textContent = fDesc.value.length + ' / 500'; });
+document.getElementById('urltoggle').onclick = () => { urlWrap.style.display = urlWrap.style.display === 'none' ? 'block' : 'none'; };
+fFile.addEventListener('change', () => {
+  const file = fFile.files[0];
+  if (!file) return;
+  pendingFile = file;
+  photoPreview.src = URL.createObjectURL(file);
+  fImg.value = '';
+});
+
+function startEdit(id) {
+  const it = lots.find(l => l.id === id);
+  if (!it) return;
+  editingId = id;
+  pendingFile = null;
+  fTitle.value = it.title || '';
+  fCategory.value = it.category || 'Art';
+  fDesc.value = it.description || '';
+  document.getElementById('desc-count').textContent = fDesc.value.length + ' / 500';
+  fImg.value = '';
+  photoPreview.src = it.imageUrl || '';
+  fStart.value = it.startingBid ?? it.currentBid ?? '';
+  fInc.value = it.increment ?? 500;
+  fDuration.value = it.durationMinutes || '';
+  document.querySelectorAll('#duration-presets button').forEach(b => b.classList.toggle('on', b.dataset.min === String(it.durationMinutes || '')));
+  fCloses.value = it.closesAt ? toLocalInputValue(it.closesAt) : '';
+  document.getElementById('form-legend').textContent = 'Editing LOT ' + String(it.lotNumber).padStart(3, '0');
+  submitBtn.textContent = 'Save changes';
+  cancelEditBtn.style.display = 'inline-block';
+  addErr.textContent = '';
+  document.querySelector('.sb-item[data-page="items"]').click();
+  document.querySelector('.form-col').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function toLocalInputValue(closesAt) {
+  const d = closesAt && closesAt.toDate ? closesAt.toDate() : new Date(closesAt);
+  const pad = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+
+function resetForm() {
+  editingId = null;
+  pendingFile = null;
+  document.getElementById('lotForm').reset();
+  photoPreview.src = '';
+  urlWrap.style.display = 'none';
+  document.querySelectorAll('#duration-presets button').forEach(b => b.classList.remove('on'));
+  document.getElementById('desc-count').textContent = '0 / 500';
+  document.getElementById('form-legend').textContent = 'Add a lot';
+  submitBtn.textContent = 'Add lot';
+  cancelEditBtn.style.display = 'none';
+  addErr.textContent = '';
+}
+cancelEditBtn.onclick = resetForm;
+
+function compressImageToDataUrl(file, maxDim = 900, startQuality = 0.72) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Could not read that file.'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Could not read that image.'));
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          if (width >= height) { height = Math.round(height * maxDim / width); width = maxDim; }
+          else { width = Math.round(width * maxDim / height); height = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        let quality = startQuality;
+        let dataUrl = canvas.toDataURL('image/jpeg', quality);
+        while (dataUrl.length > 700000 && quality > 0.3) { quality -= 0.1; dataUrl = canvas.toDataURL('image/jpeg', quality); }
+        if (dataUrl.length > 700000) { reject(new Error('This photo is too large even compressed — try a smaller image.')); return; }
+        resolve(dataUrl);
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+document.getElementById('lotForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  addErr.textContent = '';
+  const title = fTitle.value.trim();
+  const description = fDesc.value.trim();
+  const category = fCategory.value;
+  const start = Number(fStart.value);
+  const inc = Number(fInc.value);
+  const durationMinutes = Number(fDuration.value) || 0;
+  // Only touch closesAt when a fixed date/time was explicitly set here —
+  // otherwise leave whatever "Start timer" put there (or nothing) alone,
+  // so editing a lot's title mid-countdown doesn't reset its clock.
+  const fixedClosesAt = fCloses.value ? firebase.firestore.Timestamp.fromDate(new Date(fCloses.value)) : null;
+  if (!title || !start || !inc) { addErr.textContent = 'Title, starting bid and increment are required.'; return; }
+
+  submitBtn.disabled = true;
+  const prevLabel = submitBtn.textContent;
+  submitBtn.textContent = editingId ? 'Saving…' : 'Adding…';
+
+  try {
+    let imageUrl = editingId ? (lots.find(l => l.id === editingId)?.imageUrl || '') : '';
+    if (pendingFile) {
+      document.getElementById('upload-status').textContent = 'Compressing photo…';
+      imageUrl = await compressImageToDataUrl(pendingFile);
+      document.getElementById('upload-status').textContent = '';
+    } else if (fImg.value.trim()) { imageUrl = fImg.value.trim(); }
+
+    if (editingId) {
+      const it = lots.find(l => l.id === editingId);
+      const patch = { title, description, category, imageUrl, startingBid: start, increment: inc, durationMinutes };
+      if (fixedClosesAt) patch.closesAt = fixedClosesAt;
+      if (!it || (it.bidCount || 0) === 0) patch.currentBid = start;
+      await db.collection('items').doc(editingId).update(patch);
+    } else {
+      const nextLotNumber = lots.reduce((m, l) => Math.max(m, l.lotNumber || 0), 0) + 1;
+      await db.collection('items').add({
+        lotNumber: nextLotNumber, title, description, category, imageUrl,
+        startingBid: start, increment: inc, currentBid: start,
+        durationMinutes, closesAt: fixedClosesAt,
+        currentBidderName: '', currentBidderUid: null, bidCount: 0, active: true,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+    resetForm();
+  } catch (err) {
+    addErr.textContent = err.message || 'Could not save this lot — try again.';
+    submitBtn.textContent = prevLabel;
+  } finally {
+    submitBtn.disabled = false;
+  }
+});
+
+// ---------------------------------------------------------------
+// Dashboard: stats, recent bids, activity chart
+// ---------------------------------------------------------------
+function renderDashboard() {
+  document.getElementById('stat-items').textContent = lots.length;
+  const totalBids = lots.reduce((s, l) => s + (l.bidCount || 0), 0);
+  document.getElementById('stat-bids').textContent = totalBids;
+  const totalRaised = lots.reduce((s, l) => s + (l.currentBid || 0), 0);
+  document.getElementById('stat-raised').textContent = money(totalRaised);
+  const distinctUsers = new Set(allBids.map(b => b.deviceId || b.name));
+  document.getElementById('stat-users').textContent = distinctUsers.size;
+
+  const tbody = document.getElementById('recent-bids-body');
+  const recent = allBids.slice(0, 10);
+  if (!recent.length) {
+    tbody.innerHTML = '<tr><td colspan="4" style="color:var(--muted-2);">No bids placed yet.</td></tr>';
+  } else {
+    tbody.innerHTML = recent.map(b => {
+      const it = lots.find(l => l.id === b.itemId);
+      return '<tr><td>' + relTime(b.timestamp) + '</td><td>' + escapeHtml(b.name) + '</td><td>' + escapeHtml(it ? it.title : '—') + '</td><td style="text-align:right;color:var(--gold-soft);font-weight:600;">' + money(b.amount) + '</td></tr>';
+    }).join('');
+  }
+  drawActivityChart('activity-chart');
+}
+
+function relTime(ts) {
+  if (!ts || !ts.toDate) return '—';
+  const mins = Math.max(0, Math.round((Date.now() - ts.toDate().getTime()) / 60000));
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return mins + ' min' + (mins === 1 ? '' : 's') + ' ago';
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return hrs + ' hr' + (hrs === 1 ? '' : 's') + ' ago';
+  return Math.round(hrs / 24) + ' day(s) ago';
+}
+
+function drawActivityChart(canvasId) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth || 400, h = canvas.height || 180;
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+
+  const buckets = new Array(12).fill(0); // 12 two-hour buckets across the day
+  allBids.forEach(b => {
+    if (!b.timestamp || !b.timestamp.toDate) return;
+    const hr = b.timestamp.toDate().getHours();
+    buckets[Math.floor(hr / 2)]++;
+  });
+  const max = Math.max(1, ...buckets);
+  const padL = 8, padR = 8, padT = 12, padB = 20;
+  const cw = w - padL - padR, ch = h - padT - padB;
+  const stepX = cw / (buckets.length - 1);
+
+  ctx.beginPath();
+  buckets.forEach((v, i) => {
+    const x = padL + i * stepX;
+    const y = padT + ch - (v / max) * ch;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.lineTo(padL + cw, padT + ch);
+  ctx.lineTo(padL, padT + ch);
+  ctx.closePath();
+  const grad = ctx.createLinearGradient(0, padT, 0, padT + ch);
+  grad.addColorStop(0, 'rgba(199,154,75,.45)');
+  grad.addColorStop(1, 'rgba(199,154,75,.02)');
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  ctx.beginPath();
+  buckets.forEach((v, i) => {
+    const x = padL + i * stepX;
+    const y = padT + ch - (v / max) * ch;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = '#C79A4B';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.fillStyle = '#6F675B';
+  ctx.font = '10px Inter, sans-serif';
+  [0, 4, 8, 11].forEach(i => {
+    const label = (i * 2) % 24;
+    const x = padL + i * stepX;
+    ctx.fillText((label === 0 ? '12' : (label > 12 ? label - 12 : label)) + (label < 12 ? 'AM' : 'PM'), Math.max(0, x - 12), h - 4);
+  });
+}
+
+function drawPerLotChart() {
+  const canvas = document.getElementById('perlot-chart');
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth || 400, h = canvas.height || 220;
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+
+  const data = lots.slice(0, 10);
+  if (!data.length) return;
+  const max = Math.max(1, ...data.map(l => l.bidCount || 0));
+  const padL = 8, padR = 8, padT = 10, padB = 34;
+  const cw = w - padL - padR, ch = h - padT - padB;
+  const bw = cw / data.length;
+
+  data.forEach((it, i) => {
+    const val = it.bidCount || 0;
+    const barH = (val / max) * ch;
+    const x = padL + i * bw + bw * 0.18;
+    const bw2 = bw * 0.64;
+    ctx.fillStyle = '#C79A4B';
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(x, padT + ch - barH, bw2, barH, 4) : ctx.rect(x, padT + ch - barH, bw2, barH);
+    ctx.fill();
+    ctx.fillStyle = '#9C9284';
+    ctx.font = '10px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    const label = 'L' + String(it.lotNumber).padStart(2, '0');
+    ctx.fillText(label, x + bw2 / 2, h - 18);
+    ctx.fillText(String(val), x + bw2 / 2, padT + ch - barH - 6);
+  });
+  ctx.textAlign = 'left';
+}
+
+function renderAnalytics() { drawActivityChart('activity-chart-2'); drawPerLotChart(); }
+
+// ---------------------------------------------------------------
+// Bids page
+// ---------------------------------------------------------------
+async function renderBidsPage() {
+  const el = document.getElementById('bids-lots');
+  if (!lots.length) { el.innerHTML = '<p class="empty-state">No lots yet.</p>'; return; }
+  el.innerHTML = lots.map(it => {
+    const st = lotStatus(it);
+    return '<div class="panel" style="margin-bottom:14px;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+        '<h3 style="margin:0;">' + escapeHtml(lotLabel(it)) + '</h3>' +
+        '<span class="status-badge ' + st.state + '">' + escapeHtml(st.label) + '</span>' +
+      '</div>' +
+      '<div class="bidlist open" id="bp-bidlist-' + it.id + '"></div>' +
+    '</div>';
+  }).join('');
+  for (const it of lots) {
+    await ensureBidCache(it.id);
+    renderBidList(it.id, 'bp-bidlist-' + it.id);
+  }
+}
+
+// ---------------------------------------------------------------
+// Users page
+// ---------------------------------------------------------------
+function renderUsersPage() {
+  const el = document.getElementById('users-body');
+  const map = new Map();
+  allBids.forEach(b => {
+    const key = b.deviceId || b.name;
+    if (!map.has(key)) map.set(key, { name: b.name, count: 0, max: 0, isGoogle: false });
+    const u = map.get(key);
+    u.count++;
+    u.max = Math.max(u.max, b.amount || 0);
+    u.isGoogle = u.isGoogle || !!b.isGoogle;
+  });
+  const users = Array.from(map.values()).sort((a, b) => b.max - a.max);
+  if (!users.length) { el.innerHTML = '<tr><td colspan="4" style="color:var(--muted-2);">No bidders yet.</td></tr>'; return; }
+  el.innerHTML = users.map(u =>
+    '<tr><td>' + escapeHtml(u.name) + '</td><td>' + u.count + '</td><td style="color:var(--gold-soft);font-weight:600;">' + money(u.max) + '</td>' +
+    '<td>' + (u.isGoogle ? '<span class="winner-tag">Google verified</span>' : 'Name only') + '</td></tr>').join('');
+}
+
+// ---------------------------------------------------------------
+// Payments page
+// ---------------------------------------------------------------
+function renderPaymentsPage() {
+  const el = document.getElementById('payments-body');
+  const withWinner = lots.filter(l => l.winnerName);
+  if (!withWinner.length) { el.innerHTML = '<tr><td colspan="5" style="color:var(--muted-2);">No winners set yet — mark one from the Items or Bids tab.</td></tr>'; return; }
+  el.innerHTML = withWinner.map(it =>
+    '<tr><td>' + escapeHtml(lotLabel(it)) + '</td><td>' + escapeHtml(it.winnerName) + '</td>' +
+    '<td style="text-align:right;color:var(--gold-soft);font-weight:600;">' + money(it.winnerAmount) + '</td>' +
+    '<td>' + (it.paid ? '<span class="winner-tag">Collected</span>' : '<span style="color:var(--muted);">Pending</span>') + '</td>' +
+    '<td><button class="ghost" data-pay="' + it.id + '">' + (it.paid ? 'Mark unpaid' : 'Mark collected') + '</button></td></tr>').join('');
+  el.querySelectorAll('[data-pay]').forEach(b => b.onclick = () => {
+    const it = lots.find(l => l.id === b.dataset.pay);
+    db.collection('items').doc(b.dataset.pay).update({ paid: !it.paid });
+  });
+}
+
+// ---------------------------------------------------------------
+// Export / print
+// ---------------------------------------------------------------
+document.getElementById('exportCsv').onclick = async () => {
+  const btn = document.getElementById('exportCsv');
+  btn.disabled = true;
+  btn.textContent = 'Building export…';
+  const rows = [['Lot', 'Title', 'Rank', 'Bidder', 'Amount', 'Google verified', 'Marked winner']];
+  for (const it of lots) {
+    const lotLbl = 'LOT ' + String(it.lotNumber).padStart(3, '0');
+    const snap = await db.collection('items').doc(it.id).collection('bids').orderBy('amount', 'desc').limit(50).get();
+    if (snap.empty) { rows.push([lotLbl, it.title, '', '(no bids)', '', '', '']); continue; }
+    snap.docs.forEach((d, i) => {
+      const b = d.data();
+      rows.push([lotLbl, it.title, i + 1, b.name, b.amount, b.isGoogle ? 'Yes' : 'No', it.winnerBidId === d.id ? 'WINNER' : '']);
+    });
+  }
+  const csv = rows.map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'auction-results.csv';
+  a.click();
+  btn.disabled = false;
+  btn.textContent = 'Export winners (CSV)';
+};
+
+document.getElementById('printQr').onclick = () => {
+  const sheet = document.getElementById('qrsheet');
+  sheet.innerHTML = '';
+  lots.forEach(it => {
+    const tile = document.createElement('div');
+    tile.className = 'qrtile';
+    tile.innerHTML = '<div style="font-weight:700;margin-bottom:6px;">LOT ' + String(it.lotNumber).padStart(3, '0') + '<br>' + escapeHtml(it.title) + '</div><div class="qrbox"></div>';
+    sheet.appendChild(tile);
+    new QRCode(tile.querySelector('.qrbox'), {
+      text: location.origin + location.pathname.replace('admin.html', 'index.html') + '?id=' + it.id,
+      width: 140, height: 140,
+    });
+  });
+  setTimeout(() => window.print(), 300);
+};
+
+window.addEventListener('resize', () => {
+  if (document.getElementById('page-dashboard').classList.contains('on')) drawActivityChart('activity-chart');
+  if (document.getElementById('page-analytics').classList.contains('on')) renderAnalytics();
+});
+</script>
+</body>
+</html>

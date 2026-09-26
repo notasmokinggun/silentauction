@@ -1,0 +1,47 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Paste the SAME uids you put in ADMIN_UIDS in firebase-init.js
+    function isAdmin() {
+      return request.auth != null && request.auth.uid in [
+        // "AbCdEfGhIjKlMnOpQrStUvWxYz12",
+      ];
+    }
+
+    match /items/{itemId} {
+      allow read: if true;
+      allow create, delete: if isAdmin();
+
+      // Bidding is a straight raise: only currentBid, currentBidderName,
+      // currentBidderUid and bidCount may change, currentBid must clear
+      // the previous bid by at least the increment, and closed lots
+      // reject new bids. Admins can still edit anything (e.g. fixing
+      // a typo in the description).
+      allow update: if isAdmin() || (
+        resource.data.active == true &&
+        // If a countdown (closesAt) is set, it must not have passed yet.
+        // closesAt is written as a Firestore Timestamp by admin.html
+        // specifically so this comparison works.
+        (!('closesAt' in resource.data) || resource.data.closesAt == null ||
+          request.time < resource.data.closesAt) &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['currentBid', 'currentBidderName', 'currentBidderUid', 'bidCount']) &&
+        request.resource.data.currentBid is number &&
+        request.resource.data.currentBid >= resource.data.currentBid + resource.data.increment &&
+        request.resource.data.currentBidderName is string &&
+        request.resource.data.currentBidderName.size() > 0 &&
+        request.resource.data.currentBidderName.size() < 80
+      );
+
+      match /bids/{bidId} {
+        allow read: if true;
+        allow update, delete: if isAdmin();
+        allow create: if request.resource.data.name is string &&
+          request.resource.data.name.size() > 0 &&
+          request.resource.data.name.size() < 80 &&
+          request.resource.data.amount is number;
+      }
+    }
+  }
+}

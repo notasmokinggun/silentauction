@@ -392,7 +392,7 @@ let searchQ = '';
 let detailLotId = null;
 let sheetLotId = null;
 let currentDetailItem = null;
-let googleUser = null;
+let bidderProfile = null;
 let unsubDetail = null, unsubFeed = null, lastFeedSnap = null;
 const imgCache = new Map();
 
@@ -412,32 +412,65 @@ function recordMyBid(lotId, amount) {
 // ---------------------------------------------------------------
 // Auth
 // ---------------------------------------------------------------
-// Redirect, not popup: GitHub Pages sends a Cross-Origin-Opener-Policy
-// header that blocks Firebase's popup helper from reporting the result
-// back to this page, so signInWithPopup silently hangs there. Redirect
-// is a full-page navigation instead, so it isn't affected by that header.
-auth.getRedirectResult().catch(err => {
-  console.error('Sign-in failed:', err);
-  alert('Sign-in failed: ' + err.message);
-});
-auth.onAuthStateChanged(u => { if (u) googleUser = u; renderSigninAreas(); });
-
-function signinHtml() {
-  return googleUser
-    ? '<p class="signedin">Signed in as ' + (googleUser.displayName || googleUser.email) + '</p>'
-    : '<button class="gbtn" data-google-signin>Sign in with Google</button>';
-}
+let guestReady = auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+  .then(() => new Promise(resolve => {
+    const stop = auth.onAuthStateChanged(user => { stop(); resolve(user); });
+  }));
+// Catch initialization errors when registration is attempted, with visible feedback.
+guestReady.catch(() => {});
 function renderSigninAreas() {
-  ['s-signin-area', 'p-signin-area'].forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.innerHTML = signinHtml();
-    const btn = el.querySelector('[data-google-signin]');
-    if (btn) btn.onclick = () => auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());
+  ['s', 'p'].forEach(prefix => {
+    const el = document.getElementById(prefix + '-signin-area');
+    if (el.dataset.ready) return;
+    el.dataset.ready = 'true';
+    el.innerHTML = '<div class="name-field"><label>Email (required)<input id="' + prefix + '-email" type="email" autocomplete="email" maxlength="254" required></label></div>' +
+      '<div class="name-field"><label>Phone (optional)<input id="' + prefix + '-phone" type="tel" autocomplete="tel" maxlength="30"></label></div>' +
+      '<p>We use these details to contact you about your bids. No OTP required.</p>' +
+      (prefix === 'p' ? '<button class="gbtn" id="save-profile">Save registration</button><p id="profile-status" role="status"></p>' : '');
   });
-  const nameFields = [document.getElementById('s-name'), document.getElementById('p-name')];
-  nameFields.forEach(f => { if (f && !f.value && googleUser) f.value = googleUser.displayName || ''; });
+  document.getElementById('save-profile').onclick = async () => {
+    const button = document.getElementById('save-profile');
+    const status = document.getElementById('profile-status');
+    button.disabled = true;
+    status.textContent = 'Saving…';
+    try { await saveRegistration('p'); status.textContent = 'Registration saved.'; }
+    catch (err) { status.textContent = err.message; }
+    finally { button.disabled = false; }
+  };
 }
+async function saveRegistration(prefix) {
+  const name = document.getElementById(prefix + '-name').value.trim();
+  const emailField = document.getElementById(prefix + '-email');
+  const email = emailField.value.trim();
+  const phone = document.getElementById(prefix + '-phone').value.trim();
+  if (!name || name.length > 79) throw new Error('Enter your full name (up to 79 characters).');
+  if (!email || !emailField.checkValidity()) throw new Error('Enter a valid email address.');
+  if (phone.length > 30) throw new Error('Phone number is too long.');
+  await guestReady;
+  if (!auth.currentUser) await auth.signInAnonymously();
+  const user = auth.currentUser;
+  const profile = { name, email, phone, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+  await db.collection('users').doc(user.uid).set(profile);
+  bidderProfile = profile;
+  localStorage.setItem('auction_name', name);
+  ['s', 'p'].forEach(p => {
+    document.getElementById(p + '-name').value = name;
+    document.getElementById(p + '-email').value = email;
+    document.getElementById(p + '-phone').value = phone;
+  });
+  return user;
+}
+renderSigninAreas();
+guestReady.then(async user => {
+  if (!user) return;
+  const doc = await db.collection('users').doc(user.uid).get();
+  if (!doc.exists) return;
+  bidderProfile = doc.data();
+  ['s', 'p'].forEach(p => ['name', 'email', 'phone'].forEach(key => {
+    const input = document.getElementById(p + '-' + key);
+    if (!input.value) input.value = bidderProfile[key] || '';
+  }));
+}).catch(err => { document.getElementById('profile-status').textContent = 'Could not load registration: ' + err.message; });
 
 // ---------------------------------------------------------------
 // Load lots
@@ -601,7 +634,7 @@ function openSheet(id) {
     const cur = Number(document.getElementById('s-amount').value) || minNext;
     document.getElementById('s-amount').value = cur + Number(b.dataset.inc);
   });
-  document.getElementById('s-name').value = localStorage.getItem('auction_name') || (googleUser ? (googleUser.displayName || '') : '');
+  document.getElementById('s-name').value = localStorage.getItem('auction_name') || (bidderProfile ? bidderProfile.name : '');
   document.getElementById('s-err').textContent = '';
   renderSigninAreas();
   document.getElementById('sheet-overlay').classList.add('active');
@@ -625,6 +658,7 @@ document.getElementById('s-confirm').onclick = async () => {
   const itemRef = db.collection('items').doc(sheetLotId);
   const bidRef = itemRef.collection('bids').doc();
   try {
+    const user = await saveRegistration('s');
     await db.runTransaction(async (tx) => {
       const doc = await tx.get(itemRef);
       if (!doc.exists) throw new Error('This lot no longer exists.');
@@ -634,11 +668,11 @@ document.getElementById('s-confirm').onclick = async () => {
       if (amount < need) throw new Error('Someone beat you to it — bid must now be at least ' + money(need) + '.');
       tx.update(itemRef, {
         currentBid: amount, currentBidderName: name,
-        currentBidderUid: googleUser ? googleUser.uid : null,
+        currentBidderUid: user.uid,
         bidCount: (d.bidCount || 0) + 1,
       });
       tx.set(bidRef, {
-        name, amount, uid: googleUser ? googleUser.uid : null, isGoogle: !!googleUser,
+        name, amount, uid: user.uid, isGoogle: false,
         deviceId: getDeviceId(), timestamp: firebase.firestore.FieldValue.serverTimestamp(),
       });
     });

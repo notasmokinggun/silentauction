@@ -2,11 +2,28 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Paste the SAME uids you put in ADMIN_UIDS in firebase-init.js
     function isAdmin() {
-      return request.auth != null && request.auth.uid in [
-        // "AbCdEfGhIjKlMnOpQrStUvWxYz12",
-      ];
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.approved == true;
+    }
+    function registered() {
+      return request.auth != null && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+    match /admins/{uid} {
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow list, write: if false;
+    }
+    match /users/{uid} {
+      allow read: if isAdmin() || (request.auth != null && request.auth.uid == uid);
+      allow create, update: if request.auth != null && request.auth.uid == uid &&
+        request.resource.data.keys().hasOnly(['name', 'email', 'phone', 'updatedAt']) &&
+        request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() < 80 &&
+        request.resource.data.email is string && request.resource.data.email.size() <= 254 &&
+        request.resource.data.email.matches('^[^ @]+@[^ @]+[.][^ @]+$') &&
+        request.resource.data.phone is string && request.resource.data.phone.size() <= 30 &&
+        request.resource.data.updatedAt == request.time;
+      allow delete: if isAdmin();
     }
 
     match /items/{itemId} {
@@ -19,6 +36,9 @@ service cloud.firestore {
       // reject new bids. Admins can still edit anything (e.g. fixing
       // a typo in the description).
       allow update: if isAdmin() || (
+        registered() &&
+        request.resource.data.currentBidderUid == request.auth.uid &&
+        request.resource.data.bidCount == resource.data.bidCount + 1 &&
         resource.data.active == true &&
         // If a countdown (closesAt) is set, it must not have passed yet.
         // closesAt is written as a Firestore Timestamp by admin.html
@@ -37,7 +57,16 @@ service cloud.firestore {
       match /bids/{bidId} {
         allow read: if true;
         allow update, delete: if isAdmin();
-        allow create: if request.resource.data.name is string &&
+        allow create: if registered() &&
+          request.resource.data.keys().hasOnly(['name', 'amount', 'uid', 'isGoogle', 'deviceId', 'timestamp']) &&
+          request.resource.data.uid == request.auth.uid &&
+          request.resource.data.isGoogle == false &&
+          request.resource.data.timestamp == request.time &&
+          getAfter(/databases/$(database)/documents/items/$(itemId)).data.currentBid == request.resource.data.amount &&
+          getAfter(/databases/$(database)/documents/items/$(itemId)).data.currentBidderUid == request.auth.uid &&
+          getAfter(/databases/$(database)/documents/items/$(itemId)).data.currentBidderName == request.resource.data.name &&
+          getAfter(/databases/$(database)/documents/items/$(itemId)).data.bidCount == get(/databases/$(database)/documents/items/$(itemId)).data.bidCount + 1 &&
+          request.resource.data.name is string &&
           request.resource.data.name.size() > 0 &&
           request.resource.data.name.size() < 80 &&
           request.resource.data.amount is number;

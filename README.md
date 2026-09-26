@@ -1,61 +1,119 @@
-# Silent auction platform — setup guide
+# Silent auction — Google guests and approved admins
 
-Plain HTML/JS, no build step, backed by Firebase (Firestore + Auth).
+Guests tap **Continue with Google**, choose an account, and their name and email
+are saved automatically. No guest password, UID entry, manual registration form,
+or OTP is required. Phone is optional and can be saved afterward from Profile.
+The Explore Items button has a 64px minimum height.
 
-- **`index.html`** — the whole guest experience: a photo-backed scroll
-  wheel to browse lots, tap to review a lot, enter a bid, a hard
-  **confirm** step before it's submitted, then a success screen that
-  asks "bid on another item?". A per-lot QR code (`?id=...`) jumps
-  straight to that lot's bid step, skipping the wheel.
-- **`admin.html`** — add, edit, and delete lots (title, one-paragraph description, a photo, starting bid, increment) — nothing is hardcoded, everything guests see comes from what you enter here. Photos are compressed in the browser and stored directly in the database, no separate file storage service needed. Once bidding ends, open **Bids & winner** on any lot to see every bid ranked highest to lowest and mark the winner. If a winner doesn't pay, click "Set winner" on the next row down.
-- **`item.html`** — a one-line redirect to `index.html?id=...`, kept
-  only so QR codes printed before this version still work.
+Admin access remains email/password with backend approval. Guest contact details
+are private `users/{uid}` documents, readable only by that user and approved
+admins. UID is an internal database key, never something a guest must enter.
+No emails or SMS are sent automatically.
 
-## Staying on the Spark (free) plan — read this
+## Spark-only setup (no billing upgrade)
 
-You've decided against Blaze, so here's the honest tradeoff, not just the happy path.
+This version uses Firebase Authentication and Cloud Firestore on **Spark**.
+There are no Cloud Functions, Admin SDK, service-account credentials, or paid
+extensions. The static site can stay on GitHub Pages. Firestore's server-side
+security rules enforce every admin read/write; changing browser code cannot
+approve an unapproved user. Normal Spark quotas still apply.
 
-Firestore's free Spark tier caps out at **50,000 reads and 20,000 writes per day**, project-wide. The part that actually eats into that at an event isn't the bids themselves (a few hundred bids is a few hundred writes — nothing) — it's **realtime listener fan-out**: every phone with the catalog open has a live connection, and every single bid pushes an update to every one of those open connections. Rough math: if 200 people have the site open at once and 300 bids happen over the night, that's roughly 200 × 300 = 60,000 reads from that alone — already over the free daily cap. Once you hit the cap, Firestore starts rejecting reads/writes until it resets, which for a live auction means bidding could visibly break mid-event.
+1. Firebase Authentication → Sign-in method: enable **Google** and **Email/Password**.
+2. Confirm the Google Web client ID matches `GOOGLE_CLIENT_ID` in `firebase-init.js`.
+   In Google Cloud → APIs & Services → Credentials → that OAuth client, add the
+   exact origin to Authorized JavaScript origins (for GitHub Pages:
+   `https://notasmokinggun.github.io`, without `/silentauction`). Add the hostname
+   to Firebase Authentication → Settings → Authorized domains as well.
+3. In Firestore Console → Rules, paste and publish **firestore.rules** from this
+   branch. Alternatively run `firebase deploy --project cas-silent-auction --only firestore:rules`.
+4. Publish the static files, including `owner-setup.html`, `owner-setup.js`, `guest-auth.js`, `admin-access.html`,
+   `admin-access.js`, `firebase-init.js` and `admin.html`.
 
-Two honest ways to handle this:
+### First owner: guided setup
 
-1. **Reconsider Blaze, but understand what it actually is.** Blaze isn't a subscription — it's Spark *plus* the option to pay only for usage past the same free daily quota. You can set a budget alert (e.g. $5) in Firebase console → Usage and billing, and in practice a single event rarely costs more than a few dollars, often nothing at all if you stay near the free limits. It removes the hard failure mode without meaningfully changing your bill.
-2. **Stay strictly Spark and reduce fan-out.** The biggest lever is not holding a permanent realtime listener on the whole catalog for every guest — e.g. refresh the wheel's bid amounts every 20-30 seconds instead of a live subscription, and only open a true realtime listener on the one lot someone's actively bidding on. This trades a little bit of "instant" for a lot of headroom. I didn't build this in by default since it's a real tradeoff (less live-feeling UI) — say the word if you want me to wire it in.
+Follow [SETUP.md](SETUP.md) for the beginner walkthrough.
 
-Photos themselves aren't the bottleneck here — Spark's caps are on operation *counts*, not bytes, and a compressed photo or two per lot is nothing against the 1 GiB total storage cap.
+In Firebase Console create collection `setupKeys`, click **Auto-ID** for the
+document ID, copy that random ID, and add just `enabled` (boolean) = `true`.
+Keep the ID private. Open `owner-setup.html` on the published site, create or
+sign in to your email/password account, verify your email, and paste that ID.
+Click **Make this my owner account**. No email or UID needs to be hardcoded.
 
-## Why Firebase at all
+An atomic write saves your account UID/email in private `settings/owner`, creates
+your `adminEmails/{email}` owner approval, and disables the setup key. Owner setup
+cannot run again, even with another key. The website cannot replace or delete
+the owner. Account recovery or an intentional owner change requires the Firebase
+project owner to use the Console. Your chosen email must be yours to verify.
 
-Firestore's transactions make the "only accept a higher bid" logic safe even when two people tap Confirm at the same moment, and Auth gives you Google Sign-In for free. That's the whole reason it's Firebase instead of a plain database — everything else (Storage, Blaze) is optional and, per above, currently switched off.
+### Only the owner can add or remove other admins
 
-## 1. Create the Firebase project
+Open **Admin → Settings → Manage admin access**. Enter an organizer's email and
+click **Add admin**. They create their own account on `admin.html`, verify the
+email, and sign in. Existing verified accounts can sign in immediately. Adding
+an email does not create an account or send an invitation.
 
-1. Go to [console.firebase.google.com](https://console.firebase.google.com) → **Add project**.
-2. **Build → Firestore Database → Create database** → start in **production mode**.
-3. **Build → Authentication → Sign-in method** → enable **Google**.
-4. **Project settings → General → Your apps → Add app → Web** (the `</>` icon). Copy the `firebaseConfig` object it gives you.
+Only the stored owner UID AND verified owner email can list/manage approvals.
+Other approved admins can manage auction lots and read guest registrations,
+but cannot grant or revoke admin permissions. This is enforced by Firestore
+rules, not just by hiding controls. Revocation keeps guest accounts/bids intact.
+The owner cannot be removed through the website.
 
-## 2. Wire up the code
+### Migration from earlier branch revisions
 
-1. Paste that config into `firebase-init.js`, replacing the `PASTE_ME` values.
-2. Deploy the site anywhere that serves static files — Firebase Hosting is the easiest since it's already the same project:
-   ```
-   npm install -g firebase-tools
-   firebase login
-   firebase init hosting    # point it at this folder, single-page app: No
-   firebase deploy
-   ```
-   You'll get a `https://<project-id>.web.app` URL — that's what your QR codes will point to.
+The old `admins/{UID}` documents are ignored. If you created an owner email record
+using the previous instructions but have not completed the new setup, run the
+setup page once with your intended owner account. It will update the matching
+email approval and lock the single owner identity in `settings/owner`. Existing
+ordinary admin approvals remain usable, but cannot approve others.
 
-## 3. Make yourself an admin
+No Cloud Functions, Blaze subscription, or service-account keys are needed.
 
-1. Open `admin.html` on your deployed site and **Sign in with Google**.
-2. You'll land on a "not an admin yet" screen showing your UID.
-3. Copy it into **both**:
-   - `ADMIN_UIDS` in `firebase-init.js`
-   - the `isAdmin()` list in `firestore.rules`
-4. Publish the rules — either paste `firestore.rules` straight into **Firestore Database → Rules** in the console, or if you're using the Firebase CLI: `firebase deploy --only firestore:rules`.
-5. Redeploy your hosting for the `firebase-init.js` change, then reload `admin.html` — you're in.
+### Checks
+
+```sh
+npm install
+npm test
+npm run test:rules
+```
+
+The rules tests use a local Firestore emulator and demo project, never production.
+They check unauthorized/self-approval attempts, email verification, owner
+protection, revocation, and malformed writes. Java 17+ is required with the
+pinned emulator CLI. On the live site, also test email verification delivery,
+Google sign-in, and admin access after the rules and pages have been published.
+The testing packages are development tools, not dependencies for the hosted site.
+
+## How sign-in completes
+
+`guest-auth.js` loads Google Identity Services and renders its standard button.
+The Google callback supplies an ID token to Firebase `signInWithCredential`.
+Firebase verifies it and establishes a persistent session; the app then saves
+name/email, preserves any existing phone, updates both Profile and the bid sheet,
+and displays confirmation. Auth restoration repeats this process after reload.
+Errors are visible, and failed profile writes have a retry button. Contact details
+are never added to public bid documents. Rules require a Google-authenticated
+session and match the profile email against the verified Firebase token.
+
+This avoids the previous Firebase cross-domain popup/redirect relay. The reported
+live failure has not been reproduced here; production OAuth origin configuration
+and real account sign-in still need verification. If the deployment sends a
+Cross-Origin-Opener-Policy header that interferes with popups, configure it as
+`same-origin-allow-popups` per Google's setup guide.
+
+References:
+- https://developers.google.com/identity/gsi/web/reference/js-reference
+- https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid
+- https://firebase.google.com/docs/auth/web/google-signin
+
+## Verification
+
+Run `node --test tests/guest-auth.test.cjs` for the mocked credential exchange,
+profile saving, restore, optional phone, and failure handling checks.
+On the deployed site, test Google sign-in, reload, sign-out, another account,
+profile-save permission failure, optional phone saving, and bidding. Verify an
+approved email/password admin can see registrations and an unapproved account
+cannot manage lots or read guest contacts. These live checks require configured
+Firebase/Google access and are not covered by the mocked tests.
 
 ## 4. Run the event
 
@@ -65,22 +123,4 @@ Firestore's transactions make the "only accept a higher bid" logic safe even whe
 4. Guests scan a QR, or open the site directly → scroll the wheel (the background photo changes as they browse) → **Bid on this lot** → enter an amount → **Review bid** → **Confirm bid**. After confirming they land on a success screen and can choose "Bid on another item" or "I'm done bidding."
 5. When bidding ends, use **Close bidding** per lot so the app stops accepting new bids on it.
 6. Open **Bids & winner** on each lot to see every bid ranked highest to lowest, with a "Set winner" button on each row. Set the top bid as winner; if that person doesn't show up or pay, just click "Set winner" on the next row — the tag on the lot card updates immediately.
-7. **Export winners (CSV)** gives you the full ranked bid list for every lot in one sheet (lot, rank, bidder, amount, Google-verified, and which row is marked winner) — useful at checkout if you need to go to the 2nd or 3rd highest bidder.
-
-## On identity — what this does and doesn't guarantee
-
-- **Name is always required**, shown on the live feed, and stored on every bid.
-- **Google sign-in is optional** and attaches a real account ID to a bid — use it as your tie-breaker or verification step for the *winning* bid on high-value lots, and reserve final confirmation (checking a name against a real person) for checkout.
-- The **device ID** stored in the browser is a convenience only (lets someone's own name pre-fill next time), not a security mechanism — it resets if someone clears their browser or borrows a friend's phone. Don't rely on it to stop one person bidding under two names.
-- The Firestore rules stop a bid that's too low, closed, or missing a name, and they cap what a normal bid can touch — but someone technical enough could still call the Firestore API directly with a fabricated name. For a casual event this is a non-issue; if real money and strangers-to-you are involved, the next hardening step is moving the bid-validation logic into a **Cloud Function** so nothing writes to Firestore directly from the browser. Happy to build that version if you want it.
-
-## Files
-
-| File | Purpose |
-|---|---|
-| `index.html` | The whole guest flow: wheel picker → bid → confirm → success |
-| `admin.html` | Add/edit/delete lots (with in-browser photo compression), print QR sheet, pick winners per lot, export ranked CSV |
-| `item.html` | Redirects old `?id=` links into `index.html` |
-| `option-wheel.js` / `option-wheel.css` | The scroll-wheel lot picker (vanilla JS) |
-| `firebase-init.js` | Your Firebase config + admin UID allowlist (shared by all pages) |
-| `firestore.rules` | Server-side bidding rules — publish via the Firestore Rules tab or `firebase deploy --only firestore:rules` |
+7. **Export winners (CSV)** gives you the full ranked bid list for every lot in one sheet (lot, rank, bidder, amount, and which row is marked winner) — useful at checkout if you need to go to the 2nd or 3rd highest bidder.

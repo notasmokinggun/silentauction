@@ -179,16 +179,21 @@ button.danger{color:var(--red);border-color:rgba(193,89,74,.4);}
 <!-- GATE -->
 <div class="gate" id="gate">
   <div class="logo">JASHN ADMIN</div>
-  <p>Sign in with the Google account approved as an organizer.</p>
-  <button class="gbtn" id="signin" style="margin-top:16px;">Sign in with Google</button>
+  <p>Sign in with your approved organizer email and password.</p>
+  <form id="admin-login"><label>Email <input id="admin-email" type="email" autocomplete="username" required></label><label>Password <input id="admin-password" type="password" autocomplete="current-password" required></label><button class="gbtn" id="signin" type="submit" style="margin-top:16px;">Sign in</button></form>
+  <button id="create-admin-account" class="gbtn" type="button">Create admin account</button>
+  <button id="reset-password" class="gbtn" type="button">Reset password</button>
+  <p><a href="owner-setup.html">First-time owner setup</a></p>
   <p id="signin-err" style="color:var(--red);font-size:12.5px;margin-top:12px;"></p>
 </div>
 
 <div class="gate" id="denied" style="display:none;">
   <div class="logo">JASHN ADMIN</div>
-  <p>You're signed in, but this account isn't on the admin list yet.</p>
-  <p>Add this UID to <code>ADMIN_UIDS</code> in <code>firebase-init.js</code> and to <code>isAdmin()</code> in <code>firestore.rules</code>, then reload:</p>
-  <p class="uid" id="myuid"></p>
+  <p id="denied-message">Your email must be verified and approved by an organizer.</p>
+  <p id="myuid"></p>
+  <button id="send-verification" class="gbtn">Send verification email</button>
+  <button id="refresh-approval" class="gbtn">I've verified my email / Check access</button>
+  <p id="verification-status" role="status"></p><button id="denied-signout">Use another account</button>
 </div>
 
 <!-- APP -->
@@ -321,10 +326,10 @@ button.danger{color:var(--red);border-color:rgba(193,89,74,.4);}
 
       <!-- USERS -->
       <section class="page" id="page-users">
-        <div class="page-head"><h1>Users</h1><p>Everyone who has placed a bid so far</p></div>
+        <div class="page-head"><h1>Users</h1><p>Registered guests and their contact details</p></div>
         <div class="panel">
           <table>
-            <thead><tr><th>Bidder</th><th>Bids Placed</th><th>Highest Single Bid</th><th>Verification</th></tr></thead>
+            <thead><tr><th>Bidder</th><th>Email</th><th>Phone</th><th>Verification</th></tr></thead>
             <tbody id="users-body"></tbody>
           </table>
         </div>
@@ -364,6 +369,7 @@ button.danger{color:var(--red);border-color:rgba(193,89,74,.4);}
           <h3>Your account</h3>
           <p style="font-size:13px;color:var(--muted);margin-bottom:6px;">Signed in as</p>
           <p style="font-size:14px;margin-bottom:14px;" id="settings-email"></p>
+          <a id="manage-access-link" class="ghost" href="admin-access.html" hidden>Manage admin access</a>
           <button class="ghost" id="signout2">Sign out</button>
         </div>
         <div class="panel">
@@ -390,38 +396,105 @@ const gate = document.getElementById('gate');
 const denied = document.getElementById('denied');
 const app = document.getElementById('app');
 
-document.getElementById('signin').onclick = () => {
-  const errEl = document.getElementById('signin-err');
-  if (errEl) errEl.textContent = '';
-  // Redirect, not popup: GitHub Pages sends a Cross-Origin-Opener-Policy
-  // header that blocks Firebase's popup helper from reporting the result
-  // back to this page, so signInWithPopup silently hangs there. Redirect
-  // is a full-page navigation instead, so it isn't affected by that header.
-  document.getElementById('signin').textContent = 'Redirecting to Google…';
-  auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());
+document.getElementById('create-admin-account').onclick = async event => {
+  if (!document.getElementById('admin-login').reportValidity()) return;
+  const status = document.getElementById('signin-err');
+  event.target.disabled = true;
+  try {
+    await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+    const result = await auth.createUserWithEmailAndPassword(
+      document.getElementById('admin-email').value.trim().toLowerCase(), document.getElementById('admin-password').value);
+    await result.user.sendEmailVerification();
+    document.getElementById('verification-status').textContent = 'Verification email sent. Open the link, then click Check access.';
+  } catch (err) {
+    status.textContent = err.message;
+    document.getElementById('verification-status').textContent = err.message;
+  } finally { event.target.disabled = false; }
 };
-document.getElementById('signout').onclick = () => auth.signOut();
-document.getElementById('signout2').onclick = () => auth.signOut();
-
-auth.getRedirectResult().catch(err => {
-  console.error('Sign-in failed:', err);
-  const errEl = document.getElementById('signin-err');
-  if (errEl) errEl.textContent = 'Sign-in failed: ' + err.message + ' (' + err.code + ')';
+document.getElementById('send-verification').onclick = async event => {
+  event.target.disabled = true;
+  try {
+    await auth.currentUser.sendEmailVerification();
+    document.getElementById('verification-status').textContent = 'Verification email sent. Check your inbox and spam folder.';
+  } catch (err) { document.getElementById('verification-status').textContent = err.message; }
+  finally { event.target.disabled = false; }
+};
+document.getElementById('refresh-approval').onclick = async event => {
+  event.target.disabled = true;
+  try {
+    await auth.currentUser.reload();
+    await auth.currentUser.getIdToken(true);
+    checkAdminAccess(auth.currentUser);
+  } catch (err) { document.getElementById('verification-status').textContent = err.message; }
+  finally { event.target.disabled = false; }
+};
+document.getElementById('reset-password').onclick = async event => {
+  const email = document.getElementById('admin-email');
+  const status = document.getElementById('signin-err');
+  if (!email.reportValidity()) return;
+  event.target.disabled = true;
+  try {
+    await auth.sendPasswordResetEmail(email.value.trim());
+    status.textContent = 'If this email has an account, a password setup link has been sent. Check your inbox and spam folder.';
+  } catch (err) { status.textContent = 'Could not request a password email: ' + err.message; }
+  finally { event.target.disabled = false; }
+};
+document.getElementById('admin-login').onsubmit = async event => {
+  event.preventDefault();
+  const button = document.getElementById('signin');
+  const error = document.getElementById('signin-err');
+  button.disabled = true;
+  error.textContent = 'Signing in…';
+  try {
+    await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+    await auth.signInWithEmailAndPassword(document.getElementById('admin-email').value.trim(), document.getElementById('admin-password').value);
+    error.textContent = '';
+  } catch (err) { error.textContent = 'Sign-in failed: ' + err.message; }
+  finally { button.disabled = false; }
+};
+['signout', 'signout2', 'denied-signout'].forEach(id => {
+  document.getElementById(id).onclick = () => auth.signOut();
 });
-auth.onAuthStateChanged(u => {
+let stopApproval = null, stopLots = null, stopUsers = null;
+let registeredUsers = [];
+function checkAdminAccess(user) {
+  if (stopApproval) stopApproval();
+  if (stopLots) stopLots();
+  if (stopUsers) stopUsers();
   gate.style.display = denied.style.display = 'none';
   app.classList.remove('on');
-  if (!u) { gate.style.display = 'block'; return; }
-  if (!isAdminUid(u.uid)) {
+  if (!user || user.isAnonymous) { gate.style.display = 'block'; return; }
+  document.getElementById('myuid').textContent = user.email || '';
+  document.getElementById('send-verification').hidden = user.emailVerified;
+  if (!user.emailVerified) {
     denied.style.display = 'block';
-    document.getElementById('myuid').textContent = u.uid;
+    document.getElementById('denied-message').textContent = 'Verify your email before accessing the admin panel.';
     return;
   }
-  app.classList.add('on');
-  document.getElementById('admin-av').textContent = (u.displayName || u.email || 'A').charAt(0).toUpperCase();
-  document.getElementById('settings-email').textContent = u.displayName ? (u.displayName + ' — ' + u.email) : u.email;
-  loadLots();
-});
+  document.getElementById('denied-message').textContent = 'This email has not been approved. Ask an organizer to add it in Admin Access.';
+  stopApproval = adminApprovalRef(user).onSnapshot(approval => {
+    const approved = approval.exists && approval.data().approved === true;
+    app.classList.toggle('on', approved);
+    document.getElementById('manage-access-link').hidden = !approved || approval.data().role !== 'owner';
+    denied.style.display = approved ? 'none' : 'block';
+    document.getElementById('myuid').textContent = user.email;
+    if (stopLots) stopLots();
+    if (stopUsers) stopUsers();
+    if (!approved) return;
+    document.getElementById('admin-av').textContent = (user.email || 'A').charAt(0).toUpperCase();
+    document.getElementById('settings-email').textContent = user.email;
+    loadLots();
+    stopUsers = db.collection('users').onSnapshot(snap => {
+      registeredUsers = snap.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
+      renderUsersPage();
+    }, err => { document.getElementById('users-body').textContent = err.message; });
+  }, err => {
+    app.classList.remove('on');
+    gate.style.display = 'block';
+    document.getElementById('signin-err').textContent = 'Could not check admin approval: ' + err.message;
+  });
+}
+auth.onAuthStateChanged(checkAdminAccess);
 
 // ---------------------------------------------------------------
 // Sidebar navigation
@@ -451,7 +524,7 @@ document.getElementById('global-search').addEventListener('input', e => {
 let lots = [];
 let allBids = []; // flattened cache from collectionGroup, refreshed on demand
 function loadLots() {
-  db.collection('items').orderBy('lotNumber').onSnapshot(snap => {
+  stopLots = db.collection('items').orderBy('lotNumber').onSnapshot(snap => {
     lots = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     renderLots();
     renderDashboard();
@@ -916,20 +989,9 @@ async function renderBidsPage() {
 // ---------------------------------------------------------------
 function renderUsersPage() {
   const el = document.getElementById('users-body');
-  const map = new Map();
-  allBids.forEach(b => {
-    const key = b.deviceId || b.name;
-    if (!map.has(key)) map.set(key, { name: b.name, count: 0, max: 0, isGoogle: false });
-    const u = map.get(key);
-    u.count++;
-    u.max = Math.max(u.max, b.amount || 0);
-    u.isGoogle = u.isGoogle || !!b.isGoogle;
-  });
-  const users = Array.from(map.values()).sort((a, b) => b.max - a.max);
-  if (!users.length) { el.innerHTML = '<tr><td colspan="4" style="color:var(--muted-2);">No bidders yet.</td></tr>'; return; }
-  el.innerHTML = users.map(u =>
-    '<tr><td>' + escapeHtml(u.name) + '</td><td>' + u.count + '</td><td style="color:var(--gold-soft);font-weight:600;">' + money(u.max) + '</td>' +
-    '<td>' + (u.isGoogle ? '<span class="winner-tag">Google verified</span>' : 'Name only') + '</td></tr>').join('');
+  el.innerHTML = registeredUsers.length ? registeredUsers.map(user =>
+    '<tr><td>' + escapeHtml(user.name) + '</td><td>' + escapeHtml(user.email) + '</td><td>' + escapeHtml(user.phone || '—') + '</td><td>Google account; phone self-reported</td></tr>'
+  ).join('') : '<tr><td colspan="4">No registrations yet.</td></tr>';
 }
 
 // ---------------------------------------------------------------

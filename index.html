@@ -58,6 +58,7 @@ img{-webkit-user-drag:none;}
   background:linear-gradient(180deg,rgba(13,10,8,.55) 0%,rgba(13,10,8,.35) 40%,rgba(13,10,8,.97) 92%);}
 .splash-inner{position:relative;z-index:1;display:flex;flex-direction:column;min-height:100vh;min-height:100dvh;
   padding:calc(26px + env(safe-area-inset-top,0px)) 24px calc(28px + env(safe-area-inset-bottom,0px));}
+#explore-btn{min-height:64px;padding:21px 24px;flex-shrink:0;}
 .splash-logo{font-family:'Fraunces',serif;font-size:20px;letter-spacing:.14em;font-weight:600;}
 .splash-mid{flex:1;display:flex;align-items:flex-end;}
 .splash-headline{font-size:44px;line-height:1.06;font-weight:600;margin:0 0 16px;}
@@ -212,7 +213,7 @@ img{-webkit-user-drag:none;}
         <p class="splash-sub" id="splash-sub">Exclusive items. Meaningful impact. Every bid supports the cause behind this auction.</p>
       </div>
     </div>
-    <button class="pill-cream" id="explore-btn">Explore Items →</button>
+    <button class="pill-btn pill-cream" id="explore-btn">Explore Items →</button>
     <a class="adminlink" href="admin.html">Auction organizer? Open admin</a>
   </div>
 </section>
@@ -301,11 +302,11 @@ img{-webkit-user-drag:none;}
       <input id="s-amount" type="number" inputmode="numeric">
     </div>
     <div class="quick-row" id="s-quick"></div>
-    <div class="g-row"><div class="line"></div>optional<div class="line"></div></div>
+    <div class="g-row"><div class="line"></div>Sign in to bid<div class="line"></div></div>
     <div id="s-signin-area"></div>
     <div class="name-field">
-      <label for="s-name">Your name (required)</label>
-      <input id="s-name" placeholder="Full name" maxlength="79">
+      <label for="s-name">Your name (from Google)</label>
+      <input id="s-name" placeholder="Sign in with Google" maxlength="79" readonly>
     </div>
     <button class="pill-gold" id="s-confirm">Confirm Bid</button>
     <div class="err" id="s-err"></div>
@@ -353,8 +354,8 @@ img{-webkit-user-drag:none;}
   <div class="mb-header"><h1>Profile</h1></div>
   <div class="detail-body" style="flex:1;">
     <div class="name-field">
-      <label for="p-name">Your name</label>
-      <input id="p-name" placeholder="Full name" maxlength="79">
+      <label for="p-name">Your name (from Google)</label>
+      <input id="p-name" placeholder="Sign in with Google" maxlength="79" readonly>
     </div>
     <div id="p-signin-area" style="margin-bottom:16px;"></div>
     <hr class="hairline" style="margin:20px 0;">
@@ -382,6 +383,7 @@ img{-webkit-user-drag:none;}
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="firebase-init.js"></script>
+<script src="guest-auth.js"></script>
 <script>
 // ---------------------------------------------------------------
 // State
@@ -392,7 +394,6 @@ let searchQ = '';
 let detailLotId = null;
 let sheetLotId = null;
 let currentDetailItem = null;
-let googleUser = null;
 let unsubDetail = null, unsubFeed = null, lastFeedSnap = null;
 const imgCache = new Map();
 
@@ -409,45 +410,16 @@ function recordMyBid(lotId, amount) {
   localStorage.setItem('auction_my_bids', JSON.stringify(mb));
 }
 
-// ---------------------------------------------------------------
-// Auth
-// ---------------------------------------------------------------
-// Redirect, not popup: GitHub Pages sends a Cross-Origin-Opener-Policy
-// header that blocks Firebase's popup helper from reporting the result
-// back to this page, so signInWithPopup silently hangs there. Redirect
-// is a full-page navigation instead, so it isn't affected by that header.
-auth.getRedirectResult().catch(err => {
-  console.error('Sign-in failed:', err);
-  alert('Sign-in failed: ' + err.message);
-});
-auth.onAuthStateChanged(u => { if (u) googleUser = u; renderSigninAreas(); });
-
-function signinHtml() {
-  return googleUser
-    ? '<p class="signedin">Signed in as ' + (googleUser.displayName || googleUser.email) + '</p>'
-    : '<button class="gbtn" data-google-signin>Sign in with Google</button>';
-}
-function renderSigninAreas() {
-  ['s-signin-area', 'p-signin-area'].forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.innerHTML = signinHtml();
-    const btn = el.querySelector('[data-google-signin]');
-    if (btn) btn.onclick = () => auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());
-  });
-  const nameFields = [document.getElementById('s-name'), document.getElementById('p-name')];
-  nameFields.forEach(f => { if (f && !f.value && googleUser) f.value = googleUser.displayName || ''; });
-}
-
+// Guest sign-in and registration are handled by guest-auth.js.
 // ---------------------------------------------------------------
 // Load lots
 // ---------------------------------------------------------------
 const params = new URLSearchParams(location.search);
 const directId = params.get('id');
-const savedName = localStorage.getItem('auction_name') || '';
+const savedName = bidderProfile ? bidderProfile.name : '';
 document.getElementById('s-name').value = savedName;
 document.getElementById('p-name').value = savedName;
-document.getElementById('p-name').addEventListener('input', e => localStorage.setItem('auction_name', e.target.value));
+
 
 db.collection('items').orderBy('lotNumber').onSnapshot(snap => {
   lots = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -601,7 +573,7 @@ function openSheet(id) {
     const cur = Number(document.getElementById('s-amount').value) || minNext;
     document.getElementById('s-amount').value = cur + Number(b.dataset.inc);
   });
-  document.getElementById('s-name').value = localStorage.getItem('auction_name') || (googleUser ? (googleUser.displayName || '') : '');
+  document.getElementById('s-name').value = (bidderProfile ? bidderProfile.name : '');
   document.getElementById('s-err').textContent = '';
   renderSigninAreas();
   document.getElementById('sheet-overlay').classList.add('active');
@@ -614,7 +586,7 @@ document.getElementById('s-confirm').onclick = async () => {
   const name = document.getElementById('s-name').value.trim();
   const amount = Number(document.getElementById('s-amount').value);
   const it = lots.find(l => l.id === sheetLotId);
-  if (!name) { errEl.textContent = 'Enter your name to bid.'; return; }
+  if (!isGoogleGuest(auth.currentUser) || !bidderProfile) { errEl.textContent = 'Continue with Google before confirming your bid.'; return; }
   if (!it) { errEl.textContent = 'This lot could not be found.'; return; }
   const minNext = it.currentBid + it.increment;
   if (!amount || amount < minNext) { errEl.textContent = 'Bid must be at least ' + money(minNext) + '.'; return; }
@@ -625,6 +597,7 @@ document.getElementById('s-confirm').onclick = async () => {
   const itemRef = db.collection('items').doc(sheetLotId);
   const bidRef = itemRef.collection('bids').doc();
   try {
+    const user = await saveRegistration('s');
     await db.runTransaction(async (tx) => {
       const doc = await tx.get(itemRef);
       if (!doc.exists) throw new Error('This lot no longer exists.');
@@ -634,11 +607,11 @@ document.getElementById('s-confirm').onclick = async () => {
       if (amount < need) throw new Error('Someone beat you to it — bid must now be at least ' + money(need) + '.');
       tx.update(itemRef, {
         currentBid: amount, currentBidderName: name,
-        currentBidderUid: googleUser ? googleUser.uid : null,
+        currentBidderUid: user.uid,
         bidCount: (d.bidCount || 0) + 1,
       });
       tx.set(bidRef, {
-        name, amount, uid: googleUser ? googleUser.uid : null, isGoogle: !!googleUser,
+        name, amount, uid: user.uid, isGoogle: true,
         deviceId: getDeviceId(), timestamp: firebase.firestore.FieldValue.serverTimestamp(),
       });
     });

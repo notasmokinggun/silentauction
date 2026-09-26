@@ -1,16 +1,65 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Set up the auction owner</title>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Owner Setup · JASHN Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-*{box-sizing:border-box}body{background:#17120f;color:#f3ecdc;font:16px system-ui;margin:0}main{max-width:620px;margin:40px auto;padding:24px}h1{font:36px Georgia,serif}p{line-height:1.6}label{display:block;margin:16px 0 8px}input{display:block;width:100%;font:inherit;padding:14px;border-radius:8px;border:1px solid #75634f;background:#251e18;color:inherit}button{font:inherit;padding:14px 20px;border:0;border-radius:8px;background:#ddbd83;color:#21160a;margin:16px 8px 0 0;cursor:pointer}button:disabled{opacity:.5}a{color:#ddbd83}[hidden]{display:none!important}section{border-top:1px solid #493a2c;margin-top:24px;padding-top:16px}#status{min-height:30px}
+:root{
+  --bg:#0D0A08; --bg-2:#151110; --card:#191412; --card-2:#1E1815;
+  --line:#2A231D; --gold:#C79A4B; --gold-soft:#E7C888;
+  --cream:#F3ECDC; --muted:#9C9284; --red:#C1594A;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;background:var(--bg);color:var(--cream);font-family:'Inter',sans-serif;min-height:100%;}
+h1{font-family:'Fraunces',serif;font-weight:600;font-size:30px;margin:0 0 10px;}
+main{max-width:520px;margin:0 auto;padding:60px 24px;}
+p{line-height:1.6;color:var(--muted);}
+a{color:var(--gold-soft);}
+.back{display:inline-block;margin-bottom:22px;font-size:13.5px;color:var(--muted);text-decoration:none;}
+.back:hover{color:var(--cream);}
+label{display:block;margin:16px 0 8px;font-size:13.5px;color:var(--muted);}
+input{display:block;width:100%;font:inherit;padding:13px 14px;border-radius:10px;
+  border:1px solid var(--line);background:var(--card);color:var(--cream);}
+button{font:inherit;font-size:14px;font-weight:600;padding:13px 22px;border:0;border-radius:10px;
+  background:var(--gold);color:#1B140A;margin:16px 8px 0 0;cursor:pointer;}
+button.secondary{background:var(--card-2);color:var(--cream);border:1px solid var(--line);}
+button:disabled{opacity:.5;cursor:default;}
+[hidden]{display:none!important;}
+.panel{border:1px solid var(--line);background:var(--card);border-radius:14px;padding:22px;margin-top:24px;}
+#status{min-height:22px;font-size:13.5px;color:var(--gold-soft);}
+.err{color:var(--red);}
 </style></head>
-<body><main><a href="admin.html">← Admin login</a><h1>Set up your owner account</h1>
-<p>This is a one-time setup. Your verified email will become the owner, and only your account can approve other admins.</p>
+<body><main>
+<a class="back" href="admin.html">&larr; Admin login</a>
+<h1>Set up your owner account</h1>
+<p>This is a one-time setup. Your verified email becomes the owner, and only your account can approve other admins.</p>
 <p id="status" role="status"></p>
-<form id="account"><label for="email">Your owner email</label><input id="email" type="email" required autocomplete="username"><label for="password">Choose a password</label><input id="password" type="password" required minlength="6" autocomplete="new-password"><button type="submit">Create my account</button><button type="button" id="signin">I already have an account</button></form>
-<section id="verify" hidden><p id="identity"></p><button id="send-verification">Send verification email</button><button id="check-verification">I've verified my email</button><button id="signout">Use another email</button></section>
-<form id="claim" hidden><label for="setup-key">One-time setup code from Firebase</label><input id="setup-key" type="password" autocomplete="off" required pattern="[a-zA-Z0-9_-]{20,128}" minlength="20" maxlength="128"><p>In Firestore, create collection <strong>setupKeys</strong>, click <strong>Auto-ID</strong>, and copy that document ID here. Add the boolean field <strong>enabled</strong> with value <strong>true</strong>, then save the document.</p><button id="claim-button" type="submit">Make this my owner account</button></form>
-<p id="done" hidden>Your owner account is saved. <a href="admin-access.html">Add or remove admins</a> · <a href="admin.html">Open auction admin</a></p>
+
+<form id="account">
+  <label for="email">Your owner email</label><input id="email" type="email" required autocomplete="username">
+  <label for="password">Choose a password</label><input id="password" type="password" required minlength="6" autocomplete="new-password">
+  <button type="submit">Create my account</button>
+  <button type="button" class="secondary" id="signin">I already have an account</button>
+</form>
+
+<div class="panel" id="verify" hidden>
+  <p id="identity"></p>
+  <button id="send-verification">Send verification email</button>
+  <button type="button" class="secondary" id="check-verification">I've verified my email</button>
+  <button type="button" class="secondary" id="signout">Use another email</button>
+</div>
+
+<form id="claim" class="panel" hidden>
+  <label for="setup-key">One-time setup code from Firebase</label>
+  <input id="setup-key" type="password" autocomplete="off" required pattern="[a-zA-Z0-9_-]{20,128}" minlength="20" maxlength="128">
+  <p>In Firestore, create collection <strong>setupKeys</strong>, click <strong>Auto-ID</strong>, and copy that document ID here. Add boolean field <strong>enabled</strong> = <strong>true</strong>, then save.</p>
+  <button id="claim-button" type="submit">Make this my owner account</button>
+</form>
+
+<p id="done" hidden>Your owner account is saved. <a href="admin-access.html">Add or remove admins</a> &middot; <a href="admin.html">Open auction admin</a></p>
 </main>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>

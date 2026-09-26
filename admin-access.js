@@ -18,6 +18,7 @@ async function refreshAdmins() {
       row.appendChild(label);
       if (!admin.self && admin.role !== 'owner') {
         const remove = document.createElement('button');
+        remove.className = 'secondary';
         remove.textContent = 'Remove admin';
         remove.onclick = async () => {
           if (!confirm('Remove admin access for ' + admin.email + '?')) return;
@@ -74,7 +75,7 @@ document.getElementById('add-admin').onsubmit = async event => {
       tx.set(ref, { email, approved: true, role: 'admin', updatedBy: auth.currentUser.uid,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
     });
-    accessStatus.textContent = 'Admin email approved: ' + email + '. They can create their account and verify their email on the admin login page.';
+    accessStatus.textContent = 'Admin email approved: ' + email + '. They can now go to the admin login page, enter this email, and tap Create Password to set up access.';
     event.target.reset();
     await refreshAdmins();
   } catch (err) { accessStatus.textContent = 'Could not add admin: ' + err.message; }

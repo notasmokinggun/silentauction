@@ -65,8 +65,8 @@ Alternatively open `owner-setup.html` in the same folder as `admin.html`.
 
 1. Type the email you want as owner and choose a password.
 2. Click **Create my account**. If you already have that account, use **I already
-   have an account**. For a Google-only account, use Reset password on admin.html
-   first to set a password.
+   have an account**. For a Google-only account, use **Create Password** on
+   admin.html first to set a password.
 3. Open the verification email in your inbox and click its link.
 4. Return to the setup page and click **I've verified my email**.
 5. Paste the setup code from step 5 above.
@@ -78,8 +78,10 @@ code is disabled, and owner setup is locked. You do not manually copy a UID.
 ## 7. Add other admins when you want
 
 Open **Admin → Settings → Manage admin access**, enter their email and click
-**Add admin**. They create their own email/password account on the admin login
-page and verify the email. If already registered and verified, they just sign in.
+**Add admin**. They go to the admin login page, enter that email, and tap
+**Create Password** — this emails them a one-click setup link that creates and
+verifies the account, then asks them to choose a password. If already
+registered, they just sign in normally.
 
 Only your owner account can approve or remove admins. Other admins can manage
 the auction, but cannot approve anybody else. No invitation is sent automatically.

@@ -18,7 +18,9 @@ extensions. The static site can stay on GitHub Pages. Firestore's server-side
 security rules enforce every admin read/write; changing browser code cannot
 approve an unapproved user. Normal Spark quotas still apply.
 
-1. Firebase Authentication → Sign-in method: enable **Google** and **Email/Password**.
+1. Firebase Authentication → Sign-in method: enable **Google**, **Email/Password**, and
+   **Email link (passwordless sign-in)** — the last one powers the admin "Create Password"
+   setup link and must be turned on for new admins to be able to get in.
 2. Confirm the Google Web client ID matches `GOOGLE_CLIENT_ID` in `firebase-init.js`.
    In Google Cloud → APIs & Services → Credentials → that OAuth client, add the
    exact origin to Authorized JavaScript origins (for GitHub Pages:
@@ -48,9 +50,12 @@ project owner to use the Console. Your chosen email must be yours to verify.
 ### Only the owner can add or remove other admins
 
 Open **Admin → Settings → Manage admin access**. Enter an organizer's email and
-click **Add admin**. They create their own account on `admin.html`, verify the
-email, and sign in. Existing verified accounts can sign in immediately. Adding
-an email does not create an account or send an invitation.
+click **Add admin**. They then go to `admin.html`, enter that email, and tap
+**Create Password** — this sends a one-click sign-in link that creates and
+verifies their account in one step, then prompts them to choose a password.
+Existing accounts can sign in immediately. Adding an email alone does not
+create an account or send anything; nothing happens until they visit
+`admin.html` and tap Create Password.
 
 Only the stored owner UID AND verified owner email can list/manage approvals.
 Other approved admins can manage auction lots and read guest registrations,
@@ -120,7 +125,7 @@ Firebase/Google access and are not covered by the mocked tests.
 1. In `admin.html`, add each lot: title, a one-paragraph description, a photo (click **Choose photo** — it's compressed and stored automatically, or use "paste an image URL instead" if you already have one hosted), starting bid, and increment.
 2. Made a mistake, or something's changing last-minute? Click **Edit** on any lot card to update its title, description, photo, or bid amounts — or **Delete** to pull it entirely. Nothing about the catalog is fixed; it's whatever's in the database right now.
 3. Click **Print all QR codes** to get a printable sheet, one QR per lot — tape one next to each item. (Guests can also just open the site once and browse every lot in the wheel, no per-lot scan required.)
-4. Guests scan a QR, or open the site directly → scroll the wheel (the background photo changes as they browse) → **Bid on this lot** → enter an amount → **Review bid** → **Confirm bid**. After confirming they land on a success screen and can choose "Bid on another item" or "I'm done bidding."
+4. Guests scan a QR, or open the site directly → browse the catalog grid (search and category filters at the top) → open a lot → **Place a Bid** → enter an amount → **Confirm Bid**. After confirming they land on a success screen and can choose to view the item or keep browsing.
 5. When bidding ends, use **Close bidding** per lot so the app stops accepting new bids on it.
 6. Open **Bids & winner** on each lot to see every bid ranked highest to lowest, with a "Set winner" button on each row. Set the top bid as winner; if that person doesn't show up or pay, just click "Set winner" on the next row — the tag on the lot card updates immediately.
 7. **Export winners (CSV)** gives you the full ranked bid list for every lot in one sheet (lot, rank, bidder, amount, and which row is marked winner) — useful at checkout if you need to go to the 2nd or 3rd highest bidder.

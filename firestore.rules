@@ -127,6 +127,32 @@ service cloud.firestore {
          request.resource.data.lastBidAt.toMillis() - resource.data.lastBidAt.toMillis() >= 3000);
     }
 
+    // Absurd-bid cooldown. When a device tries to bid above MAX_BID (10
+    // crore — see the same constant in firebase-init.js), the client
+    // writes a short-lived block here instead of ever attempting the bid,
+    // and any bid create underneath /items/{itemId}/bids while this doc
+    // is still "in the future" is rejected server-side too (see below) —
+    // so this can't be bypassed by skipping the client-side check.
+    // The window must land 4–6 minutes out from the server's own clock
+    // (never exactly equal, to tolerate normal network/clock skew), which
+    // stops a client from writing a block that expires immediately or
+    // lasts far longer than intended.
+    match /bidBlocks/{deviceId} {
+      allow read: if true;
+      allow create, update: if request.resource.data.keys().hasOnly(['blockedUntil']) &&
+        request.resource.data.blockedUntil is timestamp &&
+        request.resource.data.blockedUntil > request.time + duration.value(4, 'm') &&
+        request.resource.data.blockedUntil <= request.time + duration.value(6, 'm');
+      allow delete: if isAdmin();
+    }
+    // Absolute ceiling on any bid amount — an obviously-absurd value (fat-
+    // fingered or malicious) is rejected outright rather than accepted.
+    function underMaxBid(amount) { return amount > 0 && amount <= 100000000; }
+    function isBlacklisted(deviceId) {
+      return exists(/databases/$(database)/documents/bidBlocks/$(deviceId)) &&
+        get(/databases/$(database)/documents/bidBlocks/$(deviceId)).data.blockedUntil > request.time;
+    }
+
     // Guest profiles saved by guest-auth.js after Google sign-in (name/
     // email/phone for high-value lots). Unrelated to admin identity.
     match /users/{uid} {
@@ -157,6 +183,7 @@ service cloud.firestore {
         request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(['currentBid', 'currentBidderName', 'currentBidderUid', 'bidCount']) &&
         request.resource.data.currentBid is number &&
+        underMaxBid(request.resource.data.currentBid) &&
         request.resource.data.currentBid >= resource.data.currentBid + resource.data.increment &&
         request.resource.data.currentBidderName is string &&
         request.resource.data.currentBidderName.size() > 0 &&
@@ -175,7 +202,10 @@ service cloud.firestore {
           request.resource.data.name.size() > 0 &&
           request.resource.data.name.size() < 80 &&
           request.resource.data.amount is number &&
-          request.resource.data.uid == request.auth.uid;
+          underMaxBid(request.resource.data.amount) &&
+          request.resource.data.uid == request.auth.uid &&
+          request.resource.data.deviceId is string &&
+          !isBlacklisted(request.resource.data.deviceId);
       }
     }
   }

@@ -62,27 +62,60 @@
   .empty-state{padding:60px 24px;text-align:center;color:var(--muted);}
 
   /* ---------- Item detail ---------- */
-  #view-item .hero-wrap{position:relative;}
-  .hero-img{width:100%;aspect-ratio:1/1;object-fit:cover;background:var(--surface2);}
+  #view-item .hero-wrap{position:relative;background:var(--surface2);}
+  /* Entire photo always visible — never force-cropped to a fixed ratio.
+     "contain" plus a background fill letterboxes whatever shape the
+     photo actually is, instead of cutting it to 1:1 / 4:3. */
+  .hero-img{width:100%;max-height:62vh;object-fit:contain;background:var(--surface2);cursor:pointer;}
   .hero-nav{position:absolute;top:calc(16px + env(safe-area-inset-top,0px));left:16px;right:16px;
-    display:flex;justify-content:space-between;}
+    display:flex;justify-content:space-between;pointer-events:none;}
+  .hero-nav .icon-btn{pointer-events:auto;}
+  .hero-tap-hint{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);
+    font-size:11px;color:var(--cream);background:rgba(0,0,0,.45);padding:6px 12px;border-radius:20px;
+    pointer-events:none;letter-spacing:.02em;}
   #view-item .body{padding:20px;}
   .item-title{font-size:22px;font-weight:600;margin:0 0 4px;line-height:1.25;}
   .item-sub{font-size:13px;color:var(--muted);margin:0 0 14px;}
   .badges{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
-  .item-desc{font-size:14px;line-height:1.6;color:#D9D0C0;margin-bottom:20px;}
+  /* pre-line so admin-entered blank lines become real paragraph breaks */
+  .item-desc{font-size:14px;line-height:1.6;color:#D9D0C0;margin-bottom:20px;white-space:pre-line;}
   .stat-row{display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid var(--border);
-    border-bottom:1px solid var(--border);padding:16px 0;margin-bottom:90px;}
+    border-bottom:1px solid var(--border);padding:16px 0;margin-top:20px;margin-bottom:24px;}
   .stat-row .stat .k{font-size:11px;color:var(--muted);margin:0 0 4px;}
   .stat-row .stat .v{font-size:16px;font-weight:600;}
   .stat-row .stat .v.gold{color:var(--gold);}
-  .item-cta-bar{position:fixed;left:0;right:0;bottom:0;padding:14px 20px calc(14px + env(safe-area-inset-bottom,0px));
-    background:linear-gradient(180deg,transparent,var(--bg) 30%);z-index:6;}
+  /* In-flow now, not fixed to the viewport — this way it always sits
+     right where the description ends, wherever that is on the page,
+     rather than pinned to the bottom of the screen. */
+  .item-cta-bar{padding:0;}
+  .cta-row{display:flex;gap:10px;align-items:stretch;}
+  .cta-row .cta{flex:1;}
+  .detailed-btn{flex:none;width:auto;padding:0 18px;display:flex;align-items:center;gap:6px;
+    border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);
+    font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;}
   .closed-note{text-align:center;font-size:13px;color:var(--muted);padding:14px;
     background:var(--surface);border:1px solid var(--border);border-radius:12px;}
   .signin-gate{text-align:center;padding:6px 0 4px;}
   .signin-note{font-size:13px;color:var(--muted);margin:0 0 14px;}
   #sheet-google-btn{display:flex;justify-content:center;}
+
+  /* ---------- Reading mode (tap the photo → just the write-up) ---------- */
+  .reading-overlay{position:fixed;inset:0;background:var(--bg);z-index:15;display:none;
+    flex-direction:column;overflow-y:auto;}
+  .reading-overlay.open{display:flex;}
+  .reading-top{position:sticky;top:0;padding:calc(16px + env(safe-area-inset-top,0px)) 16px 10px;
+    background:var(--bg);display:flex;justify-content:flex-end;z-index:1;}
+  .reading-body{padding:0 22px 24px;flex:1;}
+  .reading-body .item-title{font-size:24px;margin-bottom:8px;}
+  .reading-desc{font-size:15px;line-height:1.75;color:#D9D0C0;white-space:pre-line;margin:18px 0 26px;}
+  .reading-actions{padding:0 22px calc(20px + env(safe-area-inset-bottom,0px));}
+
+  /* ---------- Lightbox (Detailed — full uncropped photo pop-up) ---------- */
+  .lightbox-overlay{position:fixed;inset:0;background:rgba(6,5,4,.94);z-index:35;display:none;
+    align-items:center;justify-content:center;padding:24px;}
+  .lightbox-overlay.open{display:flex;}
+  .lightbox-overlay img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;}
+  .lightbox-close{position:absolute;top:calc(16px + env(safe-area-inset-top,0px));right:16px;}
 
   /* ---------- Bid sheet ---------- */
   .sheet-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:20;display:none;}
@@ -166,11 +199,9 @@
   .bottomnav{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--bg2);
     border-top:1px solid var(--border);display:flex;
     padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px));}
-  /* The item view's own CTA bar (Place a Bid / closed note) sits at the
-     same fixed bottom:0 spot as the tab bar. Without this, the tab bar's
-     higher z-index silently covers it — the button was rendering, just
-     hidden underneath the always-on nav. Hide the tab bar on this view
-     since the CTA bar replaces it there. */
+  /* Item detail has its own back button up top; keep the tab bar off
+     this view so scrolling to the in-flow CTA bar isn't competing with
+     a second fixed bar at the bottom of the screen. */
   #view-item.active ~ .bottomnav{display:none;}
   .navbtn{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
     background:none;border:none;color:var(--muted);font-size:11px;padding:6px;cursor:pointer;}
@@ -199,20 +230,39 @@
       <button class="icon-btn" id="item-back"></button>
       <button class="icon-btn" id="item-share"></button>
     </div>
+    <div class="hero-tap-hint">Tap photo to read more</div>
   </div>
   <div class="body">
     <h1 class="item-title serif" id="item-title"></h1>
     <p class="item-sub" id="item-lotnum"></p>
     <div class="badges" id="item-badges"></div>
     <p class="item-desc" id="item-desc"></p>
+    <div class="item-cta-bar" id="item-cta-bar"></div>
     <div class="stat-row">
       <div class="stat"><p class="k" id="item-bid-label">Current Bid</p><p class="v gold" id="item-bid-value"></p></div>
       <div class="stat"><p class="k">Time Left</p><p class="v" id="item-time-value">—</p></div>
       <div class="stat"><p class="k">Total Bids</p><p class="v" id="item-bidcount-value">0</p></div>
     </div>
   </div>
-  <div class="item-cta-bar" id="item-cta-bar"></div>
 </section>
+
+<!-- ============ READING MODE (tap photo → just the write-up) ============ -->
+<div class="reading-overlay" id="reading-overlay">
+  <div class="reading-top"><button class="icon-btn" id="reading-close"></button></div>
+  <div class="reading-body">
+    <p class="item-sub" id="reading-lotnum"></p>
+    <h1 class="item-title serif" id="reading-title"></h1>
+    <div class="badges" id="reading-badges"></div>
+    <p class="reading-desc" id="reading-desc"></p>
+  </div>
+  <div class="reading-actions" id="reading-actions"></div>
+</div>
+
+<!-- ============ LIGHTBOX (Detailed — full photo pop-up) ============ -->
+<div class="lightbox-overlay" id="lightbox-overlay">
+  <button class="icon-btn lightbox-close" id="lightbox-close"></button>
+  <img id="lightbox-img" alt="">
+</div>
 
 <!-- ============ MY BIDS ============ -->
 <section class="view" id="view-mybids">
@@ -265,7 +315,7 @@
     <div id="sheet-google-btn"></div>
   </div>
   <div id="sheet-bidform">
-    <div class="amount-field"><span>₹</span><input id="sheet-amount" type="number" inputmode="numeric"></div>
+    <div class="amount-field"><span>₹</span><input id="sheet-amount" type="number" inputmode="numeric" min="1" max="100000000"></div>
     <div class="quick-row" id="sheet-quick"></div>
     <div class="biddername">
       <span>Bidding as <strong id="sheet-name-display"></strong></span>
@@ -307,6 +357,7 @@ const ICONS = {
   tag: '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 12.6L12.6 20.6a2 2 0 01-2.8 0L3 13.8V4a1 1 0 011-1h9.8a2 2 0 011.4.6l5.4 5.4a2 2 0 010 2.8z"/><circle cx="8" cy="8" r="1.4" fill="currentColor" stroke="none"/></svg>',
   user: '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 5-6 8-6s6.5 2 8 6"/></svg>',
   spark: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/></svg>',
+  expand: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>',
 };
 function setIcon(id, name) { document.getElementById(id).innerHTML = ICONS[name]; }
 
@@ -327,6 +378,8 @@ setIcon('search-toggle', 'search');
 setIcon('item-back', 'back');
 setIcon('item-share', 'share');
 setIcon('sheet-close', 'close');
+setIcon('reading-close', 'close');
+setIcon('lightbox-close', 'close');
 setIcon('nav-home', 'home');
 setIcon('nav-mybids', 'tag');
 setIcon('nav-profile', 'user');
@@ -344,6 +397,7 @@ function showView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
   document.querySelectorAll('.navbtn').forEach(b => b.classList.toggle('on', b.dataset.view === name));
   if (name !== 'item' && itemCountdownTimer) { clearInterval(itemCountdownTimer); itemCountdownTimer = null; }
+  if (name !== 'item') { closeReadingMode(); closeLightbox(); }
   if (name === 'mybids') renderMyBids();
   if (name === 'profile') renderProfile();
   window.scrollTo(0, 0);
@@ -500,6 +554,10 @@ document.getElementById('item-share').onclick = async () => {
   else { await navigator.clipboard.writeText(url); alert('Link copied.'); }
 };
 
+function closedNoteHtml(it) {
+  return `<div class="closed-note">Bidding closed — won by <strong>${escapeHtml(it.currentBidderName || '—')}</strong> at ${money(it.currentBid)}</div>`;
+}
+
 function renderItemView(it) {
   const closed = it.active === false;
   document.getElementById('item-img').src = it.imageUrl || '';
@@ -517,13 +575,76 @@ function renderItemView(it) {
   tick();
   if (!closed && it.endsAt) itemCountdownTimer = setInterval(tick, 1000);
 
+  // This CTA now sits right after the description in normal document
+  // flow (see CSS) — it lands wherever the description ends, however
+  // long that is, instead of being pinned to the bottom of the screen.
   const ctaBar = document.getElementById('item-cta-bar');
   ctaBar.innerHTML = closed
-    ? `<div class="closed-note">Bidding closed — won by <strong>${escapeHtml(it.currentBidderName || '—')}</strong> at ${money(it.currentBid)}</div>`
+    ? closedNoteHtml(it)
     : `<button class="cta cta-cream" id="place-bid-btn">Place a Bid</button>`;
   const placeBtn = document.getElementById('place-bid-btn');
   if (placeBtn) placeBtn.onclick = () => openBidSheet(it);
+
+  if (readingOpen) populateReadingOverlay(it);
 }
+
+// -----------------------------------------------------------------
+// Reading mode — tapping the photo swaps to a distraction-free view of
+// just the write-up, with the bid action (and a "Detailed" photo
+// pop-up) directly below it, instead of the image itself.
+// -----------------------------------------------------------------
+let readingOpen = false;
+function populateReadingOverlay(it) {
+  const closed = it.active === false;
+  document.getElementById('reading-lotnum').textContent = 'LOT ' + String(it.lotNumber).padStart(3, '0');
+  document.getElementById('reading-title').textContent = it.title;
+  document.getElementById('reading-badges').innerHTML = it.category ? `<span class="badge">${escapeHtml(it.category)}</span>` : '';
+  document.getElementById('reading-desc').textContent = it.description || '';
+
+  const actions = document.getElementById('reading-actions');
+  actions.innerHTML = closed
+    ? closedNoteHtml(it)
+    : `<div class="cta-row">
+         <button class="cta cta-cream" id="reading-bid-btn">Place a Bid</button>
+         <button class="detailed-btn" id="reading-detailed-btn">${ICONS.expand} Detailed</button>
+       </div>`;
+  const bidBtn = document.getElementById('reading-bid-btn');
+  if (bidBtn) bidBtn.onclick = () => openBidSheet(it);
+  const detailedBtn = document.getElementById('reading-detailed-btn');
+  if (detailedBtn) detailedBtn.onclick = () => openLightbox(it.imageUrl);
+  // Closed lots still get a way to see the full photo.
+  if (closed) {
+    actions.insertAdjacentHTML('beforeend',
+      `<button class="detailed-btn" id="reading-detailed-btn-closed" style="width:100%;justify-content:center;margin-top:10px;">${ICONS.expand} View Detailed Photo</button>`);
+    document.getElementById('reading-detailed-btn-closed').onclick = () => openLightbox(it.imageUrl);
+  }
+}
+function openReadingMode() {
+  const it = lots.find(l => l.id === currentItemId);
+  if (!it) return;
+  populateReadingOverlay(it);
+  readingOpen = true;
+  document.getElementById('reading-overlay').classList.add('open');
+}
+function closeReadingMode() {
+  readingOpen = false;
+  document.getElementById('reading-overlay').classList.remove('open');
+}
+document.getElementById('item-img').onclick = openReadingMode;
+document.getElementById('reading-close').onclick = closeReadingMode;
+
+// -----------------------------------------------------------------
+// Lightbox — "Detailed": the same photo, uncropped, as a pop-out preview.
+// -----------------------------------------------------------------
+function openLightbox(url) {
+  document.getElementById('lightbox-img').src = url || '';
+  document.getElementById('lightbox-overlay').classList.add('open');
+}
+function closeLightbox() { document.getElementById('lightbox-overlay').classList.remove('open'); }
+document.getElementById('lightbox-close').onclick = closeLightbox;
+document.getElementById('lightbox-overlay').addEventListener('click', (e) => {
+  if (e.target.id === 'lightbox-overlay') closeLightbox();
+});
 
 // -----------------------------------------------------------------
 // Bid sheet
@@ -557,6 +678,11 @@ function openBidSheet(it) {
 
   backdrop.classList.add('open');
   sheet.classList.add('open');
+
+  getActiveBidBlock().then(until => {
+    if (until) document.getElementById('sheet-err').textContent =
+      `You're temporarily blocked from bidding — try again in ${minutesLeftText(until)}.`;
+  });
 }
 document.getElementById('sheet-close').onclick = closeBidSheet;
 backdrop.onclick = closeBidSheet;
@@ -576,7 +702,23 @@ document.getElementById('sheet-confirm').onclick = async () => {
   const amount = Number(document.getElementById('sheet-amount').value);
   if (!googleUser) { errEl.textContent = 'Sign in with Google to bid.'; return; }
   if (!name) { errEl.textContent = 'Enter your name to bid.'; return; }
-  if (!amount || amount <= 0) { errEl.textContent = 'Enter a bid amount.'; return; }
+  if (!Number.isFinite(amount) || amount <= 0) { errEl.textContent = 'Enter a bid amount — it can\'t be zero or negative.'; return; }
+
+  // Already blocked from an earlier absurd bid? Don't even try.
+  const activeBlock = await getActiveBidBlock();
+  if (activeBlock) {
+    errEl.textContent = `You're temporarily blocked from bidding — try again in ${minutesLeftText(activeBlock)}.`;
+    return;
+  }
+
+  // Anything above the sanity ceiling is auto-rejected, and the device
+  // is blocked from bidding for a few minutes rather than just re-shown
+  // an error (see firestore.rules for the server-side half of this).
+  if (amount > MAX_BID_AMOUNT) {
+    await triggerBidBlock();
+    errEl.textContent = `${money(amount)} is way above the ${money(MAX_BID_AMOUNT)} limit — that bid was rejected and you're blocked from bidding for ${BID_BLOCK_MINUTES} minutes.`;
+    return;
+  }
 
   const btn = document.getElementById('sheet-confirm');
   btn.disabled = true;
@@ -615,7 +757,7 @@ document.getElementById('sheet-confirm').onclick = async () => {
     document.getElementById('success-overlay').classList.add('open');
   } catch (e) {
     if (e.code === 'permission-denied') {
-      errEl.textContent = "You're bidding too fast — wait a few seconds and try again.";
+      errEl.textContent = "You're bidding too fast, or temporarily blocked — wait a few seconds and try again.";
     } else {
       errEl.textContent = e.message || 'Could not place that bid — try again.';
     }

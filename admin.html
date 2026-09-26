@@ -256,8 +256,8 @@
                 <input id="f-cat" list="cat-options" placeholder="Art, Experiences, Sports…" maxlength="40">
                 <datalist id="cat-options"><option value="Art"><option value="Experiences"><option value="Sports"></datalist>
               </div>
-              <div class="form-row"><label for="f-desc">Description <span style="font-weight:400;">— one short paragraph</span></label>
-                <textarea id="f-desc" maxlength="500"></textarea><div class="charcount" id="desc-count">0 / 500</div></div>
+              <div class="form-row"><label for="f-desc">Description <span style="font-weight:400;">— multiple paragraphs OK, leave a blank line between them</span></label>
+                <textarea id="f-desc" maxlength="4000" style="min-height:150px;"></textarea><div class="charcount" id="desc-count">0 / 4000</div></div>
               <label>Photo</label>
               <div class="photo-picker">
                 <img class="photo-preview" id="photo-preview" alt="">
@@ -269,8 +269,8 @@
                 </div>
               </div>
               <div class="row2">
-                <div class="form-row"><label for="f-start">Starting bid (₹)</label><input id="f-start" type="number" required></div>
-                <div class="form-row"><label for="f-inc">Increment (₹)</label><input id="f-inc" type="number" value="500" required></div>
+                <div class="form-row"><label for="f-start">Starting bid (₹)</label><input id="f-start" type="number" min="0" max="100000000" required></div>
+                <div class="form-row"><label for="f-inc">Increment (₹)</label><input id="f-inc" type="number" min="1" max="100000000" value="500" required></div>
               </div>
               <div class="form-row"><label for="f-ends">Bidding closes at <span style="font-weight:400;">(optional)</span></label>
                 <input id="f-ends" type="datetime-local"></div>
@@ -626,6 +626,12 @@ function renderLots() {
           <button class="btn-ghost" data-act="toggle" data-id="${it.id}">${it.active === false ? 'Reopen' : 'Close'}</button>
           <button class="btn-ghost btn-danger" data-act="delete" data-id="${it.id}">Delete</button>
         </div>
+        <div class="actions" style="margin-top:6px;">
+          <span style="font-size:11px;color:var(--muted);align-self:center;">Extend deadline:</span>
+          <button class="btn-ghost" data-extend="${it.id}" data-secs="900">+15m</button>
+          <button class="btn-ghost" data-extend="${it.id}" data-secs="3600">+1h</button>
+          <button class="btn-ghost" data-extend="${it.id}" data-secs="86400">+1d</button>
+        </div>
       </div>
     </div>`).join('');
   el.querySelectorAll('[data-act="edit"]').forEach(b => b.onclick = () => startEdit(b.dataset.id));
@@ -639,6 +645,23 @@ function renderLots() {
       if (editingId === b.dataset.id) resetForm();
     }
   });
+  el.querySelectorAll('[data-extend]').forEach(b => b.onclick = () => extendLotDeadline(b.dataset.extend, Number(b.dataset.secs)));
+}
+
+// Bumps a lot's closing time by a fixed amount without ever opening the
+// date/time picker — extends from whatever the current deadline is (or
+// from now, if the lot has no deadline yet or it's already passed).
+async function extendLotDeadline(itemId, seconds) {
+  const it = lots.find(l => l.id === itemId);
+  if (!it) return;
+  const base = it.endsAt && it.endsAt.toDate ? it.endsAt.toDate() : null;
+  const from = base && base.getTime() > Date.now() ? base.getTime() : Date.now();
+  const newEndsAt = firebase.firestore.Timestamp.fromDate(new Date(from + seconds * 1000));
+  try {
+    await db.collection('items').doc(itemId).update({ endsAt: newEndsAt });
+  } catch (err) {
+    alert('Could not extend this lot: ' + err.message);
+  }
 }
 
 let editingId = null;
@@ -657,7 +680,7 @@ const submitBtn = document.getElementById('submitLot');
 const cancelEditBtn = document.getElementById('cancelEdit');
 const addErr = document.getElementById('addErr');
 
-fDesc.addEventListener('input', () => { document.getElementById('desc-count').textContent = fDesc.value.length + ' / 500'; });
+fDesc.addEventListener('input', () => { document.getElementById('desc-count').textContent = fDesc.value.length + ' / 4000'; });
 document.getElementById('urltoggle').onclick = () => { urlWrap.style.display = urlWrap.style.display === 'none' ? 'block' : 'none'; };
 fFile.addEventListener('change', () => {
   const file = fFile.files[0];
@@ -675,7 +698,7 @@ function startEdit(id) {
   fTitle.value = it.title || '';
   fCat.value = it.category || '';
   fDesc.value = it.description || '';
-  document.getElementById('desc-count').textContent = fDesc.value.length + ' / 500';
+  document.getElementById('desc-count').textContent = fDesc.value.length + ' / 4000';
   fImg.value = '';
   photoPreview.src = it.imageUrl || '';
   fStart.value = it.startingBid ?? it.currentBid ?? '';
@@ -698,7 +721,7 @@ function resetForm() {
   document.getElementById('lotForm').reset();
   photoPreview.src = '';
   urlWrap.style.display = 'none';
-  document.getElementById('desc-count').textContent = '0 / 500';
+  document.getElementById('desc-count').textContent = '0 / 4000';
   document.getElementById('form-legend').textContent = 'Add a lot';
   submitBtn.textContent = 'Add lot';
   cancelEditBtn.style.display = 'none';
@@ -747,6 +770,8 @@ document.getElementById('lotForm').addEventListener('submit', async (e) => {
   const start = Number(fStart.value);
   const inc = Number(fInc.value);
   if (!title || !start || !inc) { addErr.textContent = 'Title, starting bid and increment are required.'; return; }
+  if (start < 0 || inc <= 0) { addErr.textContent = "Starting bid can't be negative, and increment must be positive."; return; }
+  if (start > 100000000 || inc > 100000000) { addErr.textContent = 'Starting bid and increment must each be ₹10,00,00,000 or less.'; return; }
 
   submitBtn.disabled = true;
   const prevLabel = submitBtn.textContent;
@@ -843,7 +868,7 @@ function renderBidRows(itemId) {
       <span class="who">${escapeHtml(b.name)}${b.isGoogle ? ' <span class="g">· Google verified</span>' : ''}</span>
       <span class="amt">${money(b.amount)}</span>
       <button class="${isWinner ? '' : 'set'}" data-set="${b.id}">${isWinner ? 'Winner ✓' : 'Set winner'}</button>
-      <button class="btn-danger" data-invalidate="${b.id}">Invalidate</button>
+      <button class="btn-danger" data-invalidate="${b.id}">Delete bid</button>
     </div>`;
   }).join('');
   container.querySelectorAll('[data-set]').forEach(btn => btn.onclick = () => {
@@ -861,7 +886,7 @@ function renderBidRows(itemId) {
 // bid from whatever remains (or resets to the starting bid if nothing
 // does). Clears the marked winner too, if the invalidated bid held it.
 async function invalidateBid(itemId, bidId) {
-  if (!confirm('Invalidate this bid? It is permanently removed and the leading bid is recalculated.')) return;
+  if (!confirm('Delete this bid? It is permanently removed and the leading bid is recalculated.')) return;
   const itemRef = db.collection('items').doc(itemId);
   const bidsRef = itemRef.collection('bids');
   try {

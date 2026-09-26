@@ -54,6 +54,53 @@ function money(n) {
   return "₹" + Number(n).toLocaleString("en-IN", { minimumFractionDigits: 0 });
 }
 
+// ─────────────────────────────────────────────────────────────
+// Bid guardrails — no negative/zero bids, and anything above
+// MAX_BID_AMOUNT (10 crore) is rejected outright and the device is
+// temporarily blocked from bidding at all. Enforced here (for a fast,
+// friendly message) AND in firestore.rules (bidBlocks + underMaxBid),
+// so a tampered client can't bypass either check.
+// ─────────────────────────────────────────────────────────────
+const MAX_BID_AMOUNT = 100000000; // ₹10,00,00,000 = 10 crore
+const BID_BLOCK_MINUTES = 5;
+
+function bidBlockRef() {
+  return db.collection("bidBlocks").doc(getDeviceId());
+}
+
+// Resolves to a Date the device is blocked until, or null if not blocked.
+async function getActiveBidBlock() {
+  try {
+    const doc = await bidBlockRef().get();
+    if (!doc.exists) return null;
+    const until = doc.data().blockedUntil;
+    const untilDate = until && until.toDate ? until.toDate() : null;
+    return untilDate && untilDate.getTime() > Date.now() ? untilDate : null;
+  } catch {
+    return null; // Rules still enforce this server-side regardless.
+  }
+}
+
+// Blocks this device from bidding for BID_BLOCK_MINUTES. Called when a
+// bid above MAX_BID_AMOUNT is attempted.
+async function triggerBidBlock() {
+  try {
+    await bidBlockRef().set({
+      blockedUntil: firebase.firestore.Timestamp.fromDate(
+        new Date(Date.now() + BID_BLOCK_MINUTES * 60000)
+      ),
+    });
+  } catch {
+    // Best-effort — firestore.rules also rejects any bid attempt while
+    // a valid block exists, so this isn't the only line of defense.
+  }
+}
+
+function minutesLeftText(untilDate) {
+  const mins = Math.max(1, Math.ceil((untilDate.getTime() - Date.now()) / 60000));
+  return `${mins} minute${mins === 1 ? "" : "s"}`;
+}
+
 // Fast, sync, bootstrap-only check — use for an instant UI decision.
 function isAdminEmail(email) {
   return !!email && ADMIN_EMAILS.includes(email.toLowerCase());

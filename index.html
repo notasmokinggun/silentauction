@@ -38,6 +38,22 @@
   .cta-outline{background:transparent;border:1px solid var(--border);color:var(--text);}
   .cta[disabled]{opacity:.4;pointer-events:none;}
 
+  /* ---------- Splash / Welcome ---------- */
+  #view-splash{padding-bottom:0;}
+  #view-splash.active{display:flex;}
+  .splash-photo{position:relative;min-height:100vh;min-height:100dvh;display:flex;
+    flex-direction:column;justify-content:flex-end;
+    background:radial-gradient(120% 70% at 30% 8%, #3a2a18 0%, #1a140d 42%, var(--bg) 75%);}
+  .splash-photo::before{content:'';position:absolute;inset:0;
+    background:radial-gradient(60% 45% at 22% 82%, rgba(227,183,92,.16), transparent 70%);}
+  .splash-content{position:relative;padding:0 24px calc(34px + env(safe-area-inset-bottom,0px));}
+  .splash-wordmark{position:absolute;top:calc(24px + env(safe-area-inset-top,0px));left:24px;
+    font-size:16px;letter-spacing:.08em;font-weight:600;color:var(--cream);}
+  .splash-title{font-size:44px;line-height:1.08;margin:0 0 16px;color:var(--cream);font-weight:500;}
+  .splash-desc{font-size:14px;line-height:1.6;color:#D9D0C0;max-width:340px;margin:0 0 26px;}
+  .splash-cta{display:inline-flex;align-items:center;gap:8px;padding:15px 24px;border:none;
+    border-radius:12px;font-weight:600;font-size:15px;cursor:pointer;background:var(--cream);color:#1B140A;}
+
   /* ---------- Home ---------- */
   #view-home .top{padding:calc(20px + env(safe-area-inset-top,0px)) 20px 4px;
     display:flex;align-items:center;justify-content:space-between;}
@@ -151,6 +167,7 @@
   .name-edit input{width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);
     background:var(--surface);color:var(--text);font-size:14px;}
   .sheet-err{color:var(--red);font-size:13px;margin-top:10px;min-height:16px;}
+  #sheet-amount:disabled,.quick-btn:disabled{opacity:.4;pointer-events:none;}
 
   /* ---------- Success ---------- */
   .success-overlay{position:fixed;inset:0;z-index:30;background:var(--bg);display:none;
@@ -206,12 +223,25 @@
   .navbtn{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
     background:none;border:none;color:var(--muted);font-size:11px;padding:6px;cursor:pointer;}
   .navbtn.on{color:var(--cream);}
+  #view-splash.active ~ .bottomnav{display:none;}
 </style>
 </head>
 <body>
 
+<!-- ============ SPLASH / WELCOME ============ -->
+<section class="view active" id="view-splash">
+  <div class="splash-photo">
+    <div class="splash-wordmark serif" id="splash-wordmark">JASHN</div>
+    <div class="splash-content">
+      <h1 class="splash-title serif">Bid.<br>Support.<br>Create<br>Change.</h1>
+      <p class="splash-desc">Exclusive items. Meaningful impact. All proceeds support underprivileged children.</p>
+      <button class="splash-cta" id="splash-explore">Explore Items <span>&#8594;</span></button>
+    </div>
+  </div>
+</section>
+
 <!-- ============ HOME ============ -->
-<section class="view active" id="view-home">
+<section class="view" id="view-home">
   <div class="top">
     <div class="wordmark serif" id="event-name">JASHN</div>
     <button class="icon-btn" id="search-toggle"></button>
@@ -403,6 +433,15 @@ function showView(name) {
   window.scrollTo(0, 0);
 }
 document.querySelectorAll('.navbtn').forEach(b => b.onclick = () => showView(b.dataset.view));
+
+// Splash / Welcome — shown once per device, like a first-run intro.
+// A returning guest who already tapped through goes straight to the catalog.
+document.getElementById('splash-wordmark').textContent = EVENT_NAME;
+document.getElementById('splash-explore').onclick = () => {
+  localStorage.setItem('auction_seen_splash', '1');
+  showView('home');
+};
+if (localStorage.getItem('auction_seen_splash')) showView('home');
 
 // -----------------------------------------------------------------
 // Auth
@@ -679,14 +718,57 @@ function openBidSheet(it) {
   backdrop.classList.add('open');
   sheet.classList.add('open');
 
-  getActiveBidBlock().then(until => {
-    if (until) document.getElementById('sheet-err').textContent =
-      `You're temporarily blocked from bidding — try again in ${minutesLeftText(until)}.`;
-  });
+  setSheetBlockedUI(null); // reset to enabled while we check, avoids a stale locked state
+  getActiveBidBlock().then(until => setSheetBlockedUI(until));
 }
 document.getElementById('sheet-close').onclick = closeBidSheet;
 backdrop.onclick = closeBidSheet;
-function closeBidSheet() { backdrop.classList.remove('open'); sheet.classList.remove('open'); }
+function closeBidSheet() {
+  backdrop.classList.remove('open'); sheet.classList.remove('open');
+  if (bidBlockInterval) { clearInterval(bidBlockInterval); bidBlockInterval = null; }
+}
+
+// -----------------------------------------------------------------
+// Bid-block UI — the 5-minute lockout after an absurd (>10 crore) bid
+// attempt is enforced server-side (firestore.rules) no matter what the
+// client does, but it also has to be genuinely enforced HERE: while a
+// block is active the amount field, quick-add buttons and Confirm
+// button are actually disabled (not just an error string the person
+// could ignore and keep clicking through), with a countdown that
+// re-enables everything itself the moment the block expires.
+// -----------------------------------------------------------------
+let bidBlockInterval = null;
+function setSheetBlockedUI(until) {
+  const amt = document.getElementById('sheet-amount');
+  const confirmBtn = document.getElementById('sheet-confirm');
+  const quickBtns = document.querySelectorAll('#sheet-quick .quick-btn');
+  const errEl = document.getElementById('sheet-err');
+  if (bidBlockInterval) { clearInterval(bidBlockInterval); bidBlockInterval = null; }
+  if (!until) {
+    amt.disabled = false;
+    confirmBtn.disabled = false;
+    quickBtns.forEach(b => b.disabled = false);
+    return;
+  }
+  const lock = () => {
+    amt.disabled = true;
+    confirmBtn.disabled = true;
+    quickBtns.forEach(b => b.disabled = true);
+  };
+  const tick = () => {
+    if (until.getTime() - Date.now() <= 0) {
+      clearInterval(bidBlockInterval); bidBlockInterval = null;
+      amt.disabled = false; confirmBtn.disabled = false;
+      quickBtns.forEach(b => b.disabled = false);
+      errEl.textContent = '';
+      return;
+    }
+    lock();
+    errEl.textContent = `You're temporarily blocked from bidding — try again in ${minutesLeftText(until)}.`;
+  };
+  tick();
+  bidBlockInterval = setInterval(tick, 1000);
+}
 
 document.getElementById('sheet-name-change').onclick = () => {
   document.getElementById('sheet-name-edit').classList.add('open');
@@ -707,7 +789,7 @@ document.getElementById('sheet-confirm').onclick = async () => {
   // Already blocked from an earlier absurd bid? Don't even try.
   const activeBlock = await getActiveBidBlock();
   if (activeBlock) {
-    errEl.textContent = `You're temporarily blocked from bidding — try again in ${minutesLeftText(activeBlock)}.`;
+    setSheetBlockedUI(activeBlock);
     return;
   }
 
@@ -716,7 +798,10 @@ document.getElementById('sheet-confirm').onclick = async () => {
   // an error (see firestore.rules for the server-side half of this).
   if (amount > MAX_BID_AMOUNT) {
     await triggerBidBlock();
-    errEl.textContent = `${money(amount)} is way above the ${money(MAX_BID_AMOUNT)} limit — that bid was rejected and you're blocked from bidding for ${BID_BLOCK_MINUTES} minutes.`;
+    // Lock the UI immediately, client-side, rather than just showing an
+    // error the person could click past — matches the block firestore.rules
+    // will enforce for the same window regardless.
+    setSheetBlockedUI(new Date(Date.now() + BID_BLOCK_MINUTES * 60000));
     return;
   }
 

@@ -931,7 +931,7 @@ async function renderBidsPage() {
 function renderUsersPage() {
   const el = document.getElementById('users-body');
   el.innerHTML = registeredUsers.length ? registeredUsers.map(user =>
-    '<tr><td>' + escapeHtml(user.name) + '</td><td>' + escapeHtml(user.email) + '</td><td>' + escapeHtml(user.phone || '—') + '</td><td>Self-reported</td></tr>'
+    '<tr><td>' + escapeHtml(user.name) + '</td><td>' + escapeHtml(user.email) + '</td><td>' + escapeHtml(user.phone || '—') + '</td><td>Google account; phone self-reported</td></tr>'
   ).join('') : '<tr><td colspan="4">No registrations yet.</td></tr>';
 }
 

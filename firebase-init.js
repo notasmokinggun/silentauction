@@ -11,6 +11,9 @@ const firebaseConfig = {
   appId: "1:423062787372:web:c9b424d8e76eb1d6b48889",
 };
 
+// Web OAuth client from Firebase Authentication → Google → Web SDK configuration.
+const GOOGLE_CLIENT_ID = "423062787372-3fdpdp077o7hse14ap6nrj43aifeejch.apps.googleusercontent.com";
+
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();

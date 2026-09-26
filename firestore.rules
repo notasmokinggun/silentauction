@@ -8,7 +8,8 @@ service cloud.firestore {
         get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.approved == true;
     }
     function registered() {
-      return request.auth != null && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+      return request.auth != null && request.auth.token.firebase.sign_in_provider == 'google.com' &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid));
     }
     match /admins/{uid} {
       allow get: if request.auth != null && request.auth.uid == uid;
@@ -17,6 +18,8 @@ service cloud.firestore {
     match /users/{uid} {
       allow read: if isAdmin() || (request.auth != null && request.auth.uid == uid);
       allow create, update: if request.auth != null && request.auth.uid == uid &&
+        request.auth.token.firebase.sign_in_provider == 'google.com' &&
+        request.resource.data.email == request.auth.token.email &&
         request.resource.data.keys().hasOnly(['name', 'email', 'phone', 'updatedAt']) &&
         request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() < 80 &&
         request.resource.data.email is string && request.resource.data.email.size() <= 254 &&
@@ -60,7 +63,7 @@ service cloud.firestore {
         allow create: if registered() &&
           request.resource.data.keys().hasOnly(['name', 'amount', 'uid', 'isGoogle', 'deviceId', 'timestamp']) &&
           request.resource.data.uid == request.auth.uid &&
-          request.resource.data.isGoogle == false &&
+          request.resource.data.isGoogle == true &&
           request.resource.data.timestamp == request.time &&
           getAfter(/databases/$(database)/documents/items/$(itemId)).data.currentBid == request.resource.data.amount &&
           getAfter(/databases/$(database)/documents/items/$(itemId)).data.currentBidderUid == request.auth.uid &&

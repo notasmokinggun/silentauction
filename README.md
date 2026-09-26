@@ -1,53 +1,64 @@
-# Registration and admin access — updated setup
+# Silent auction — Google guests and approved admins
 
-This version removes Google OAuth from both pages. Guests enter their name,
-email and optional phone. Firebase Anonymous Auth keeps their registration
-associated with the browser; email and phone are self-reported, with no OTP.
-Contact details are stored in private `users/{uid}` documents, not public bids.
-Approved organizers can see all registrations on the admin Users page, including
-people who have not bid. No emails or SMS are sent automatically.
+Guests tap **Continue with Google**, choose an account, and their name and email
+are saved automatically. No guest password, UID entry, manual registration form,
+or OTP is required. Phone is optional and can be saved afterward from Profile.
+The Explore Items button has a 64px minimum height.
 
-## Activate this version
+Admin access remains email/password with backend approval. Guest contact details
+are private `users/{uid}` documents, readable only by that user and approved
+admins. UID is an internal database key, never something a guest must enter.
+No emails or SMS are sent automatically.
 
-1. Firebase Console → Authentication → Sign-in method: enable **Anonymous**
-   and **Email/Password**.
-2. Authentication → Users → Add user: create the organizer's email/password
-   account. Copy its UID. Do not put the password in source code.
-3. Firestore → Data: create `admins/{that exact UID}` with a boolean field
-   `approved: true`. Only the Firebase project owner/server credentials can
-   write approvals; web clients cannot approve themselves. Set it to false
-   or delete it to revoke access.
-4. Publish `firestore.rules` in Firestore Console → Rules before using the
-   new pages. Existing hardcoded admin lists have been removed.
-5. Deploy the updated static files to your existing host. Open `admin.html`
-   and sign in with the account from step 2. Guests save their registration
-   on Profile or automatically when confirming their first bid.
+## One-time setup
 
-The existing Firebase project configuration is retained. This uses Firebase
-Auth and Firestore as the backend and does not require a custom server or
-Cloud Functions. Clearing browser storage loses the guest's anonymous session;
-entering the same email on another device creates a separate registration.
+1. Firebase Console → Authentication → Sign-in method: enable **Google** and
+   **Email/Password**. Anonymous authentication is no longer used by the guest page.
+2. Google provider → Web SDK configuration: confirm its Web client ID matches
+   `GOOGLE_CLIENT_ID` in `firebase-init.js`.
+3. In Google Cloud Console → APIs & Services → Credentials, open that web OAuth
+   client and add the exact deployed origin to **Authorized JavaScript origins**.
+   For GitHub Pages this is `https://notasmokinggun.github.io` (no repository path).
+   Add any custom domain too. In Firebase Authentication → Settings → Authorized
+   domains, add the deployed hostname. Serve through HTTPS, not a local file.
+4. Authentication → Users → Add user: create the organizer email/password account.
+   Copy its UID. In Firestore create `admins/{that UID}` with boolean `approved: true`.
+   This is organizer setup only. Browser clients cannot grant approval. Delete the
+   document or set approved to false to revoke access.
+5. Publish `firestore.rules` and deploy all updated static files, including
+   **guest-auth.js**. Then test on the deployed domain before the event.
 
-## Verification checklist
+## How sign-in completes
 
-- Register with name/email, both with and without a phone; reload and check
-  Profile. Check the same registration appears in admin Users before any bid.
-- Reject blank/invalid email and name. A failed write must show an error.
-- Confirm a bid and verify it references the authenticated guest UID.
-- Sign in with an approved organizer; reload; sign out; try an unapproved
-  account and confirm it cannot access organizer data or modify lots.
-- Verify ordinary guests cannot read another guest's contact details or write
-  `admins` documents. Public bids contain no email or phone fields.
+`guest-auth.js` loads Google Identity Services and renders its standard button.
+The Google callback supplies an ID token to Firebase `signInWithCredential`.
+Firebase verifies it and establishes a persistent session; the app then saves
+name/email, preserves any existing phone, updates both Profile and the bid sheet,
+and displays confirmation. Auth restoration repeats this process after reload.
+Errors are visible, and failed profile writes have a retry button. Contact details
+are never added to public bid documents. Rules require a Google-authenticated
+session and match the profile email against the verified Firebase token.
 
-## Repository diagnosis
+This avoids the previous Firebase cross-domain popup/redirect relay. The reported
+live failure has not been reproduced here; production OAuth origin configuration
+and real account sign-in still need verification. If the deployment sends a
+Cross-Origin-Opener-Policy header that interferes with popups, configure it as
+`same-origin-allow-popups` per Google's setup guide.
 
-The old pages used Firebase redirect sign-in while a separate Google client
-ID was configured but unused. They did not write user profile documents at
-all, and both client and rules admin allowlists were empty. The reported popup
-failure could not be reproduced against the deployed site in this environment;
-this change removes that OAuth flow rather than asserting a browser-specific
-cause. The auction operation guide follows below.
+References:
+- https://developers.google.com/identity/gsi/web/reference/js-reference
+- https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid
+- https://firebase.google.com/docs/auth/web/google-signin
 
+## Verification
+
+Run `node --test tests/guest-auth.test.cjs` for the mocked credential exchange,
+profile saving, restore, optional phone, and failure handling checks.
+On the deployed site, test Google sign-in, reload, sign-out, another account,
+profile-save permission failure, optional phone saving, and bidding. Verify an
+approved email/password admin can see registrations and an unapproved account
+cannot manage lots or read guest contacts. These live checks require configured
+Firebase/Google access and are not covered by the mocked tests.
 
 ## 4. Run the event
 

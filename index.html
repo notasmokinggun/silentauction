@@ -412,9 +412,6 @@ function recordMyBid(lotId, amount) {
 // ---------------------------------------------------------------
 // Auth
 // ---------------------------------------------------------------
-auth.getRedirectResult().then(res => {
-  if (res.user) { googleUser = res.user; renderSigninAreas(); }
-}).catch(() => {});
 auth.onAuthStateChanged(u => { if (u) googleUser = u; renderSigninAreas(); });
 
 function signinHtml() {
@@ -428,7 +425,10 @@ function renderSigninAreas() {
     if (!el) return;
     el.innerHTML = signinHtml();
     const btn = el.querySelector('[data-google-signin]');
-    if (btn) btn.onclick = () => auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());
+    if (btn) btn.onclick = () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(err => {
+      console.error('Sign-in failed:', err);
+      alert('Sign-in failed: ' + err.message);
+    });
   });
   const nameFields = [document.getElementById('s-name'), document.getElementById('p-name')];
   nameFields.forEach(f => { if (f && !f.value && googleUser) f.value = googleUser.displayName || ''; });
@@ -722,3 +722,4 @@ function renderMyBids() {
 </script>
 </body>
 </html>
+

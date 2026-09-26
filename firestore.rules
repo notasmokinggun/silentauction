@@ -2,26 +2,108 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Admin check has two layers, so there's no chicken-and-egg problem:
-    // 1. A tiny hardcoded bootstrap list — paste the SAME lowercase email(s)
-    //    you put in ADMIN_EMAILS in firebase-init.js. This is how the very
-    //    first admin (you) gets in, since nobody exists yet to add you.
-    // 2. Anyone with a doc in the `admins` collection, keyed by their
-    //    lowercase email — this is what the in-app "Manage Admins" page
-    //    writes to. You add someone by typing their email; they don't need
-    //    to sign in first to get a UID for you to paste anywhere.
+    // ───────────────────────────────────────────────────────────
+    // Admin identity is by EMAIL, never Google/UID, and always
+    // requires a verified email address:
+    //   1. A tiny hardcoded bootstrap list (paste the SAME lowercase
+    //      email(s) as ADMIN_EMAILS in firebase-init.js) — how the
+    //      very first admin gets in, since nobody exists yet to add
+    //      them.
+    //   2. Anyone with an approved doc in adminEmails/{email} — written
+    //      by admin-access.html (owner adds/removes admins by email)
+    //      and by owner-setup.html (the one-time owner claim).
+    // ───────────────────────────────────────────────────────────
+    function verifiedEmail() {
+      return request.auth != null && request.auth.token.email_verified == true &&
+        request.auth.token.email is string;
+    }
+    function ownEmail() { return request.auth.token.email.lower(); }
     function isAdmin() {
-      return request.auth != null && request.auth.token.email != null && (
-        request.auth.token.email.lower() in [
+      return verifiedEmail() && (
+        ownEmail() in [
           // "you@example.com",
         ]
-        || exists(/databases/$(database)/documents/admins/$(request.auth.token.email.lower()))
+        || (exists(/databases/$(database)/documents/adminEmails/$(ownEmail())) &&
+            get(/databases/$(database)/documents/adminEmails/$(ownEmail())).data.approved == true)
       );
     }
-
-    match /admins/{email} {
-      allow read, write: if isAdmin();
+    function isOwner() {
+      return verifiedEmail() &&
+        exists(/databases/$(database)/documents/settings/owner) &&
+        get(/databases/$(database)/documents/settings/owner).data.uid == request.auth.uid &&
+        get(/databases/$(database)/documents/settings/owner).data.email == ownEmail();
     }
+    // True only while no owner has been claimed yet AND this write would
+    // itself create that owner record for the signed-in user — lets
+    // owner-setup.html's one-time claim happen without a chicken-and-egg
+    // "you must already be owner to become owner" problem.
+    function bootstrapping() {
+      return verifiedEmail() &&
+        !exists(/databases/$(database)/documents/settings/owner) &&
+        getAfter(/databases/$(database)/documents/settings/owner).data.uid == request.auth.uid &&
+        getAfter(/databases/$(database)/documents/settings/owner).data.email == ownEmail();
+    }
+
+    // Created once by owner-setup.html's one-time claim, keyed uid+email
+    // so it can never silently point at a different account later.
+    match /settings/owner {
+      allow get: if isOwner();
+      allow create: if verifiedEmail() &&
+        request.resource.data.keys().hasOnly(['uid', 'email', 'setupKey', 'createdAt']) &&
+        request.resource.data.uid == request.auth.uid && request.resource.data.email == ownEmail() &&
+        request.resource.data.createdAt == request.time &&
+        request.resource.data.setupKey is string &&
+        request.resource.data.setupKey.matches('^[a-zA-Z0-9_-]{20,128}$') &&
+        get(/databases/$(database)/documents/setupKeys/$(request.resource.data.setupKey)).data.enabled == true &&
+        getAfter(/databases/$(database)/documents/setupKeys/$(request.resource.data.setupKey)).data.enabled == false &&
+        getAfter(/databases/$(database)/documents/adminEmails/$(ownEmail())).data.role == 'owner' &&
+        getAfter(/databases/$(database)/documents/adminEmails/$(ownEmail())).data.approved == true;
+      allow update, delete, list: if false;
+    }
+
+    // Created only in the Firebase console (Firestore → Data → Start
+    // collection "setupKeys" → doc with `enabled: true`). Never readable
+    // or creatable from the browser — consuming it and writing the first
+    // owner record must happen atomically in the same batch as above.
+    match /setupKeys/{key} {
+      allow read, create, delete: if false;
+      allow update: if bootstrapping() && resource.data.enabled == true &&
+        getAfter(/databases/$(database)/documents/settings/owner).data.setupKey == key &&
+        request.resource.data.keys().hasOnly(['enabled']) && request.resource.data.enabled == false;
+    }
+
+    // admin-access.html: owner adds/removes organizers by email here.
+    // The owner's own row can never be edited/removed through this path.
+    function initialOwnerApproval(email) {
+      return bootstrapping() && email == ownEmail() &&
+        request.resource.data.keys().hasOnly(['email', 'approved', 'role', 'updatedBy', 'updatedAt']) &&
+        request.resource.data.email == ownEmail() && request.resource.data.approved == true &&
+        request.resource.data.role == 'owner' && request.resource.data.updatedBy == request.auth.uid &&
+        request.resource.data.updatedAt == request.time;
+    }
+    function validApproval(email) {
+      return request.resource.data.keys().hasOnly(['email', 'approved', 'role', 'updatedBy', 'updatedAt']) &&
+        email == email.lower() && email.size() <= 254 &&
+        email.matches('^[^ @/]+@[^ @/]+[.][^ @/]+$') &&
+        request.resource.data.email == email &&
+        request.resource.data.approved == true &&
+        request.resource.data.role == 'admin' &&
+        request.resource.data.updatedBy == request.auth.uid &&
+        request.resource.data.updatedAt == request.time;
+    }
+    match /adminEmails/{email} {
+      allow get: if isOwner() || (verifiedEmail() && email == ownEmail());
+      allow list: if isOwner();
+      allow create: if (isOwner() && validApproval(email)) || initialOwnerApproval(email);
+      allow update: if (isOwner() && resource.data.role != 'owner' && email != ownEmail() && validApproval(email)) || initialOwnerApproval(email);
+      allow delete: if isOwner() && resource.data.role != 'owner' && email != ownEmail();
+    }
+
+    // Legacy: an older build briefly wrote admin approvals to admins/{email}
+    // (Google-sign-in era). That collection is no longer read by the app —
+    // locked out entirely rather than left as a stale backdoor. Re-add
+    // anyone who was only approved there through Admin Access instead.
+    match /admins/{email} { allow read, write: if false; }
 
     // A per-device cooldown, checked server-side. A bid transaction writes
     // here alongside its real writes; if the gap since this device's last
@@ -34,6 +116,21 @@ service cloud.firestore {
       allow write: if request.resource.data.lastBidAt is timestamp &&
         (!exists(/databases/$(database)/documents/bidLimits/$(deviceId)) ||
          request.resource.data.lastBidAt.toMillis() - resource.data.lastBidAt.toMillis() >= 3000);
+    }
+
+    // Guest profiles saved by guest-auth.js after Google sign-in (name/
+    // email/phone for high-value lots). Unrelated to admin identity.
+    match /users/{uid} {
+      allow read: if isAdmin() || (request.auth != null && request.auth.uid == uid);
+      allow create, update: if request.auth != null && request.auth.uid == uid &&
+        request.resource.data.email == request.auth.token.email &&
+        request.resource.data.keys().hasOnly(['name', 'email', 'phone', 'updatedAt']) &&
+        request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() < 80 &&
+        request.resource.data.email is string && request.resource.data.email.size() <= 254 &&
+        request.resource.data.email.matches('^[^ @]+@[^ @]+[.][^ @]+$') &&
+        request.resource.data.phone is string && request.resource.data.phone.size() <= 30 &&
+        request.resource.data.updatedAt == request.time;
+      allow delete: if isAdmin();
     }
 
     match /items/{itemId} {

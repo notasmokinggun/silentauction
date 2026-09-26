@@ -12,14 +12,22 @@ const firebaseConfig = {
 };
 
 // ─────────────────────────────────────────────────────────────
-// 2. Bootstrap admin(s) only — paste the email of the FIRST admin (you)
-//    here, lowercase, exactly as your Google account shows it. That's the
-//    one manual step. After that, add every other admin through the
-//    in-app "Manage Admins" page instead (admin.html → Settings) by
-//    typing their email — you should never need to edit this array again
-//    except for yourself. This is UI-only; the real enforcement lives in
-//    firestore.rules, which needs the SAME email pasted into its
-//    bootstrap list too.
+// 2. Guest Google sign-in (guest-auth.js). Web OAuth client ID from
+//    Firebase Authentication → Google → Web SDK configuration. Guests
+//    only — admins never use Google, see ADMIN_EMAILS below.
+// ─────────────────────────────────────────────────────────────
+const GOOGLE_CLIENT_ID = "423062787372-3fdpdp077o7hse14ap6nrj43aifeejch.apps.googleusercontent.com";
+
+// ─────────────────────────────────────────────────────────────
+// 3. Bootstrap admin(s) only — paste the email of the FIRST admin (you)
+//    here, lowercase, exactly as you'll sign in with (email/password —
+//    see owner-setup.html for the one-time claim, or just list yourself
+//    here directly). That's the one manual step. After that, add every
+//    other admin through the in-app Admin Access page (admin-access.html)
+//    instead, by typing their email — you should never need to edit this
+//    array again except for yourself. This is UI-only; the real
+//    enforcement lives in firestore.rules, which needs the SAME email
+//    pasted into its bootstrap list too.
 // ─────────────────────────────────────────────────────────────
 const ADMIN_EMAILS = [
   // "you@example.com",
@@ -51,17 +59,34 @@ function isAdminEmail(email) {
   return !!email && ADMIN_EMAILS.includes(email.toLowerCase());
 }
 
-// Authoritative check: bootstrap list OR a live admins/{email} doc in
-// Firestore, keyed by lowercase email. Always use this before showing the
-// admin panel — isAdminEmail() alone would miss anyone added through
-// Manage Admins. Takes a Firebase Auth user object (needs .email).
+// Lowercased email for a Firebase Auth user object, or null. This is the
+// admin "identity" everywhere in the app — admins/owner are keyed by
+// email, never by uid, so approving someone doesn't require them to have
+// signed in first.
+function adminEmail(user) {
+  return user && user.email ? user.email.toLowerCase() : null;
+}
+
+// The adminEmails/{email} doc for a user — the single source of truth for
+// "is this person approved", written by admin-access.js (adding/removing
+// admins) and owner-setup.js (claiming ownership). firestore.rules trusts
+// this same collection, keyed the same way.
+function adminApprovalRef(user) {
+  const email = adminEmail(user);
+  return email ? db.collection("adminEmails").doc(email) : null;
+}
+
+// Authoritative check: bootstrap list OR a live adminEmails/{email} doc
+// with approved === true. Always use this before showing the admin
+// panel — isAdminEmail() alone would miss anyone added through Admin
+// Access. Takes a Firebase Auth user object (needs .email).
 async function checkIsAdmin(user) {
   if (!user || !user.email) return false;
-  const email = user.email.toLowerCase();
+  const email = adminEmail(user);
   if (isAdminEmail(email)) return true;
   try {
-    const doc = await db.collection("admins").doc(email).get();
-    return doc.exists;
+    const doc = await db.collection("adminEmails").doc(email).get();
+    return doc.exists && doc.data().approved === true;
   } catch {
     return false; // Firestore rules will also block a non-admin regardless.
   }

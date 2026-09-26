@@ -393,14 +393,21 @@ const app = document.getElementById('app');
 document.getElementById('signin').onclick = () => {
   const errEl = document.getElementById('signin-err');
   if (errEl) errEl.textContent = '';
-  auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(err => {
-    console.error('Sign-in failed:', err);
-    if (errEl) errEl.textContent = 'Sign-in failed: ' + err.message + ' (' + err.code + ')';
-  });
+  // Redirect, not popup: GitHub Pages sends a Cross-Origin-Opener-Policy
+  // header that blocks Firebase's popup helper from reporting the result
+  // back to this page, so signInWithPopup silently hangs there. Redirect
+  // is a full-page navigation instead, so it isn't affected by that header.
+  document.getElementById('signin').textContent = 'Redirecting to Google…';
+  auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());
 };
 document.getElementById('signout').onclick = () => auth.signOut();
 document.getElementById('signout2').onclick = () => auth.signOut();
 
+auth.getRedirectResult().catch(err => {
+  console.error('Sign-in failed:', err);
+  const errEl = document.getElementById('signin-err');
+  if (errEl) errEl.textContent = 'Sign-in failed: ' + err.message + ' (' + err.code + ')';
+});
 auth.onAuthStateChanged(u => {
   gate.style.display = denied.style.display = 'none';
   app.classList.remove('on');

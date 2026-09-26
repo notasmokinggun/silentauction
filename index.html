@@ -52,7 +52,7 @@ img{-webkit-user-drag:none;}
 
 /* ---------- SPLASH ---------- */
 #screen-splash{position:relative;background:#000;color:var(--cream);}
-.splash-bg{position:absolute;inset:0;background-size:cover;background-position:center;
+.splash-bg{position:absolute;inset:0;background-size:contain;background-repeat:no-repeat;background-position:center;
   filter:saturate(.85) brightness(.6);
   /* Default look before any item photo is available (or if one fails to
      load) — a warm gold-on-charcoal gradient in brand tones, no external
@@ -106,7 +106,7 @@ img{-webkit-user-drag:none;}
 /* ---------- DETAIL ---------- */
 #screen-detail{background:var(--bg);}
 .detail-topbar{position:relative;}
-.detail-hero{width:100%;aspect-ratio:4/3;object-fit:cover;background:var(--card-2);display:block;}
+.detail-hero{width:100%;height:320px;object-fit:contain;background:var(--card-2);display:block;}
 .detail-actions{position:absolute;top:calc(16px + env(safe-area-inset-top,0px));left:16px;right:16px;
   display:flex;justify-content:space-between;}
 .detail-actions .grp{display:flex;gap:8px;}

@@ -481,18 +481,15 @@ document.getElementById('reset-password').onclick = async event => {
   event.target.disabled = true;
   status.textContent = 'Sending…';
   try {
-    const methods = await auth.fetchSignInMethodsForEmail(email);
-    if (methods.length === 0) {
-      // No account yet for this email — send a sign-in link. Clicking it
-      // both creates and verifies the account, then this page prompts
-      // for a password (see isSignInWithEmailLink above / setpw form).
-      localStorage.setItem(EMAIL_LINK_KEY, email);
-      await auth.sendSignInLinkToEmail(email, actionCodeSettings);
-      status.textContent = 'If ' + email + ' has been approved by an owner, a setup link has been sent. Open it on this device to finish creating your password.';
-    } else {
-      await auth.sendPasswordResetEmail(email);
-      status.textContent = 'A password setup link has been sent to ' + email + '. Check your inbox and spam folder.';
-    }
+    // One unconditional path for both brand-new and existing admins: Firebase
+    // treats "does this email already have an account" as sensitive (email
+    // enumeration protection), so fetchSignInMethodsForEmail can't be used
+    // to branch on that anymore. A sign-in link works either way — it
+    // creates + verifies a new account, or signs an existing one straight
+    // in (skipping a forgotten password entirely), per Firebase's own docs.
+    localStorage.setItem(EMAIL_LINK_KEY, email);
+    await auth.sendSignInLinkToEmail(email, actionCodeSettings);
+    status.textContent = 'A setup link has been sent to ' + email + ' if it is approved. Open it on this device to finish signing in.';
   } catch (err) { status.textContent = 'Could not send a setup link: ' + err.message; }
   finally { event.target.disabled = false; }
 };

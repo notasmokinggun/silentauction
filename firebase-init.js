@@ -12,6 +12,15 @@ const firebaseConfig = {
 };
 
 // ─────────────────────────────────────────────────────────────
+// 1b. Google Sign-In uses Google Identity Services directly (not
+//     Firebase's redirect/popup helper — that breaks on GitHub Pages).
+//     Get this from: Firebase Console → Authentication → Sign-in
+//     method → click "Google" → expand "Web SDK configuration" →
+//     copy "Web client ID" (ends in .apps.googleusercontent.com).
+// ─────────────────────────────────────────────────────────────
+const GOOGLE_CLIENT_ID = "423062787372-3fdpdp077o7hse14ap6nrj43aifeejch.apps.googleusercontent.com";
+
+// ─────────────────────────────────────────────────────────────
 // 2. List the Google account UIDs allowed to open admin.html.
 //    This is UI-only — the real enforcement lives in firestore.rules.
 //    Sign in once on admin.html to see your own UID, then add it
@@ -91,3 +100,4 @@ function lotStatus(it) {
 function isAdminUid(uid) {
   return !!uid && ADMIN_UIDS.includes(uid);
 }
+

@@ -183,6 +183,7 @@ button.danger{color:var(--red);border-color:rgba(193,89,74,.4);}
   <form id="admin-login"><label>Email <input id="admin-email" type="email" autocomplete="username" required></label><label>Password <input id="admin-password" type="password" autocomplete="current-password" required></label><button class="gbtn" id="signin" type="submit" style="margin-top:16px;">Sign in</button></form>
   <button id="create-admin-account" class="gbtn" type="button">Create admin account</button>
   <button id="reset-password" class="gbtn" type="button">Reset password</button>
+  <p><a href="owner-setup.html">First-time owner setup</a></p>
   <p id="signin-err" style="color:var(--red);font-size:12.5px;margin-top:12px;"></p>
 </div>
 
@@ -368,7 +369,7 @@ button.danger{color:var(--red);border-color:rgba(193,89,74,.4);}
           <h3>Your account</h3>
           <p style="font-size:13px;color:var(--muted);margin-bottom:6px;">Signed in as</p>
           <p style="font-size:14px;margin-bottom:14px;" id="settings-email"></p>
-          <a class="ghost" href="admin-access.html">Manage admin access</a>
+          <a id="manage-access-link" class="ghost" href="admin-access.html" hidden>Manage admin access</a>
           <button class="ghost" id="signout2">Sign out</button>
         </div>
         <div class="panel">
@@ -474,6 +475,7 @@ function checkAdminAccess(user) {
   stopApproval = adminApprovalRef(user).onSnapshot(approval => {
     const approved = approval.exists && approval.data().approved === true;
     app.classList.toggle('on', approved);
+    document.getElementById('manage-access-link').hidden = !approved || approval.data().role !== 'owner';
     denied.style.display = approved ? 'none' : 'block';
     document.getElementById('myuid').textContent = user.email;
     if (stopLots) stopLots();

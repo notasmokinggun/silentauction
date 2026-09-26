@@ -1,7 +1,7 @@
 const { before, after, test } = require('node:test');
 const fs = require('node:fs');
 const { initializeTestEnvironment, assertSucceeds, assertFails } = require('@firebase/rules-unit-testing');
-const { doc, getDoc, getDocs, collection, setDoc, deleteDoc, serverTimestamp } = require('firebase/firestore');
+const { doc, getDoc, getDocs, collection, setDoc, deleteDoc, serverTimestamp, writeBatch } = require('firebase/firestore');
 let env;
 const account = (uid, email, verified = true) => env.authenticatedContext(uid, {
   email, email_verified: verified, firebase: { sign_in_provider: 'password' },
@@ -13,6 +13,7 @@ before(async () => {
   } });
   await env.clearFirestore();
   await env.withSecurityRulesDisabled(async context => {
+    await setDoc(doc(context.firestore(), 'settings/owner'), { uid: 'owner', email: 'owner@example.com' });
     await setDoc(doc(context.firestore(), 'adminEmails/owner@example.com'), { approved: true, role: 'owner', email: 'owner@example.com' });
     await setDoc(doc(context.firestore(), 'adminEmails/admin@example.com'), { approved: true, role: 'admin', email: 'admin@example.com' });
     await setDoc(doc(context.firestore(), 'users/guest'), { email: 'guest@example.com', name: 'Guest', phone: '' });
@@ -66,4 +67,47 @@ test('verified users can check only their own approval; legacy approvals grant n
   await env.withSecurityRulesDisabled(context => setDoc(doc(context.firestore(), 'admins/guest'), { approved: true }));
   await assertFails(getDoc(doc(db, 'users/other')));
   await assertFails(setDoc(doc(db, 'items/legacy'), { title: 'Unauthorized' }));
+});
+
+test('approved ordinary admins can manage lots but cannot approve, list or revoke admins', async () => {
+  const db = account('admin', 'admin@example.com');
+  await assertSucceeds(setDoc(doc(db, 'items/allowed'), { title: 'Allowed lot' }));
+  await assertFails(getDocs(collection(db, 'adminEmails')));
+  await assertFails(setDoc(doc(db, 'adminEmails/escalated@example.com'), approval('escalated@example.com', 'admin')));
+  await assertFails(deleteDoc(doc(db, 'adminEmails/new@example.com')));
+  await assertFails(setDoc(doc(db, 'settings/owner'), { uid: 'admin', email: 'admin@example.com' }));
+});
+test('a different UID cannot claim owner powers merely by carrying the owner email', async () => {
+  const db = account('different-uid', 'owner@example.com');
+  await assertFails(setDoc(doc(db, 'adminEmails/imposter@example.com'), approval('imposter@example.com', 'different-uid')));
+});
+test('first-owner setup requires verified email and private code, consumes it atomically, and locks permanently', async () => {
+  await env.clearFirestore();
+  const key = 'TestRandomSetupCode123456789';
+  await env.withSecurityRulesDisabled(context => setDoc(doc(context.firestore(), 'setupKeys/' + key), { enabled: true }));
+  function claim(db, uid, email, code, consume = true) {
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'settings/owner'), { uid, email, setupKey: code, createdAt: serverTimestamp() });
+    batch.set(doc(db, 'adminEmails/' + email), approval(email, uid, 'owner'));
+    if (consume) batch.set(doc(db, 'setupKeys/' + code), { enabled: false });
+    return batch.commit();
+  }
+  const db = account('first', 'first@example.com');
+  await assertFails(getDoc(doc(db, 'setupKeys/' + key)));
+  await assertFails(getDocs(collection(db, 'setupKeys')));
+  await assertFails(setDoc(doc(db, 'setupKeys/AttackerGeneratedKey12345'), { enabled: true }));
+  await assertFails(claim(db, 'first', 'first@example.com', 'WrongSetupCode1234567890'));
+  await assertFails(claim(account('first', 'first@example.com', false), 'first', 'first@example.com', key));
+  await assertFails(claim(db, 'first', 'someoneelse@example.com', key));
+  await assertFails(claim(db, 'first', 'first@example.com', key, false));
+  await assertSucceeds(claim(db, 'first', 'first@example.com', key));
+  await assertSucceeds(setDoc(doc(db, 'adminEmails/helper@example.com'), approval('helper@example.com', 'first')));
+  await env.withSecurityRulesDisabled(async context => {
+    const consumed = await getDoc(doc(context.firestore(), 'setupKeys/' + key));
+    require('node:assert/strict').equal(consumed.data().enabled, false);
+    await setDoc(doc(context.firestore(), 'setupKeys/AnotherSetupCode123456789'), { enabled: true });
+  });
+  await assertFails(claim(account('second', 'second@example.com'), 'second', 'second@example.com', 'AnotherSetupCode123456789'));
+  await assertFails(deleteDoc(doc(db, 'settings/owner')));
+  await assertFails(deleteDoc(doc(db, 'adminEmails/first@example.com')));
 });

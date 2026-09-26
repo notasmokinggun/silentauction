@@ -50,9 +50,9 @@ auth.onAuthStateChanged(user => {
   stopAccess = adminApprovalRef(user).onSnapshot(doc => {
     accessVersion++;
     manager.hidden = true;
-    if (!doc.exists || doc.data().approved !== true) {
+    if (!doc.exists || doc.data().approved !== true || doc.data().role !== 'owner') {
       document.getElementById('admins').replaceChildren();
-      accessStatus.textContent = 'This account does not have admin access.';
+      accessStatus.textContent = 'Only the auction owner can approve or remove admins.';
       return;
     }
     accessStatus.textContent = 'Signed in as ' + user.email + '.';

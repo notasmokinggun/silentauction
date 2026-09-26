@@ -26,57 +26,47 @@ approve an unapproved user. Normal Spark quotas still apply.
    to Firebase Authentication → Settings → Authorized domains as well.
 3. In Firestore Console → Rules, paste and publish **firestore.rules** from this
    branch. Alternatively run `firebase deploy --project cas-silent-auction --only firestore:rules`.
-4. Publish the static files, including `guest-auth.js`, `admin-access.html`,
+4. Publish the static files, including `owner-setup.html`, `owner-setup.js`, `guest-auth.js`, `admin-access.html`,
    `admin-access.js`, `firebase-init.js` and `admin.html`.
 
-### First admin: approve your email once in Firebase Console
+### First owner: guided setup
 
-Create collection **adminEmails**, with a document whose ID is your full email
-address **in lowercase**, for example `you@example.com`. Add these fields:
+Follow [SETUP.md](SETUP.md) for the beginner walkthrough.
 
-| Field | Type | Value |
-|---|---|---|
-| email | string | your lowercase email |
-| approved | boolean | true |
-| role | string | owner |
+In Firebase Console create collection `setupKeys`, click **Auto-ID** for the
+document ID, copy that random ID, and add just `enabled` (boolean) = `true`.
+Keep the ID private. Open `owner-setup.html` on the published site, create or
+sign in to your email/password account, verify your email, and paste that ID.
+Click **Make this my owner account**. No email or UID needs to be hardcoded.
 
-Then open `admin.html`, enter that email and a password, and click **Create admin
-account**. Open the verification email, return to the page, and click **I've
-verified my email / Check access**. Existing accounts can sign in and use **Send
-verification email** if needed. Existing Google-only accounts can use **Reset
-password** to set up password access. Never put passwords in Firestore.
+An atomic write saves your account UID/email in private `settings/owner`, creates
+your `adminEmails/{email}` owner approval, and disables the setup key. Owner setup
+cannot run again, even with another key. The website cannot replace or delete
+the owner. Account recovery or an intentional owner change requires the Firebase
+project owner to use the Console. Your chosen email must be yours to verify.
 
-This owner approval cannot be edited or removed from the website. Only the
-Firebase project owner can change it in the Console. This prevents the admin
-page from accidentally removing the last protected owner. You do not copy a UID.
+### Only the owner can add or remove other admins
 
-### Add or remove other admin emails
+Open **Admin → Settings → Manage admin access**. Enter an organizer's email and
+click **Add admin**. They create their own account on `admin.html`, verify the
+email, and sign in. Existing verified accounts can sign in immediately. Adding
+an email does not create an account or send an invitation.
 
-Go to **Admin → Settings → Manage admin access**. Enter the organizer's email and
-click **Add admin**. That saves an approval in Firestore; it does not create an
-Authentication account or send an invitation. The organizer creates their own
-email/password account on `admin.html`, verifies the email, then signs in.
-Existing verified accounts can sign in immediately. Account creation alone never
-grants admin permissions; an approved email AND verified ownership are required.
+Only the stored owner UID AND verified owner email can list/manage approvals.
+Other approved admins can manage auction lots and read guest registrations,
+but cannot grant or revoke admin permissions. This is enforced by Firestore
+rules, not just by hiding controls. Revocation keeps guest accounts/bids intact.
+The owner cannot be removed through the website.
 
-**Remove admin** deletes that email's approval. Firestore rules reject subsequent
-admin requests even with an existing login session. The person's Firebase Auth
-account and guest bids remain. Admins cannot remove themselves or edit/remove an
-owner. All approved admins can manage other non-owner admins.
+### Migration from earlier branch revisions
 
-The browser requests Firestore operations using its normal Firebase SDK, but the
-backend rules decide whether those operations are allowed. The email list lives
-in the private `adminEmails` collection, not in JavaScript. Writes validate the
-email, role, actor UID and server timestamp. No browser can create an owner role.
+The old `admins/{UID}` documents are ignored. If you created an owner email record
+using the previous instructions but have not completed the new setup, run the
+setup page once with your intended owner account. It will update the matching
+email approval and lock the single owner identity in `settings/owner`. Existing
+ordinary admin approvals remain usable, but cannot approve others.
 
-### Migration from the earlier branch revision
-
-The earlier `admins/{UID}` approvals are no longer used. Create the first
-`adminEmails/{lowercase-email}` owner document before using this revision and
-publish the new rules. Old approval documents can be left in place; the new rules
-make them inaccessible and they grant no permissions. The functions directory
-and callable endpoints were removed from the project. No functions deployment
-or Blaze subscription is needed.
+No Cloud Functions, Blaze subscription, or service-account keys are needed.
 
 ### Checks
 

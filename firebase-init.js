@@ -21,7 +21,7 @@ const firebaseConfig = {
 //    list too.
 // ─────────────────────────────────────────────────────────────
 const ADMIN_UIDS = [
-  // "AbCdEfGhIjKlMnOpQrStUvWxYz12",
+  "NEt1uQMYZlhRMUuuB6K3dFArQF23",
 ];
 
 firebase.initializeApp(firebaseConfig);

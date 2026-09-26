@@ -843,6 +843,7 @@ function renderBidRows(itemId) {
       <span class="who">${escapeHtml(b.name)}${b.isGoogle ? ' <span class="g">· Google verified</span>' : ''}</span>
       <span class="amt">${money(b.amount)}</span>
       <button class="${isWinner ? '' : 'set'}" data-set="${b.id}">${isWinner ? 'Winner ✓' : 'Set winner'}</button>
+      <button class="btn-danger" data-invalidate="${b.id}">Invalidate</button>
     </div>`;
   }).join('');
   container.querySelectorAll('[data-set]').forEach(btn => btn.onclick = () => {
@@ -853,6 +854,47 @@ function renderBidRows(itemId) {
       winnerSetAt: firebase.firestore.FieldValue.serverTimestamp(),
     });
   });
+  container.querySelectorAll('[data-invalidate]').forEach(btn => btn.onclick = () => invalidateBid(itemId, btn.dataset.invalidate));
+}
+
+// Removes a bogus/joke bid entirely and recalculates the lot's leading
+// bid from whatever remains (or resets to the starting bid if nothing
+// does). Clears the marked winner too, if the invalidated bid held it.
+async function invalidateBid(itemId, bidId) {
+  if (!confirm('Invalidate this bid? It is permanently removed and the leading bid is recalculated.')) return;
+  const itemRef = db.collection('items').doc(itemId);
+  const bidsRef = itemRef.collection('bids');
+  try {
+    await bidsRef.doc(bidId).delete();
+    const [itemDoc, remaining, countSnap] = await Promise.all([
+      itemRef.get(),
+      bidsRef.orderBy('amount', 'desc').limit(1).get(),
+      bidsRef.get(),
+    ]);
+    const it = itemDoc.data();
+    const patch = { bidCount: countSnap.size };
+    if (remaining.empty) {
+      patch.currentBid = it.startingBid;
+      patch.currentBidderName = '';
+      patch.currentBidderUid = null;
+    } else {
+      const top = remaining.docs[0].data();
+      patch.currentBid = top.amount;
+      patch.currentBidderName = top.name;
+      patch.currentBidderUid = top.uid || null;
+    }
+    if (it.winnerBidId === bidId) {
+      patch.winnerBidId = firebase.firestore.FieldValue.delete();
+      patch.winnerName = firebase.firestore.FieldValue.delete();
+      patch.winnerAmount = firebase.firestore.FieldValue.delete();
+      patch.winnerUid = firebase.firestore.FieldValue.delete();
+      patch.winnerIsGoogle = firebase.firestore.FieldValue.delete();
+      patch.winnerSetAt = firebase.firestore.FieldValue.delete();
+    }
+    await itemRef.update(patch);
+  } catch (err) {
+    alert('Could not invalidate bid: ' + err.message);
+  }
 }
 
 // -----------------------------------------------------------------

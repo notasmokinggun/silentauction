@@ -80,6 +80,9 @@
     background:linear-gradient(180deg,transparent,var(--bg) 30%);z-index:6;}
   .closed-note{text-align:center;font-size:13px;color:var(--muted);padding:14px;
     background:var(--surface);border:1px solid var(--border);border-radius:12px;}
+  .signin-gate{text-align:center;padding:6px 0 4px;}
+  .signin-note{font-size:13px;color:var(--muted);margin:0 0 14px;}
+  #sheet-google-btn{display:flex;justify-content:center;}
 
   /* ---------- Bid sheet ---------- */
   .sheet-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:20;display:none;}
@@ -257,14 +260,20 @@
     <p class="v" id="sheet-current-bid"></p>
     <p class="sheet-min" id="sheet-min-text"></p>
   </div>
-  <div class="amount-field"><span>₹</span><input id="sheet-amount" type="number" inputmode="numeric"></div>
-  <div class="quick-row" id="sheet-quick"></div>
-  <div class="biddername">
-    <span>Bidding as <strong id="sheet-name-display"></strong></span>
-    <button id="sheet-name-change">Change</button>
+  <div class="signin-gate" id="sheet-signin-gate">
+    <p class="signin-note">Sign in with Google to bid — every bid is tied to a real account.</p>
+    <div id="sheet-google-btn"></div>
   </div>
-  <div class="name-edit" id="sheet-name-edit"><input id="sheet-name-input" placeholder="Full name" maxlength="79"></div>
-  <button class="cta cta-cream" id="sheet-confirm">Confirm Bid</button>
+  <div id="sheet-bidform">
+    <div class="amount-field"><span>₹</span><input id="sheet-amount" type="number" inputmode="numeric"></div>
+    <div class="quick-row" id="sheet-quick"></div>
+    <div class="biddername">
+      <span>Bidding as <strong id="sheet-name-display"></strong></span>
+      <button id="sheet-name-change">Change</button>
+    </div>
+    <div class="name-edit" id="sheet-name-edit"><input id="sheet-name-input" placeholder="Full name" maxlength="79"></div>
+    <button class="cta cta-cream" id="sheet-confirm">Confirm Bid</button>
+  </div>
   <div class="sheet-err" id="sheet-err"></div>
 </div>
 
@@ -345,7 +354,56 @@ document.querySelectorAll('.navbtn').forEach(b => b.onclick = () => showView(b.d
 // Auth
 // -----------------------------------------------------------------
 auth.getRedirectResult().then(res => { if (res.user) { googleUser = res.user; renderProfile(); } }).catch(() => {});
-auth.onAuthStateChanged(u => { googleUser = u || null; renderProfile(); });
+auth.onAuthStateChanged(u => {
+  googleUser = u || null;
+  renderProfile();
+  if (sheet && sheet.classList.contains('open')) updateSheetAuthGate();
+});
+
+// Bidding requires a real signed-in Google account (mandatory, not optional) —
+// every bid and item update is written with this uid, and firestore.rules
+// rejects any bid write whose uid doesn't match the signed-in account.
+let gisReady = false;
+function initGis() {
+  if (gisReady || !window.google || !google.accounts) return;
+  gisReady = true;
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: async (resp) => {
+      const errEl = document.getElementById('sheet-err');
+      try {
+        const credential = firebase.auth.GoogleAuthProvider.credential(resp.credential);
+        await auth.signInWithCredential(credential);
+        if (errEl) errEl.textContent = '';
+      } catch (err) {
+        if (errEl) errEl.textContent = 'Sign-in failed: ' + (err.message || err);
+      }
+    },
+    ux_mode: 'popup',
+    auto_select: false,
+  });
+  renderGoogleButton();
+}
+function renderGoogleButton() {
+  if (!gisReady) return;
+  const el = document.getElementById('sheet-google-btn');
+  if (!el) return;
+  el.innerHTML = '';
+  google.accounts.id.renderButton(el, { type: 'standard', theme: 'outline', size: 'large', text: 'continue_with', shape: 'pill' });
+}
+(function loadGis() {
+  const s = document.createElement('script');
+  s.src = 'https://accounts.google.com/gsi/client';
+  s.async = true;
+  s.onload = initGis;
+  document.head.appendChild(s);
+})();
+function updateSheetAuthGate() {
+  const signedIn = !!googleUser;
+  document.getElementById('sheet-signin-gate').style.display = signedIn ? 'none' : 'block';
+  document.getElementById('sheet-bidform').style.display = signedIn ? 'block' : 'none';
+  if (!signedIn) renderGoogleButton();
+}
 
 // -----------------------------------------------------------------
 // Load lots
@@ -495,6 +553,7 @@ function openBidSheet(it) {
   document.getElementById('sheet-name-display').textContent = savedName || 'someone new';
   document.getElementById('sheet-name-edit').classList.toggle('open', !savedName);
   document.getElementById('sheet-err').textContent = '';
+  updateSheetAuthGate();
 
   backdrop.classList.add('open');
   sheet.classList.add('open');
@@ -515,6 +574,7 @@ document.getElementById('sheet-confirm').onclick = async () => {
   errEl.textContent = '';
   const name = document.getElementById('sheet-name-input').value.trim();
   const amount = Number(document.getElementById('sheet-amount').value);
+  if (!googleUser) { errEl.textContent = 'Sign in with Google to bid.'; return; }
   if (!name) { errEl.textContent = 'Enter your name to bid.'; return; }
   if (!amount || amount <= 0) { errEl.textContent = 'Enter a bid amount.'; return; }
 
@@ -535,12 +595,12 @@ document.getElementById('sheet-confirm').onclick = async () => {
       if (amount < minNext) throw new Error(`Someone beat you to it — bid must now be at least ${money(minNext)}.`);
       tx.update(itemRef, {
         currentBid: amount, currentBidderName: name,
-        currentBidderUid: googleUser ? googleUser.uid : null,
+        currentBidderUid: googleUser.uid,
         bidCount: (it.bidCount || 0) + 1,
       });
       tx.set(bidRef, {
-        name, amount, uid: googleUser ? googleUser.uid : null,
-        isGoogle: !!googleUser, deviceId: getDeviceId(),
+        name, amount, uid: googleUser.uid,
+        isGoogle: true, deviceId: getDeviceId(),
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
       });
       // Server-enforced cooldown — see firestore.rules. If this device bid

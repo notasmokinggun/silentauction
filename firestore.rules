@@ -18,6 +18,15 @@ service cloud.firestore {
         request.auth.token.email is string;
     }
     function ownEmail() { return request.auth.token.email.lower(); }
+    // A guest placing a bid must be signed in with a real Google account —
+    // never anonymous, never a bare uid with no verified provider. This is
+    // the server-side half of "every bid has a mandatory user id": the
+    // client can't spoof it, since request.auth comes from Firebase's own
+    // verified ID token, not from anything the page sends.
+    function isVerifiedBidder() {
+      return request.auth != null &&
+        request.auth.token.firebase.sign_in_provider == 'google.com';
+    }
     function isAdmin() {
       return verifiedEmail() && (
         ownEmail() in [
@@ -144,22 +153,29 @@ service cloud.firestore {
       // a typo in the description).
       allow update: if isAdmin() || (
         resource.data.active == true &&
+        isVerifiedBidder() &&
         request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(['currentBid', 'currentBidderName', 'currentBidderUid', 'bidCount']) &&
         request.resource.data.currentBid is number &&
         request.resource.data.currentBid >= resource.data.currentBid + resource.data.increment &&
         request.resource.data.currentBidderName is string &&
         request.resource.data.currentBidderName.size() > 0 &&
-        request.resource.data.currentBidderName.size() < 80
+        request.resource.data.currentBidderName.size() < 80 &&
+        request.resource.data.currentBidderUid == request.auth.uid
       );
 
       match /bids/{bidId} {
         allow read: if true;
         allow update, delete: if isAdmin();
-        allow create: if request.resource.data.name is string &&
+        // A bid document is only ever valid if its uid is the account that
+        // is actually signed in right now — a guest can't write someone
+        // else's uid, and can't write a bid with no uid at all.
+        allow create: if isVerifiedBidder() &&
+          request.resource.data.name is string &&
           request.resource.data.name.size() > 0 &&
           request.resource.data.name.size() < 80 &&
-          request.resource.data.amount is number;
+          request.resource.data.amount is number &&
+          request.resource.data.uid == request.auth.uid;
       }
     }
   }

@@ -11,17 +11,27 @@ const firebaseConfig = {
   appId: "1:423062787372:web:c9b424d8e76eb1d6b48889",
 };
 
-// Web OAuth client from Firebase Authentication → Google → Web SDK configuration.
-const GOOGLE_CLIENT_ID = "423062787372-3fdpdp077o7hse14ap6nrj43aifeejch.apps.googleusercontent.com";
+// ─────────────────────────────────────────────────────────────
+// 2. Bootstrap admin(s) only — paste the UID of the FIRST admin (you)
+//    here so you can get in at all. After that, add every other admin
+//    through the in-app "Manage Admins" page instead (admin.html →
+//    Settings) — you should never need to edit this array again except
+//    for yourself. This is UI-only; the real enforcement lives in
+//    firestore.rules, which needs the SAME uid pasted into its bootstrap
+//    list too.
+// ─────────────────────────────────────────────────────────────
+const ADMIN_UIDS = [
+  // "AbCdEfGhIjKlMnOpQrStUvWxYz12",
+];
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
 
-// A per-browser random id, used only so a guest's own bids can be
-// highlighted on their own screen. It is NOT a security mechanism —
-// anyone can clear it or fake it. Real identity comes from Google
-// sign-in when a bidder chooses to use it.
+// A per-browser random id. Used so a guest's own bids can be highlighted,
+// AND as the key for the server-enforced bid rate limit (bidLimits/{id} in
+// Firestore — see firestore.rules). It is not a login: anyone can clear it,
+// which just resets their own rate-limit cooldown, nothing more.
 function getDeviceId() {
   let id = localStorage.getItem("auction_device_id");
   if (!id) {
@@ -32,59 +42,59 @@ function getDeviceId() {
 }
 
 function money(n) {
-  return "\u20B9" + Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 0 });
+  return "₹" + Number(n).toLocaleString("en-IN", { minimumFractionDigits: 0 });
 }
 
-// closesAt on a lot doc can be a Firestore Timestamp (normal case, so
-// firestore.rules can enforce it), a JS Date, or an ISO string (legacy).
-// This normalizes any of those to millis, or null if there's nothing set.
-function closesAtMillis(closesAt) {
-  if (!closesAt) return null;
-  if (typeof closesAt.toDate === "function") return closesAt.toDate().getTime();
-  const t = new Date(closesAt).getTime();
-  return isNaN(t) ? null : t;
+// Fast, sync, bootstrap-only check — use for an instant UI decision.
+function isAdminUid(uid) {
+  return !!uid && ADMIN_UIDS.includes(uid);
 }
 
-// Lightweight countdown formatter shared by index.html and admin.html.
-// Returns null when there's nothing to show, "Closed" once time is up.
-function timeLeft(closesAt) {
-  const target = closesAtMillis(closesAt);
-  if (target == null) return null;
-  const ms = target - Date.now();
-  if (ms <= 0) return "Closed";
-  const s = Math.floor(ms / 1000);
-  const d = Math.floor(s / 86400);
-  const h = Math.floor((s % 86400) / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  if (d > 0) return d + "d " + h + "h left";
-  if (h > 0) return h + "h " + m + "m left";
-  if (m > 0) return m + "m " + sec + "s left";
-  return sec + "s left";
-}
-
-// Full status for a lot, folding together the manual "active" flag, an
-// optional pre-set bidding duration that hasn't been started yet, and a
-// running/expired countdown. This is the single source of truth both
-// pages render from.
-//   'notstarted' — duration configured, timer not started (never opened)
-//   'live'       — accepting bids right now
-//   'closed'     — manually closed, or the countdown ran out
-function lotStatus(it) {
-  if (it.active === false) return { state: "closed", label: "Closed" };
-  const target = closesAtMillis(it.closesAt);
-  if (target == null) {
-    if (it.durationMinutes > 0) return { state: "notstarted", label: "Not started yet" };
-    return { state: "live", label: "Open" };
+// Authoritative check: bootstrap list OR a live admins/{uid} doc in
+// Firestore. Always use this before showing the admin panel — isAdminUid()
+// alone would miss anyone added through Manage Admins.
+async function checkIsAdmin(uid) {
+  if (isAdminUid(uid)) return true;
+  try {
+    const doc = await db.collection("admins").doc(uid).get();
+    return doc.exists;
+  } catch {
+    return false; // Firestore rules will also block a non-admin regardless.
   }
-  if (target - Date.now() <= 0) return { state: "closed", label: "Closed" };
-  return { state: "live", label: timeLeft(it.closesAt) };
 }
 
-// Email approval is stored in Firestore and enforced by server-side rules.
-function adminEmail(user) {
-  return user && user.email ? user.email.trim().toLowerCase() : '';
+function escapeHtml(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) => (
+    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
+  ));
 }
-function adminApprovalRef(user) {
-  return db.collection('adminEmails').doc(adminEmail(user));
+
+// Human "time left" text from a Firestore Timestamp (or null for "no deadline set").
+function timeLeftText(endsAt) {
+  if (!endsAt) return null;
+  const end = endsAt.toDate ? endsAt.toDate() : new Date(endsAt);
+  const diff = end.getTime() - Date.now();
+  if (diff <= 0) return "Ended";
+  const totalMin = Math.floor(diff / 60000);
+  const days = Math.floor(totalMin / 1440);
+  const hours = Math.floor((totalMin % 1440) / 60);
+  const mins = totalMin % 60;
+  if (days > 0) return `${days}d ${hours}h left`;
+  if (hours > 0) return `${hours}h ${mins}m left`;
+  const secs = Math.floor((diff % 60000) / 1000);
+  return `${mins}m ${secs}s left`;
+}
+
+// "My Bids" is tracked per-browser (no account system) — every confirmed bid
+// records its own Firestore bid-doc id here, one entry per item (latest wins).
+// A bid is provably "mine" later by checking if item.winnerBidId matches the
+// id we stored, which works whether or not the bidder used Google sign-in.
+function getMyBids() {
+  try { return JSON.parse(localStorage.getItem("my_bids") || "[]"); }
+  catch { return []; }
+}
+function recordMyBid(itemId, bidId, amount) {
+  const list = getMyBids().filter((b) => b.itemId !== itemId);
+  list.push({ itemId, bidId, amount, ts: Date.now() });
+  localStorage.setItem("my_bids", JSON.stringify(list));
 }

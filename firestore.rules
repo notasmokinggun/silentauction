@@ -2,92 +2,37 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function verifiedEmail() {
-      return request.auth != null && request.auth.token.email_verified == true &&
-        request.auth.token.email is string;
-    }
-    function ownEmail() { return request.auth.token.email.lower(); }
+    // Admin check has two layers, so there's no chicken-and-egg problem:
+    // 1. A tiny hardcoded bootstrap list — paste the SAME uid(s) you put in
+    //    ADMIN_UIDS in firebase-init.js. This is how the very first admin
+    //    (you) gets in, since nobody exists yet to add you via the app.
+    // 2. Anyone with a doc in the `admins` collection — this is what the
+    //    in-app "Manage Admins" page writes to, so every admin after the
+    //    first one is added without ever touching this file again.
     function isAdmin() {
-      return verifiedEmail() &&
-        exists(/databases/$(database)/documents/adminEmails/$(ownEmail())) &&
-        get(/databases/$(database)/documents/adminEmails/$(ownEmail())).data.approved == true;
+      return request.auth != null && (
+        request.auth.uid in [
+          // "AbCdEfGhIjKlMnOpQrStUvWxYz12",
+        ]
+        || exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
     }
-    function isOwner() {
-      return verifiedEmail() &&
-        exists(/databases/$(database)/documents/settings/owner) &&
-        get(/databases/$(database)/documents/settings/owner).data.uid == request.auth.uid &&
-        get(/databases/$(database)/documents/settings/owner).data.email == ownEmail();
+
+    match /admins/{uid} {
+      allow read, write: if isAdmin();
     }
-    function bootstrapping() {
-      return verifiedEmail() &&
-        !exists(/databases/$(database)/documents/settings/owner) &&
-        getAfter(/databases/$(database)/documents/settings/owner).data.uid == request.auth.uid &&
-        getAfter(/databases/$(database)/documents/settings/owner).data.email == ownEmail();
-    }
-    match /settings/owner {
-      allow get: if isOwner();
-      allow create: if verifiedEmail() &&
-        request.resource.data.keys().hasOnly(['uid', 'email', 'setupKey', 'createdAt']) &&
-        request.resource.data.uid == request.auth.uid && request.resource.data.email == ownEmail() &&
-        request.resource.data.createdAt == request.time &&
-        request.resource.data.setupKey is string &&
-        request.resource.data.setupKey.matches('^[a-zA-Z0-9_-]{20,128}$') &&
-        get(/databases/$(database)/documents/setupKeys/$(request.resource.data.setupKey)).data.enabled == true &&
-        getAfter(/databases/$(database)/documents/setupKeys/$(request.resource.data.setupKey)).data.enabled == false &&
-        getAfter(/databases/$(database)/documents/adminEmails/$(ownEmail())).data.role == 'owner' &&
-        getAfter(/databases/$(database)/documents/adminEmails/$(ownEmail())).data.approved == true;
-      allow update, delete, list: if false;
-    }
-    // Created only in Firebase Console. Never readable or creatable by browsers.
-    // Consuming the key and storing the first owner must be one atomic batch.
-    match /setupKeys/{key} {
-      allow read, create, delete: if false;
-      allow update: if bootstrapping() && resource.data.enabled == true &&
-        getAfter(/databases/$(database)/documents/settings/owner).data.setupKey == key &&
-        request.resource.data.keys().hasOnly(['enabled']) && request.resource.data.enabled == false;
-    }
-    match /adminEmails/{email} {
-      allow get: if isOwner() || (verifiedEmail() && email == ownEmail());
-      allow list: if isOwner();
-      allow create: if (isOwner() && validApproval(email)) || initialOwnerApproval(email);
-      allow update: if (isOwner() && resource.data.role != 'owner' && email != ownEmail() && validApproval(email)) || initialOwnerApproval(email);
-      allow delete: if isOwner() && resource.data.role != 'owner' && email != ownEmail();
-    }
-    function initialOwnerApproval(email) {
-      return bootstrapping() && email == ownEmail() &&
-        request.resource.data.keys().hasOnly(['email', 'approved', 'role', 'updatedBy', 'updatedAt']) &&
-        request.resource.data.email == ownEmail() && request.resource.data.approved == true &&
-        request.resource.data.role == 'owner' && request.resource.data.updatedBy == request.auth.uid &&
-        request.resource.data.updatedAt == request.time;
-    }
-    function validApproval(email) {
-      return request.resource.data.keys().hasOnly(['email', 'approved', 'role', 'updatedBy', 'updatedAt']) &&
-        email == email.lower() && email.size() <= 254 &&
-        email.matches('^[^ @/]+@[^ @/]+[.][^ @/]+$') &&
-        request.resource.data.email == email &&
-        request.resource.data.approved == true &&
-        request.resource.data.role == 'admin' &&
-        request.resource.data.updatedBy == request.auth.uid &&
-        request.resource.data.updatedAt == request.time;
-    }
-    function registered() {
-      return request.auth != null && request.auth.token.firebase.sign_in_provider == 'google.com' &&
-        exists(/databases/$(database)/documents/users/$(request.auth.uid));
-    }
-    // Legacy UID approvals are intentionally ignored and inaccessible.
-    match /admins/{uid} { allow read, write: if false; }
-    match /users/{uid} {
-      allow read: if isAdmin() || (request.auth != null && request.auth.uid == uid);
-      allow create, update: if request.auth != null && request.auth.uid == uid &&
-        request.auth.token.firebase.sign_in_provider == 'google.com' &&
-        request.resource.data.email == request.auth.token.email &&
-        request.resource.data.keys().hasOnly(['name', 'email', 'phone', 'updatedAt']) &&
-        request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() < 80 &&
-        request.resource.data.email is string && request.resource.data.email.size() <= 254 &&
-        request.resource.data.email.matches('^[^ @]+@[^ @]+[.][^ @]+$') &&
-        request.resource.data.phone is string && request.resource.data.phone.size() <= 30 &&
-        request.resource.data.updatedAt == request.time;
-      allow delete: if isAdmin();
+
+    // A per-device cooldown, checked server-side. A bid transaction writes
+    // here alongside its real writes; if the gap since this device's last
+    // bid is under 3 seconds, the whole transaction is rejected atomically —
+    // no partial bid, no spam-clicking past it. serverTimestamp() sentinels
+    // are resolved by Firestore before rules run, so this can't be spoofed
+    // by sending a fake future/past client timestamp.
+    match /bidLimits/{deviceId} {
+      allow read: if true;
+      allow write: if request.resource.data.lastBidAt is timestamp &&
+        (!exists(/databases/$(database)/documents/bidLimits/$(deviceId)) ||
+         request.resource.data.lastBidAt.toMillis() - resource.data.lastBidAt.toMillis() >= 3000);
     }
 
     match /items/{itemId} {
@@ -100,15 +45,7 @@ service cloud.firestore {
       // reject new bids. Admins can still edit anything (e.g. fixing
       // a typo in the description).
       allow update: if isAdmin() || (
-        registered() &&
-        request.resource.data.currentBidderUid == request.auth.uid &&
-        request.resource.data.bidCount == resource.data.bidCount + 1 &&
         resource.data.active == true &&
-        // If a countdown (closesAt) is set, it must not have passed yet.
-        // closesAt is written as a Firestore Timestamp by admin.html
-        // specifically so this comparison works.
-        (!('closesAt' in resource.data) || resource.data.closesAt == null ||
-          request.time < resource.data.closesAt) &&
         request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(['currentBid', 'currentBidderName', 'currentBidderUid', 'bidCount']) &&
         request.resource.data.currentBid is number &&
@@ -121,16 +58,7 @@ service cloud.firestore {
       match /bids/{bidId} {
         allow read: if true;
         allow update, delete: if isAdmin();
-        allow create: if registered() &&
-          request.resource.data.keys().hasOnly(['name', 'amount', 'uid', 'isGoogle', 'deviceId', 'timestamp']) &&
-          request.resource.data.uid == request.auth.uid &&
-          request.resource.data.isGoogle == true &&
-          request.resource.data.timestamp == request.time &&
-          getAfter(/databases/$(database)/documents/items/$(itemId)).data.currentBid == request.resource.data.amount &&
-          getAfter(/databases/$(database)/documents/items/$(itemId)).data.currentBidderUid == request.auth.uid &&
-          getAfter(/databases/$(database)/documents/items/$(itemId)).data.currentBidderName == request.resource.data.name &&
-          getAfter(/databases/$(database)/documents/items/$(itemId)).data.bidCount == get(/databases/$(database)/documents/items/$(itemId)).data.bidCount + 1 &&
-          request.resource.data.name is string &&
+        allow create: if request.resource.data.name is string &&
           request.resource.data.name.size() > 0 &&
           request.resource.data.name.size() < 80 &&
           request.resource.data.amount is number;

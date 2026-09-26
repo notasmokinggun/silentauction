@@ -3,420 +3,312 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>JASHN — Admin</title>
+<title>Auction Admin</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{
-  --bg:#0D0A08; --bg-2:#151110; --sidebar:#120E0C; --card:#191412; --card-2:#1E1815;
-  --line:#2A231D; --line-soft:#241E19;
-  --gold:#C79A4B; --gold-soft:#E7C888;
-  --cream:#F3ECDC; --paper:#F6F1E4; --ink:#0D0A08;
-  --muted:#9C9284; --muted-2:#6F675B;
-  --green:#5C9A76; --red:#C1594A;
-  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
-}
-*{box-sizing:border-box;}
-html,body{margin:0;background:var(--bg);color:var(--cream);font-family:'Inter',sans-serif;min-height:100%;}
-h1,h2,h3{font-family:'Fraunces',serif;font-weight:600;margin:0;}
-button{font-family:inherit;}
-a{color:inherit;}
-input,textarea,select{font-family:inherit;}
+  :root{
+    --bg:#0E0C0A; --bg2:#151210; --surface:#1B1815; --surface2:#221E19;
+    --border:#2E2820; --cream:#F3EBDA; --text:#F3EBDA; --muted:#9C9086;
+    --gold:#E3B75C; --green:#7FBF8E; --red:#D9836E;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;}
+  .serif{font-family:'Newsreader',serif;}
+  h1,h2{font-weight:600;}
+  a{color:inherit;}
+  button{font-family:inherit;cursor:pointer;}
+  input,textarea,select{font-family:inherit;}
 
-/* ---------- gate screens ---------- */
-.gate{max-width:420px;margin:14vh auto;text-align:center;padding:0 20px;}
-.gate.hidden-gate{display:none;}
-.gate-err{color:var(--red);font-size:12.5px;margin-top:12px;min-height:16px;}
-.gate-hint{font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:14px;}
-#setpw-input{width:100%;padding:13px 14px;border-radius:10px;border:1px solid var(--line);
-  background:var(--card);color:var(--cream);font-size:14px;}
-.gate .logo{font-family:'Fraunces',serif;font-size:22px;letter-spacing:.1em;margin-bottom:26px;}
-.gbtn{padding:13px 24px;border-radius:10px;border:1px solid var(--line);background:var(--card);
-  color:var(--cream);font-size:14px;cursor:pointer;}
-.uid{font-family:monospace;background:var(--card);border:1px solid var(--line);padding:10px;
-  word-break:break-all;font-size:12.5px;margin:16px 0;border-radius:8px;color:var(--gold-soft);}
+  .gate{min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;
+    text-align:center;padding:40px;}
+  .gbtn{padding:12px 22px;border:1px solid var(--border);background:var(--surface);color:var(--text);
+    font-size:15px;border-radius:10px;}
+  .uid{font-family:monospace;background:var(--surface);border:1px solid var(--border);padding:10px;
+    word-break:break-all;font-size:13px;margin:14px 0;border-radius:8px;}
 
-/* ---------- app layout ---------- */
-.app{display:none;min-height:100vh;}
-.app.on{display:flex;}
-.sidebar{width:240px;flex:none;background:var(--sidebar);border-right:1px solid var(--line);
-  display:flex;flex-direction:column;padding:22px 14px;}
-.sb-logo{font-family:'Fraunces',serif;font-size:19px;letter-spacing:.1em;padding:6px 12px 22px;}
-.sb-nav{display:flex;flex-direction:column;gap:2px;flex:1;}
-.sb-item{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:10px;cursor:pointer;
-  color:var(--muted);font-size:14px;}
-.sb-item svg{width:17px;height:17px;flex:none;}
-.sb-item.active{background:var(--card);color:var(--cream);}
-.sb-item:hover{color:var(--cream);}
+  .shell{display:flex;min-height:100vh;}
+  .sidebar{width:230px;flex:none;background:var(--bg2);border-right:1px solid var(--border);
+    padding:22px 14px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;}
+  .sidebar .wordmark{font-size:19px;padding:0 10px 22px;}
+  .navitem{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:10px;
+    color:var(--muted);font-size:14px;cursor:pointer;margin-bottom:2px;}
+  .navitem svg{flex:none;}
+  .navitem.on{background:var(--surface);color:var(--text);}
+  .sidebar .spacer{flex:1;}
+  .sidebar .signout{color:var(--muted);font-size:13px;padding:11px 12px;}
 
-.main{flex:1;min-width:0;display:flex;flex-direction:column;}
-.topbar{display:flex;align-items:center;gap:16px;padding:18px 28px;border-bottom:1px solid var(--line);}
-.topbar-search{flex:1;position:relative;max-width:420px;}
-.topbar-search input{width:100%;padding:10px 14px 10px 38px;border-radius:10px;background:var(--card);
-  border:1px solid var(--line);color:var(--cream);font-size:13.5px;}
-.topbar-search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--muted-2);}
-.topbar-right{display:flex;align-items:center;gap:14px;margin-left:auto;}
-.iconbtn{width:36px;height:36px;border-radius:50%;background:var(--card);border:1px solid var(--line);
-  display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--cream);}
-.iconbtn svg{width:16px;height:16px;}
-.admin-chip{display:flex;align-items:center;gap:8px;cursor:pointer;padding:5px 10px 5px 5px;
-  border-radius:999px;background:var(--card);border:1px solid var(--line);}
-.admin-chip .av{width:26px;height:26px;border-radius:50%;background:var(--gold);color:#20150A;
-  display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;}
-.admin-chip .name{font-size:13px;}
-.btn-add{display:flex;align-items:center;gap:6px;padding:10px 16px;border-radius:10px;background:var(--cream);
-  color:var(--ink);font-weight:600;font-size:13.5px;border:none;cursor:pointer;}
-.content{flex:1;overflow-y:auto;padding:26px 28px 60px;}
-.page{display:none;}
-.page.on{display:block;}
-.page-head{margin-bottom:22px;}
-.page-head p{font-size:13px;color:var(--muted);margin-top:4px;}
+  .main{flex:1;min-width:0;}
+  .topbar{display:flex;align-items:center;gap:14px;padding:18px 28px;border-bottom:1px solid var(--border);}
+  .topbar .searchwrap{flex:1;position:relative;max-width:420px;}
+  .topbar .searchwrap svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--muted);}
+  .topbar input{width:100%;padding:10px 14px 10px 38px;border-radius:10px;border:1px solid var(--border);
+    background:var(--surface);color:var(--text);font-size:13px;}
+  .topbar .bell{width:38px;height:38px;border-radius:50%;background:var(--surface);border:1px solid var(--border);
+    display:flex;align-items:center;justify-content:center;color:var(--muted);flex:none;}
+  .topbar .avatar{width:32px;height:32px;border-radius:50%;background:var(--gold);color:#1B140A;
+    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex:none;}
 
-/* ---------- stat cards ---------- */
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
-.stat-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;}
-.stat-card .ic{width:34px;height:34px;border-radius:9px;background:var(--card-2);display:flex;
-  align-items:center;justify-content:center;margin-bottom:14px;color:var(--gold-soft);}
-.stat-card .ic svg{width:17px;height:17px;}
-.stat-card .lbl{font-size:12px;color:var(--muted);margin-bottom:4px;}
-.stat-card .val{font-size:24px;font-weight:700;font-family:'Fraunces',serif;}
+  .panel{display:none;padding:26px 28px 60px;}
+  .panel.active{display:block;}
+  .panel h1{font-size:24px;margin:0 0 4px;}
+  .panel .sub{font-size:13px;color:var(--muted);margin:0 0 22px;}
 
-.panels{display:grid;grid-template-columns:1.3fr 1fr;gap:18px;align-items:start;}
-.panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;}
-.panel h3{font-size:15px;margin-bottom:14px;}
-table{width:100%;border-collapse:collapse;font-size:13px;}
-th{text-align:left;color:var(--muted-2);font-weight:600;font-size:11.5px;text-transform:uppercase;
-  letter-spacing:.03em;padding:0 8px 10px;border-bottom:1px solid var(--line);}
-td{padding:10px 8px;border-bottom:1px solid var(--line-soft);}
-tr:last-child td{border-bottom:none;}
-.chart-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
-canvas{width:100%;display:block;}
+  .statgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
+  .statcard{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;}
+  .statcard .lbl{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-bottom:10px;}
+  .statcard .val{font-size:24px;font-weight:600;}
 
-/* ---------- items / form ---------- */
-.layout{display:grid;grid-template-columns:360px 1fr;gap:22px;align-items:start;}
-fieldset{border:1px solid var(--line);border-radius:16px;margin:0;padding:18px;background:var(--card);}
-legend{font-weight:700;font-size:15px;padding:0 6px;font-family:'Fraunces',serif;}
-label{display:block;font-size:12px;color:var(--muted);margin:12px 0 5px;}
-label .hint{font-weight:400;color:var(--muted-2);}
-input,textarea,select{width:100%;font-size:13.5px;padding:10px 12px;border-radius:10px;
-  border:1px solid var(--line);background:var(--bg-2);color:var(--cream);}
-input:focus,textarea:focus,select:focus{outline:1px solid var(--gold);}
-textarea{resize:vertical;min-height:70px;}
-.charcount{font-size:11px;color:var(--muted-2);text-align:right;margin-top:2px;}
-.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-.preset-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
-.preset-row button{padding:6px 11px;border-radius:999px;border:1px solid var(--line);background:var(--bg-2);
-  color:var(--muted);font-size:11.5px;cursor:pointer;}
-.preset-row button.on{background:var(--gold);border-color:var(--gold);color:#1B140A;}
-.status-badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;display:inline-block;}
-.status-badge.notstarted{background:rgba(156,146,132,.16);color:var(--muted);}
-.status-badge.live{background:rgba(92,154,118,.16);color:var(--green);}
-.status-badge.closed{background:rgba(193,89,74,.16);color:var(--red);}
+  .panelgrid{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;align-items:start;}
+  .block{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;}
+  .block h2{font-size:15px;margin:0 0 14px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:left;color:var(--muted);font-weight:500;font-size:11px;text-transform:uppercase;
+    letter-spacing:.03em;padding:0 8px 10px;}
+  td{padding:9px 8px;border-top:1px solid var(--border);}
+  .chart-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+  select{background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;
+    padding:6px 10px;font-size:12px;}
 
-.photo-picker{display:flex;gap:12px;align-items:center;margin-top:6px;}
-.photo-preview{width:64px;height:64px;border-radius:10px;object-fit:cover;background:var(--card-2);
-  flex:none;border:1px solid var(--line);}
-.photo-picker-controls{flex:1;}
-.filebtn{display:inline-block;padding:9px 13px;border-radius:8px;border:1px solid var(--line);
-  background:var(--bg-2);font-size:12.5px;cursor:pointer;color:var(--cream);}
-.filebtn input{display:none;}
-.urltoggle{display:inline-block;margin-left:8px;font-size:11.5px;color:var(--muted);
-  text-decoration:underline;cursor:pointer;background:none;border:none;}
-.upload-status{font-size:12px;color:var(--gold-soft);margin-top:6px;}
+  fieldset{border:1px solid var(--border);border-radius:14px;padding:18px;background:var(--surface);}
+  legend{font-weight:600;font-size:15px;padding:0 6px;}
+  label{display:block;font-size:12px;color:var(--muted);margin:12px 0 4px;}
+  .form-row input, .form-row textarea{width:100%;padding:10px;border-radius:9px;border:1px solid var(--border);
+    background:var(--surface2);color:var(--text);font-size:14px;}
+  textarea{resize:vertical;min-height:70px;}
+  .charcount{font-size:11px;color:var(--muted);text-align:right;margin-top:2px;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .photo-picker{display:flex;gap:12px;align-items:center;margin-top:6px;}
+  .photo-preview{width:64px;height:64px;object-fit:cover;background:var(--surface2);flex:none;border-radius:8px;
+    border:1px solid var(--border);}
+  .filebtn{display:inline-block;padding:9px 13px;border:1px solid var(--border);background:var(--surface2);
+    border-radius:8px;font-size:13px;}
+  .filebtn input{display:none;}
+  .urltoggle{display:inline-block;margin-left:10px;font-size:12px;color:var(--muted);text-decoration:underline;
+    background:none;border:none;}
+  .upload-status{font-size:12px;color:var(--gold);margin-top:6px;}
+  .form-actions{display:flex;gap:10px;margin-top:16px;}
+  .btn-primary{flex:1;padding:12px;background:var(--cream);border:none;color:#1B140A;font-weight:700;
+    font-size:14px;border-radius:10px;}
+  .btn-primary[disabled]{opacity:.5;}
+  .btn-cancel{padding:12px 16px;background:none;border:1px solid var(--border);color:var(--text);
+    border-radius:10px;font-size:14px;display:none;}
+  .btn-ghost{padding:9px 13px;background:var(--surface2);border:1px solid var(--border);color:var(--text);
+    border-radius:8px;font-size:12px;}
+  .btn-danger{color:var(--red);border-color:var(--red);}
+  #addErr{color:var(--red);font-size:13px;margin-top:8px;}
 
-.form-actions{display:flex;gap:10px;margin-top:16px;}
-button.primary{padding:12px 18px;background:var(--gold);border:none;border-radius:10px;
-  color:#1B140A;font-weight:700;font-size:13.5px;cursor:pointer;flex:1;}
-button.primary[disabled]{opacity:.5;cursor:default;}
-button.cancel-edit{padding:12px 16px;border-radius:10px;background:none;border:1px solid var(--line);
-  color:var(--cream);font-size:13.5px;cursor:pointer;display:none;}
-button.ghost,a.ghost{padding:9px 13px;border-radius:8px;background:var(--bg-2);border:1px solid var(--line);
-  font-size:11.5px;cursor:pointer;color:var(--cream);text-decoration:none;display:inline-block;}
-button.danger{color:var(--red);border-color:rgba(193,89,74,.4);}
-.ghost.gold{background:var(--gold);border-color:var(--gold);color:#1B140A;}
-/* utility classes (replace one-off inline styles) */
-.mt-16{margin-top:16px;}
-.mb-14{margin-bottom:14px;}
-.mb-16{margin-bottom:16px;}
-.mb-18{margin-bottom:18px;}
-.ta-r{text-align:right;}
-.amt-gold{text-align:right;color:var(--gold-soft);font-weight:600;}
-.empty-cell{color:var(--muted-2);}
-.pending-tag{color:var(--muted);}
-.grow{flex:1;}
-.chip-caret{font-size:10px;}
-.panel-head-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
-.panel-head-row h3{margin:0;}
-.chart-head span{font-size:12px;color:var(--muted-2);}
-.field-label{font-size:13px;color:var(--muted);}
-.field-value{font-size:14px;}
-.url-wrap{display:none;margin-top:8px;}
-.url-wrap.on{display:block;}
-.duration-col{grid-column:1/2;}
-.duration-unit{align-self:center;font-size:12.5px;color:var(--muted);}
-.qrtile-title{font-weight:700;margin-bottom:6px;}
-#addErr{color:var(--red);font-size:13px;margin-top:8px;}
+  .lotcard{border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;
+    background:var(--surface);display:flex;gap:12px;}
+  .lotcard img{width:60px;height:60px;object-fit:cover;border-radius:8px;background:var(--surface2);flex:none;}
+  .lotcard .body{flex:1;min-width:0;}
+  .lotcard .title{font-weight:600;font-size:14px;}
+  .lotcard .meta{font-size:12px;color:var(--muted);margin:4px 0 10px;line-height:1.5;}
+  .lotcard .actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .closed-tag{color:var(--red);font-weight:600;}
+  .winner-tag{color:var(--green);font-weight:600;}
+  .empty-lots{color:var(--muted);padding:16px 0;}
 
-.list-col h2{font-size:16px;margin:0 0 12px;}
-.lotcard{border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px;background:var(--card);
-  display:flex;gap:12px;}
-.lotcard img{width:60px;height:60px;border-radius:10px;object-fit:cover;background:var(--card-2);flex:none;}
-.lotcard .body{flex:1;min-width:0;}
-.lotcard .title{font-weight:700;font-size:14.5px;}
-.lotcard .meta{font-size:12px;color:var(--muted);margin:5px 0 10px;line-height:1.5;}
-.lotcard .actions{display:flex;gap:7px;flex-wrap:wrap;}
-.closed-tag{color:var(--red);font-weight:600;}
-.winner-tag{color:var(--green);font-weight:600;}
-.empty-state{color:var(--muted);padding:24px 0;text-align:center;font-size:13.5px;}
+  .bidlist{margin-top:12px;border-top:1px solid var(--border);padding-top:10px;display:none;}
+  .bidlist.open{display:block;}
+  .bidrow{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;border-top:1px solid var(--border);}
+  .bidrow:first-child{border-top:none;}
+  .bidrow .rank{width:20px;color:var(--muted);flex:none;}
+  .bidrow .who{flex:1;}
+  .bidrow .who .g{font-size:11px;color:var(--muted);}
+  .bidrow .amt{font-weight:600;width:80px;text-align:right;flex:none;}
+  .bidrow.iswinner{background:#2A2416;margin:0 -6px;padding:6px;border-radius:8px;}
+  .bidrow button{flex:none;padding:5px 9px;font-size:11px;border:1px solid var(--border);
+    background:var(--surface2);color:var(--text);border-radius:6px;}
+  .bidrow button.set{background:var(--gold);border-color:var(--gold);color:#1B140A;}
+  .bidlist .empty{font-size:13px;color:var(--muted);padding:6px 0;}
 
-.bidlist{margin-top:12px;border-top:1px solid var(--line);padding-top:10px;display:none;}
-.bidlist.open{display:block;}
-.bidrow{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;border-bottom:1px solid var(--line-soft);}
-.bidrow .rank{width:20px;color:var(--muted-2);flex:none;}
-.bidrow .who{flex:1;}
-.bidrow .who .g{font-size:11px;color:var(--muted-2);}
-.bidrow .amt{font-weight:700;width:74px;text-align:right;flex:none;color:var(--gold-soft);}
-.bidrow.iswinner{background:rgba(199,154,75,.1);border-radius:8px;}
-.bidrow button{flex:none;padding:5px 9px;font-size:11px;border-radius:7px;border:1px solid var(--line);
-  background:var(--bg-2);color:var(--cream);cursor:pointer;}
-.bidrow button.set{background:var(--gold);border-color:var(--gold);color:#1B140A;}
-.bidlist .empty{font-size:13px;color:var(--muted-2);padding:6px 0;}
+  #qrsheet{display:none;}
+  @media print{
+    body *{visibility:hidden;}
+    #qrsheet, #qrsheet *{visibility:visible;}
+    #qrsheet{display:grid !important;position:absolute;top:0;left:0;width:100%;
+      grid-template-columns:repeat(3,1fr);gap:20px;}
+    .qrtile{text-align:center;color:#000;}
+  }
 
-#qrsheet{display:none;}
-@media print{
-  body *{visibility:hidden;}
-  #qrsheet, #qrsheet *{visibility:visible;background:#fff !important;color:#000 !important;}
-  #qrsheet{display:grid !important;position:absolute;top:0;left:0;width:100%;grid-template-columns:repeat(3,1fr);gap:20px;}
-  .qrtile{text-align:center;}
-}
-
-@media (max-width:900px){
-  .app.on{flex-direction:column;}
-  .sidebar{width:100%;flex-direction:row;overflow-x:auto;padding:10px;}
-  .sb-nav{flex-direction:row;}
-  .stats{grid-template-columns:1fr 1fr;}
-  .panels{grid-template-columns:1fr;}
-  .layout{grid-template-columns:1fr;}
-}
+  @media (max-width:960px){
+    .panelgrid{grid-template-columns:1fr;}
+    .statgrid{grid-template-columns:1fr 1fr;}
+  }
+  @media (max-width:760px){
+    .sidebar{position:fixed;left:-240px;z-index:30;transition:left .2s;box-shadow:0 0 40px rgba(0,0,0,.4);}
+    .sidebar.open{left:0;}
+    .menu-toggle{display:flex !important;}
+  }
 </style>
 </head>
 <body>
 
-<!-- GATE -->
-<div class="gate" id="gate">
-  <div class="logo">JASHN ADMIN</div>
-  <p>Sign in with your approved organizer email and password.</p>
-  <form id="admin-login"><label>Email <input id="admin-email" type="email" autocomplete="username" required></label><label>Password <input id="admin-password" type="password" autocomplete="current-password" required></label><button id="signin" type="submit" class="gbtn mt-16">Sign in</button></form>
-  <button id="reset-password" class="gbtn" type="button">Create Password</button>
-  <p class="gate-hint">New admin? An owner adds your email first — then enter it above and tap <strong>Create Password</strong> to get a setup link by email.</p>
-  <p><a href="owner-setup.html">First-time owner setup</a></p>
-  <p id="signin-err" class="gate-err"></p>
+<div id="gate" class="gate">
+  <p>Sign in with the Google account approved as an organizer.</p>
+  <button class="gbtn" id="signin">Sign in with Google</button>
 </div>
 
-<div class="gate hidden-gate" id="denied">
-  <div class="logo">JASHN ADMIN</div>
-  <p id="denied-message">Your email must be verified and approved by an organizer.</p>
-  <p id="myuid"></p>
-  <button id="send-verification" class="gbtn">Send verification email</button>
-  <button id="refresh-approval" class="gbtn">I've verified my email / Check access</button>
-  <p id="verification-status" role="status"></p><button id="denied-signout">Use another account</button>
+<div id="denied" class="gate" style="display:none;">
+  <p>You're signed in, but this account isn't on the admin list yet.</p>
+  <p>Add this UID to <code>ADMIN_UIDS</code> in <code>firebase-init.js</code> and to <code>isAdmin()</code> in <code>firestore.rules</code>, then reload:</p>
+  <p class="uid" id="myuid"></p>
 </div>
 
-<div class="gate hidden-gate" id="setpw">
-  <div class="logo">JASHN ADMIN</div>
-  <p>You're signed in as <strong id="setpw-email"></strong>. Choose a password so you can sign in directly next time.</p>
-  <form id="setpw-form">
-    <input id="setpw-input" type="password" autocomplete="new-password" minlength="6" required placeholder="New password (6+ characters)">
-    <button class="gbtn mt-16" id="setpw-submit" type="submit">Save password</button>
-  </form>
-  <p id="setpw-err" class="gate-err"></p>
-</div>
-
-<!-- APP -->
-<div class="app" id="app">
-  <aside class="sidebar">
-    <div class="sb-logo">JASHN</div>
-    <nav class="sb-nav">
-      <div class="sb-item active" data-page="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>Dashboard</div>
-      <div class="sb-item" data-page="items"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>Items</div>
-      <div class="sb-item" data-page="bids"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>Bids</div>
-      <div class="sb-item" data-page="users"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c1-4 3.5-6 6.5-6s5.5 2 6.5 6"/><circle cx="18" cy="8" r="2.7"/><path d="M15.7 14.3c2.4.4 4 2.2 4.8 5.7"/></svg>Users</div>
-      <div class="sb-item" data-page="payments"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>Payments</div>
-      <div class="sb-item" data-page="analytics"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V9M11 19V4M18 19v-7"/></svg>Analytics</div>
-      <div class="sb-item" data-page="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.9 2.9l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.6V21a2 2 0 11-4 0v-.2a1.7 1.7 0 00-1-1.5 1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.9-2.9l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.6-1H3a2 2 0 110-4h.2a1.7 1.7 0 001.5-1 1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.9-2.9l.1.1a1.7 1.7 0 001.9.3H9a1.7 1.7 0 001-1.6V3a2 2 0 114 0v.2a1.7 1.7 0 001 1.5 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.9 2.9l-.1.1a1.7 1.7 0 00-.3 1.9V9a1.7 1.7 0 001.6 1H21a2 2 0 110 4h-.2a1.7 1.7 0 00-1.5 1z"/></svg>Settings</div>
-    </nav>
+<div id="shell" class="shell" style="display:none;">
+  <aside class="sidebar" id="sidebar">
+    <div class="wordmark serif" id="side-wordmark">JASHN</div>
+    <div class="navitem on" data-panel="dashboard"><span class="ic"></span>Dashboard</div>
+    <div class="navitem" data-panel="items"><span class="ic"></span>Items</div>
+    <div class="navitem" data-panel="bids"><span class="ic"></span>Bids</div>
+    <div class="navitem" data-panel="users"><span class="ic"></span>Users</div>
+    <div class="navitem" data-panel="payments"><span class="ic"></span>Payments</div>
+    <div class="navitem" data-panel="settings"><span class="ic"></span>Settings</div>
+    <div class="spacer"></div>
+    <div class="navitem signout" id="signout">Sign out</div>
   </aside>
 
   <div class="main">
     <div class="topbar">
-      <div class="topbar-search">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-        <input id="global-search" placeholder="Search items, users, bids…">
+      <button class="btn-ghost menu-toggle" id="menu-toggle" style="display:none;">☰</button>
+      <div class="searchwrap"><span class="ic"></span><input id="global-search" placeholder="Search items, users, bids…"></div>
+      <div class="bell"><span class="ic"></span></div>
+      <div class="avatar" id="avatar">A</div>
+    </div>
+
+    <!-- ===================== DASHBOARD ===================== -->
+    <div class="panel active" id="panel-dashboard">
+      <h1>Dashboard</h1>
+      <p class="sub">Overview of your silent auction event</p>
+      <div class="statgrid">
+        <div class="statcard"><div class="lbl"><span class="ic"></span>Total Items</div><div class="val" id="stat-items">—</div></div>
+        <div class="statcard"><div class="lbl"><span class="ic"></span>Total Bids</div><div class="val" id="stat-bids">—</div></div>
+        <div class="statcard"><div class="lbl"><span class="ic"></span>Total Raised</div><div class="val" id="stat-raised">—</div></div>
+        <div class="statcard"><div class="lbl"><span class="ic"></span>Active Bidders</div><div class="val" id="stat-users">—</div></div>
       </div>
-      <div class="topbar-right">
-        <button class="btn-add" id="add-item-btn"><span>+</span> Add Item</button>
-        <div class="iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg></div>
-        <div class="admin-chip" id="signout"><span class="av" id="admin-av">A</span><span class="name">Admin</span><span class="chip-caret">▾</span></div>
+      <div class="panelgrid">
+        <div class="block">
+          <h2>Recent Bids</h2>
+          <table><thead><tr><th>Time</th><th>User</th><th>Item</th><th style="text-align:right;">Amount</th></tr></thead>
+            <tbody id="recent-bids-body"></tbody></table>
+        </div>
+        <div class="block">
+          <div class="chart-head"><h2 style="margin:0;">Bidding Activity</h2>
+            <select id="chart-range"><option value="today">Today</option><option value="all">All time</option></select></div>
+          <div id="chart-holder"></div>
+        </div>
       </div>
     </div>
 
-    <div class="content">
-
-      <!-- DASHBOARD -->
-      <section class="page on" id="page-dashboard">
-        <div class="page-head"><h1>Dashboard</h1><p>Overview of your silent auction event</p></div>
-        <div class="stats">
-          <div class="stat-card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg></div><div class="lbl">Total Items</div><div class="val" id="stat-items">0</div></div>
-          <div class="stat-card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.5 6.5L21 9l-5 4.5L17.5 21 12 17l-5.5 4L8 13.5 3 9l6.5-.5z"/></svg></div><div class="lbl">Total Bids</div><div class="val" id="stat-bids">0</div></div>
-          <div class="stat-card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3z"/><path d="M3 7l9-4 9 4"/><circle cx="12" cy="13" r="2.5"/></svg></div><div class="lbl">Total Raised</div><div class="val" id="stat-raised">₹0</div></div>
-          <div class="stat-card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c1-4 3.5-6 6.5-6s5.5 2 6.5 6"/><circle cx="18" cy="8" r="2.7"/><path d="M15.7 14.3c2.4.4 4 2.2 4.8 5.7"/></svg></div><div class="lbl">Active Users</div><div class="val" id="stat-users">0</div></div>
-        </div>
-        <div class="panels">
-          <div class="panel">
-            <h3>Recent Bids</h3>
-            <table>
-              <thead><tr><th>Time</th><th>User</th><th>Item</th><th class="ta-r">Bid Amount</th></tr></thead>
-              <tbody id="recent-bids-body"></tbody>
-            </table>
-          </div>
-          <div class="panel">
-            <div class="chart-head"><h3>Bidding Activity</h3><span>All time</span></div>
-            <canvas id="activity-chart" height="180"></canvas>
-          </div>
-        </div>
-      </section>
-
-      <!-- ITEMS -->
-      <section class="page" id="page-items">
-        <div class="page-head"><h1>Items</h1><p>Add, edit and manage every lot in the auction</p></div>
-        <div class="layout">
-          <div class="form-col">
-            <form id="lotForm">
-              <fieldset>
-                <legend id="form-legend">Add a lot</legend>
-                <label for="f-title">Title</label>
-                <input id="f-title" required maxlength="120">
-
-                <label for="f-category">Category</label>
-                <select id="f-category">
-                  <option>Art</option><option>Experiences</option><option>Sports</option><option>Collectibles</option><option>Other</option>
-                </select>
-
-                <label for="f-desc">Description <span class="hint">— one short paragraph</span></label>
-                <textarea id="f-desc" maxlength="500"></textarea>
-                <div class="charcount" id="desc-count">0 / 500</div>
-
-                <label>Photo</label>
-                <div class="photo-picker">
-                  <img class="photo-preview" id="photo-preview" alt="">
-                  <div class="photo-picker-controls">
-                    <label class="filebtn">Choose photo<input type="file" id="f-file" accept="image/*"></label>
-                    <button type="button" class="urltoggle" id="urltoggle">or paste an image URL</button>
-                    <div id="url-wrap" class="url-wrap"><input id="f-img" placeholder="https://…"></div>
-                    <div class="upload-status" id="upload-status"></div>
-                  </div>
+    <!-- ===================== ITEMS ===================== -->
+    <div class="panel" id="panel-items">
+      <h1>Items</h1>
+      <p class="sub">Add, edit, and remove lots — everything here is what guests see live.</p>
+      <div class="panelgrid">
+        <div>
+          <form id="lotForm">
+            <fieldset>
+              <legend id="form-legend">Add a lot</legend>
+              <div class="form-row"><label for="f-title">Title</label><input id="f-title" required maxlength="120"></div>
+              <div class="form-row"><label for="f-cat">Category</label>
+                <input id="f-cat" list="cat-options" placeholder="Art, Experiences, Sports…" maxlength="40">
+                <datalist id="cat-options"><option value="Art"><option value="Experiences"><option value="Sports"></datalist>
+              </div>
+              <div class="form-row"><label for="f-desc">Description <span style="font-weight:400;">— one short paragraph</span></label>
+                <textarea id="f-desc" maxlength="500"></textarea><div class="charcount" id="desc-count">0 / 500</div></div>
+              <label>Photo</label>
+              <div class="photo-picker">
+                <img class="photo-preview" id="photo-preview" alt="">
+                <div style="flex:1;">
+                  <label class="filebtn">Choose photo<input type="file" id="f-file" accept="image/*"></label>
+                  <button type="button" class="urltoggle" id="urltoggle">or paste an image URL</button>
+                  <div id="url-wrap" style="display:none;margin-top:8px;"><input class="form-row" id="f-img" placeholder="https://…" style="width:100%;padding:10px;border-radius:9px;border:1px solid var(--border);background:var(--surface2);color:var(--text);"></div>
+                  <div class="upload-status" id="upload-status"></div>
                 </div>
-
-                <div class="row2">
-                  <div><label for="f-start">Starting bid (₹)</label><input id="f-start" type="number" required></div>
-                  <div><label for="f-inc">Minimum increment (₹)</label><input id="f-inc" type="number" value="500" required></div>
-                </div>
-                <label for="f-duration">Bidding duration <span class="hint">— starts counting down the moment you hit "Start" on this lot</span></label>
-                <div class="row2">
-                  <input id="f-duration" type="number" min="0" placeholder="e.g. 30" class="duration-col">
-                  <span class="duration-unit">minutes</span>
-                </div>
-                <div class="preset-row" id="duration-presets">
-                  <button type="button" data-min="10">10m</button>
-                  <button type="button" data-min="15">15m</button>
-                  <button type="button" data-min="20">20m</button>
-                  <button type="button" data-min="30">30m</button>
-                  <button type="button" data-min="45">45m</button>
-                  <button type="button" data-min="60">60m</button>
-                </div>
-
-                <label for="f-closes">Or a fixed close date/time <span class="hint">— optional, overrides the duration above</span></label>
-                <input id="f-closes" type="datetime-local">
-
-                <div class="form-actions">
-                  <button class="primary" id="submitLot" type="submit">Add lot</button>
-                  <button class="cancel-edit" id="cancelEdit" type="button">Cancel edit</button>
-                </div>
-                <div id="addErr"></div>
-              </fieldset>
-            </form>
+              </div>
+              <div class="row2">
+                <div class="form-row"><label for="f-start">Starting bid (₹)</label><input id="f-start" type="number" required></div>
+                <div class="form-row"><label for="f-inc">Increment (₹)</label><input id="f-inc" type="number" value="500" required></div>
+              </div>
+              <div class="form-row"><label for="f-ends">Bidding closes at <span style="font-weight:400;">(optional)</span></label>
+                <input id="f-ends" type="datetime-local"></div>
+              <div class="form-actions">
+                <button class="btn-primary" id="submitLot" type="submit">Add lot</button>
+                <button class="btn-cancel" id="cancelEdit" type="button">Cancel edit</button>
+              </div>
+              <div id="addErr"></div>
+            </fieldset>
+          </form>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <h2 style="font-size:15px;margin:0;" id="lots-heading">Lots</h2>
+            <button class="btn-ghost" id="printQr">Print all QR codes</button>
           </div>
+          <div id="lots"></div>
+        </div>
+      </div>
+    </div>
 
-          <div class="list-col">
-            <h2 id="lots-heading">Lots</h2>
-            <div id="lots"></div>
-          </div>
-        </div>
-      </section>
+    <!-- ===================== BIDS ===================== -->
+    <div class="panel" id="panel-bids">
+      <h1>Bids &amp; winners</h1>
+      <p class="sub">Rank bids per lot and mark the winner. If they don't pay, just set the next row down.</p>
+      <div id="bids-lots"></div>
+    </div>
 
-      <!-- BIDS -->
-      <section class="page" id="page-bids">
-        <div class="page-head"><h1>Bids</h1><p>Every lot's bid history, ranked highest to lowest — set a winner here</p></div>
-        <div id="bids-lots"></div>
-      </section>
+    <!-- ===================== USERS ===================== -->
+    <div class="panel" id="panel-users">
+      <h1>Users</h1>
+      <p class="sub">Everyone who's placed at least one bid, aggregated from bid history.</p>
+      <div class="block">
+        <table><thead><tr><th>Bidder</th><th>Verified</th><th>Bids placed</th><th style="text-align:right;">Total bid ₹</th></tr></thead>
+          <tbody id="users-body"></tbody></table>
+      </div>
+    </div>
 
-      <!-- USERS -->
-      <section class="page" id="page-users">
-        <div class="page-head"><h1>Users</h1><p>Registered guests and their contact details</p></div>
-        <div class="panel">
-          <table>
-            <thead><tr><th>Bidder</th><th>Email</th><th>Phone</th><th>Verification</th></tr></thead>
-            <tbody id="users-body"></tbody>
-          </table>
+    <!-- ===================== PAYMENTS ===================== -->
+    <div class="panel" id="panel-payments">
+      <h1>Payments</h1>
+      <p class="sub">There's no payment processor wired into this app — collect payment at checkout however you normally would (card reader, cash, Venmo/UPI, etc.) using this as your reference list.</p>
+      <div class="block">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <h2 style="margin:0;">Ranked results, every lot</h2>
+          <button class="btn-ghost" id="exportCsv">Export as CSV</button>
         </div>
-      </section>
+        <p style="font-size:13px;color:var(--muted);">The export lists every bid per lot, ranked highest to lowest, with the marked winner flagged — so if a winner doesn't pay, the next name is right there.</p>
+      </div>
+    </div>
 
-      <!-- PAYMENTS -->
-      <section class="page" id="page-payments">
-        <div class="page-head"><h1>Payments</h1><p>Winners by lot — mark collected once payment is settled</p></div>
-        <div class="form-actions mb-16" style="max-width:280px;">
-          <button class="ghost grow" id="exportCsv">Export winners (CSV)</button>
+    <!-- ===================== SETTINGS ===================== -->
+    <div class="panel" id="panel-settings">
+      <h1>Settings</h1>
+      <p class="sub">Event-level config.</p>
+      <div class="block" style="margin-bottom:16px;">
+        <h2>Manage admins</h2>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">
+          Have the new person sign in once at this admin URL — they'll land on a
+          "not an admin yet" screen showing their UID. Paste it below to add them.
+          No email or password involved.
+        </p>
+        <div class="row2" style="margin-bottom:10px;">
+          <div class="form-row"><input id="admin-new-uid" placeholder="Their UID"></div>
+          <div class="form-row"><input id="admin-new-label" placeholder="Name (optional, for your reference)"></div>
         </div>
-        <div class="panel">
-          <table>
-            <thead><tr><th>Lot</th><th>Winner</th><th class="ta-r">Amount</th><th>Status</th><th></th></tr></thead>
-            <tbody id="payments-body"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- ANALYTICS -->
-      <section class="page" id="page-analytics">
-        <div class="page-head"><h1>Analytics</h1><p>How bidding is trending across the event</p></div>
-        <div class="panel mb-18">
-          <h3>Bidding Activity</h3>
-          <canvas id="activity-chart-2" height="200"></canvas>
-        </div>
-        <div class="panel">
-          <h3>Bids per lot</h3>
-          <canvas id="perlot-chart" height="220"></canvas>
-        </div>
-      </section>
-
-      <!-- SETTINGS -->
-      <section class="page" id="page-settings">
-        <div class="page-head"><h1>Settings</h1><p>Event tools and organizer info</p></div>
-        <div class="panel mb-16">
-          <h3>Your account</h3>
-          <p class="field-label mb-16">Signed in as</p>
-          <p class="field-value mb-14" id="settings-email"></p>
-          <a id="manage-access-link" class="ghost" href="admin-access.html" hidden>Manage admin access</a>
-          <button class="ghost" id="signout2">Sign out</button>
-        </div>
-        <div class="panel">
-          <h3>Event tools</h3>
-          <div class="form-actions" style="max-width:320px;">
-            <button class="ghost grow" id="printQr">Print all QR codes</button>
-          </div>
-        </div>
-      </section>
-
+        <button class="btn-ghost" id="admin-add-btn">Add admin</button>
+        <div id="admin-add-err" style="color:var(--red);font-size:13px;margin-top:8px;"></div>
+        <div id="admins-list" style="margin-top:16px;"></div>
+      </div>
+      <div class="block" style="margin-bottom:16px;">
+        <h2>Bootstrap admin</h2>
+        <p style="font-size:13px;color:var(--muted);">The one admin who can never be removed from here — set by editing <code>ADMIN_UIDS</code> in <code>firebase-init.js</code> and <code>isAdmin()</code> in <code>firestore.rules</code> directly. That's you, presumably.</p>
+        <p style="font-size:12px;color:var(--muted);margin-top:10px;">Your UID: <span id="settings-uid" style="font-family:monospace;"></span></p>
+      </div>
+      <div class="block">
+        <h2>Sign out</h2>
+        <button class="btn-ghost" id="settings-signout">Sign out of admin</button>
+      </div>
     </div>
   </div>
 </div>
@@ -429,265 +321,262 @@ button.danger{color:var(--red);border-color:rgba(193,89,74,.4);}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="firebase-init.js"></script>
 <script>
+// -----------------------------------------------------------------
+// Icons
+// -----------------------------------------------------------------
+const ICONS = {
+  dashboard:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="12" width="8" height="9" rx="1.5"/><rect x="3" y="15" width="8" height="6" rx="1.5"/></svg>',
+  box:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>',
+  gavel:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5l5 5M9 10l-6 6 3 3 6-6M13 6l5 5"/><path d="M17 3l4 4-2.5 2.5-4-4L17 3z"/></svg>',
+  users:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c1-3.5 3.5-5.5 6-5.5s5 2 6 5.5"/><circle cx="17" cy="8" r="2.6"/><path d="M17 12c2 .3 3.6 1.8 4.4 4.6"/></svg>',
+  wallet:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="16.5" cy="14.5" r="1.2" fill="currentColor" stroke="none"/></svg>',
+  gear:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.9 2.9l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.6V21a2 2 0 11-4 0v-.2a1.7 1.7 0 00-1-1.6 1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.9-2.9l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.6-1H3a2 2 0 110-4h.2a1.7 1.7 0 001.6-1 1.7 1.7 0 00-.3-1.9l-.1-.1A2 2 0 117.3 3.4l.1.1a1.7 1.7 0 001.9.3H9.4A1.7 1.7 0 0011 3V3a2 2 0 114 0v.2a1.7 1.7 0 001 1.6 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.9 2.9l-.1.1a1.7 1.7 0 00-.3 1.9V9c.3.6.9 1 1.6 1H21a2 2 0 110 4h-.2a1.7 1.7 0 00-1.4 1z"/></svg>',
+  search:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>',
+  bell:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0112 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 20a2 2 0 004 0"/></svg>',
+};
+function ic(name){ return ICONS[name] || ''; }
+document.querySelectorAll('.navitem[data-panel] .ic').forEach((el, i) => {
+  const names = ['dashboard','box','gavel','users','wallet','gear'];
+  el.innerHTML = ic(names[i]);
+});
+document.querySelector('.searchwrap .ic').innerHTML = ic('search');
+document.querySelector('.bell .ic').innerHTML = ic('bell');
+document.querySelectorAll('.statcard .lbl .ic').forEach((el, i) => {
+  el.innerHTML = ic(['box','gavel','wallet','users'][i]);
+});
+
+// -----------------------------------------------------------------
+// Auth gate
+// -----------------------------------------------------------------
 const gate = document.getElementById('gate');
 const denied = document.getElementById('denied');
-const setpw = document.getElementById('setpw');
-const app = document.getElementById('app');
+const shell = document.getElementById('shell');
 
-// New admins never self-register. An owner approves an email in Admin
-// Access first (adminEmails collection); the underlying Firebase Auth
-// account only gets created when that person clicks "Create Password"
-// below and follows the emailed link. Firebase's email-link sign-in
-// creates the account and verifies the email in one step — no backend
-// needed, works on the free Spark plan.
-const EMAIL_LINK_KEY = 'auction_pending_admin_email';
-const actionCodeSettings = { url: location.origin + location.pathname, handleCodeInApp: true };
+document.getElementById('signin').onclick = () => auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());
+document.getElementById('signout').onclick = () => auth.signOut();
+document.getElementById('settings-signout').onclick = () => auth.signOut();
 
-if (auth.isSignInWithEmailLink(location.href)) {
-  (async () => {
-    const status = document.getElementById('signin-err');
-    let email = localStorage.getItem(EMAIL_LINK_KEY);
-    if (!email) email = window.prompt('Confirm your email to finish setting up your admin account:');
-    try {
-      await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-      await auth.signInWithEmailLink(email.trim().toLowerCase(), location.href);
-      localStorage.removeItem(EMAIL_LINK_KEY);
-      history.replaceState(null, '', location.pathname);
-    } catch (err) { status.textContent = 'Could not finish setup: ' + err.message; }
-  })();
-}
-document.getElementById('send-verification').onclick = async event => {
-  event.target.disabled = true;
-  try {
-    await auth.currentUser.sendEmailVerification();
-    document.getElementById('verification-status').textContent = 'Verification email sent. Check your inbox and spam folder.';
-  } catch (err) { document.getElementById('verification-status').textContent = err.message; }
-  finally { event.target.disabled = false; }
-};
-document.getElementById('refresh-approval').onclick = async event => {
-  event.target.disabled = true;
-  try {
-    await auth.currentUser.reload();
-    await auth.currentUser.getIdToken(true);
-    checkAdminAccess(auth.currentUser);
-  } catch (err) { document.getElementById('verification-status').textContent = err.message; }
-  finally { event.target.disabled = false; }
-};
-document.getElementById('reset-password').onclick = async event => {
-  const emailField = document.getElementById('admin-email');
-  const status = document.getElementById('signin-err');
-  if (!emailField.reportValidity()) return;
-  const email = emailField.value.trim().toLowerCase();
-  event.target.disabled = true;
-  status.textContent = 'Sending…';
-  try {
-    // One unconditional path for both brand-new and existing admins: Firebase
-    // treats "does this email already have an account" as sensitive (email
-    // enumeration protection), so fetchSignInMethodsForEmail can't be used
-    // to branch on that anymore. A sign-in link works either way — it
-    // creates + verifies a new account, or signs an existing one straight
-    // in (skipping a forgotten password entirely), per Firebase's own docs.
-    localStorage.setItem(EMAIL_LINK_KEY, email);
-    await auth.sendSignInLinkToEmail(email, actionCodeSettings);
-    status.textContent = 'A setup link has been sent to ' + email + ' if it is approved. Open it on this device to finish signing in.';
-  } catch (err) { status.textContent = 'Could not send a setup link: ' + err.message; }
-  finally { event.target.disabled = false; }
-};
-document.getElementById('setpw-form').onsubmit = async event => {
-  event.preventDefault();
-  const button = document.getElementById('setpw-submit');
-  const err = document.getElementById('setpw-err');
-  button.disabled = true;
-  try {
-    await auth.currentUser.updatePassword(document.getElementById('setpw-input').value);
-    checkAdminAccess(auth.currentUser);
-  } catch (e) { err.textContent = e.message; }
-  finally { button.disabled = false; }
-};
-document.getElementById('admin-login').onsubmit = async event => {
-  event.preventDefault();
-  const button = document.getElementById('signin');
-  const error = document.getElementById('signin-err');
-  button.disabled = true;
-  error.textContent = 'Signing in…';
-  try {
-    await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-    await auth.signInWithEmailAndPassword(document.getElementById('admin-email').value.trim(), document.getElementById('admin-password').value);
-    error.textContent = '';
-  } catch (err) { error.textContent = 'Sign-in failed: ' + err.message; }
-  finally { button.disabled = false; }
-};
-['signout', 'signout2', 'denied-signout'].forEach(id => {
-  document.getElementById(id).onclick = () => auth.signOut();
+auth.getRedirectResult().catch(() => {});
+auth.onAuthStateChanged(async (u) => {
+  gate.style.display = denied.style.display = shell.style.display = 'none';
+  if (!u) { gate.style.display = 'flex'; return; }
+  const admin = await checkIsAdmin(u.uid);
+  if (!admin) {
+    denied.style.display = 'flex';
+    document.getElementById('myuid').textContent = u.uid;
+    return;
+  }
+  shell.style.display = 'flex';
+  document.getElementById('avatar').textContent = (u.displayName || u.email || 'A')[0].toUpperCase();
+  document.getElementById('settings-uid').textContent = u.uid;
+  currentAdminUid = u.uid;
+  loadLots();
+  loadAllBids();
+  loadAdmins();
 });
-let stopApproval = null, stopLots = null, stopUsers = null;
-let registeredUsers = [];
-function checkAdminAccess(user) {
-  if (stopApproval) stopApproval();
-  if (stopLots) stopLots();
-  if (stopUsers) stopUsers();
-  gate.style.display = denied.style.display = setpw.style.display = 'none';
-  app.classList.remove('on');
-  if (!user || user.isAnonymous) { gate.style.display = 'block'; return; }
-  document.getElementById('myuid').textContent = user.email || '';
-  document.getElementById('send-verification').hidden = user.emailVerified;
-  if (!user.emailVerified) {
-    denied.style.display = 'block';
-    document.getElementById('denied-message').textContent = 'Verify your email before accessing the admin panel.';
-    return;
-  }
-  // Accounts created via the email-setup link have no password yet —
-  // have them choose one before going any further.
-  if (!user.providerData.some(p => p.providerId === 'password')) {
-    setpw.style.display = 'block';
-    document.getElementById('setpw-email').textContent = user.email || '';
-    return;
-  }
-  document.getElementById('denied-message').textContent = 'This email has not been approved. Ask an organizer to add it in Admin Access.';
-  stopApproval = adminApprovalRef(user).onSnapshot(approval => {
-    const approved = approval.exists && approval.data().approved === true;
-    app.classList.toggle('on', approved);
-    document.getElementById('manage-access-link').hidden = !approved || approval.data().role !== 'owner';
-    denied.style.display = approved ? 'none' : 'block';
-    document.getElementById('myuid').textContent = user.email;
-    if (stopLots) stopLots();
-    if (stopUsers) stopUsers();
-    if (!approved) return;
-    document.getElementById('admin-av').textContent = (user.email || 'A').charAt(0).toUpperCase();
-    document.getElementById('settings-email').textContent = user.email;
-    loadLots();
-    stopUsers = db.collection('users').onSnapshot(snap => {
-      registeredUsers = snap.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
-      renderUsersPage();
-    }, err => { document.getElementById('users-body').textContent = err.message; });
-  }, err => {
-    app.classList.remove('on');
-    gate.style.display = 'block';
-    document.getElementById('signin-err').textContent = 'Could not check admin approval: ' + err.message;
-  });
-}
-auth.onAuthStateChanged(checkAdminAccess);
 
-// ---------------------------------------------------------------
+// -----------------------------------------------------------------
 // Sidebar navigation
-// ---------------------------------------------------------------
-document.querySelectorAll('.sb-item').forEach(item => item.onclick = () => {
-  document.querySelectorAll('.sb-item').forEach(i => i.classList.toggle('active', i === item));
-  document.querySelectorAll('.page').forEach(p => p.classList.toggle('on', p.id === 'page-' + item.dataset.page));
-  if (item.dataset.page === 'bids') renderBidsPage();
-  if (item.dataset.page === 'users') renderUsersPage();
-  if (item.dataset.page === 'payments') renderPaymentsPage();
-  if (item.dataset.page === 'analytics') renderAnalytics();
+// -----------------------------------------------------------------
+document.querySelectorAll('.navitem[data-panel]').forEach(nav => nav.onclick = () => {
+  document.querySelectorAll('.navitem[data-panel]').forEach(n => n.classList.toggle('on', n === nav));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + nav.dataset.panel));
+  document.getElementById('sidebar').classList.remove('open');
+  if (nav.dataset.panel === 'bids') renderBidsPanel();
+  if (nav.dataset.panel === 'users') renderUsersPanel();
 });
-document.getElementById('add-item-btn').onclick = () => {
-  document.querySelector('.sb-item[data-page="items"]').click();
-  document.getElementById('f-title').focus();
-};
-document.getElementById('global-search').addEventListener('input', e => {
-  const q = e.target.value.trim().toLowerCase();
-  document.querySelectorAll('#lots .lotcard').forEach(card => {
-    card.style.display = card.dataset.search.includes(q) ? 'flex' : 'none';
-  });
+document.getElementById('menu-toggle').onclick = () => document.getElementById('sidebar').classList.toggle('open');
+
+document.getElementById('global-search').addEventListener('input', (e) => {
+  const q = e.target.value.trim();
+  if (!q) return;
+  // A search is most useful jumping straight to item management.
+  document.querySelector('.navitem[data-panel="items"]').click();
 });
 
-// ---------------------------------------------------------------
-// Load + render lots
-// ---------------------------------------------------------------
+// -----------------------------------------------------------------
+// Manage Admins (Firestore-backed, no email/password anywhere)
+// -----------------------------------------------------------------
+function loadAdmins() {
+  db.collection('admins').onSnapshot(snap => {
+    const rows = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+    const el = document.getElementById('admins-list');
+    el.innerHTML = rows.length ? rows.map(r => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid var(--border);font-size:13px;">
+        <div><div>${escapeHtml(r.label || '(no name given)')}</div>
+          <div style="font-family:monospace;font-size:11px;color:var(--muted);">${escapeHtml(r.uid)}</div></div>
+        <button class="btn-ghost btn-danger" data-remove="${r.uid}" ${r.uid === currentAdminUid ? 'disabled title="Can\'t remove yourself"' : ''}>Remove</button>
+      </div>`).join('')
+      : '<p style="font-size:13px;color:var(--muted);">No admins added here yet — just the bootstrap admin below.</p>';
+    el.querySelectorAll('[data-remove]').forEach(b => b.onclick = () => {
+      if (confirm('Remove this admin\'s access?')) db.collection('admins').doc(b.dataset.remove).delete();
+    });
+  }, err => {
+    document.getElementById('admins-list').innerHTML =
+      '<p style="font-size:13px;color:var(--red);">Could not load admins — is this account still an admin?</p>';
+  });
+}
+
+document.getElementById('admin-add-btn').onclick = async () => {
+  const uidInput = document.getElementById('admin-new-uid');
+  const labelInput = document.getElementById('admin-new-label');
+  const errEl = document.getElementById('admin-add-err');
+  errEl.textContent = '';
+  const uid = uidInput.value.trim();
+  if (!uid || uid.length < 10) { errEl.textContent = 'Paste a real UID — it should be a long string, not a name or email.'; return; }
+  try {
+    await db.collection('admins').doc(uid).set({
+      label: labelInput.value.trim(),
+      addedByUid: currentAdminUid,
+      addedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+    uidInput.value = '';
+    labelInput.value = '';
+  } catch (e) {
+    errEl.textContent = e.message || 'Could not add that admin.';
+  }
+};
+
+// -----------------------------------------------------------------
+// Load lots (catalog + live bid state)
+// -----------------------------------------------------------------
 let lots = [];
-let allBids = []; // flattened cache from collectionGroup, refreshed on demand
+let currentAdminUid = null;
 function loadLots() {
-  stopLots = db.collection('items').orderBy('lotNumber').onSnapshot(snap => {
+  db.collection('items').orderBy('lotNumber').onSnapshot(snap => {
     lots = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     renderLots();
-    renderDashboard();
+    renderDashboardStats();
+    if (document.getElementById('panel-bids').classList.contains('active')) renderBidsPanel();
   });
-  refreshAllBids();
 }
 
-function refreshAllBids() {
-  db.collectionGroup('bids').orderBy('timestamp', 'desc').limit(300).get().then(snap => {
-    allBids = snap.docs.map(d => ({ id: d.id, itemId: d.ref.parent.parent.id, ...d.data() }));
-    renderDashboard();
-  }).catch(() => {});
+// All bids across every lot, via a collection-group query. The FIRST time
+// this runs, Firestore may show a console error with a "create index" link —
+// click it once (or add it manually under Firestore → Indexes → Collection
+// group, field "timestamp", scope "Collection group"); after that it's instant.
+let allBids = [];
+function loadAllBids() {
+  db.collectionGroup('bids').orderBy('timestamp', 'desc').limit(500)
+    .onSnapshot(snap => {
+      allBids = snap.docs.map(d => ({ id: d.id, itemId: d.ref.parent.parent.id, ...d.data() }));
+      renderDashboardStats();
+      renderRecentBids();
+      renderChart();
+      if (document.getElementById('panel-users').classList.contains('active')) renderUsersPanel();
+    }, err => {
+      console.warn('Bids collection-group query needs an index — see console link.', err);
+      document.getElementById('recent-bids-body').innerHTML =
+        '<tr><td colspan="4" style="color:var(--muted);">Waiting on a one-time Firestore index — see browser console for the link, or check the README.</td></tr>';
+    });
 }
 
-function escapeHtml(s) { return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function lotLabel(it) { return 'LOT ' + String(it.lotNumber).padStart(3, '0') + ' — ' + it.title; }
-
-const openBidLists = new Set();
-const bidCache = new Map();
-
-function timerButtonsHtml(it, st) {
-  if (st.state === 'notstarted') {
-    return '<button class="ghost gold" data-act="start-timer" data-id="' + it.id + '">Start ' + (it.durationMinutes || 30) + 'm timer</button>';
-  }
-  if (st.state === 'live' && closesAtMillis(it.closesAt) != null) {
-    return '<button class="ghost" data-act="extend" data-id="' + it.id + '">+5 min</button>' +
-           '<button class="ghost danger" data-act="end-now" data-id="' + it.id + '">End now</button>';
-  }
-  if (it.durationMinutes > 0 && st.state === 'closed' && it.active !== false) {
-    // Countdown ran out but the lot itself was never manually closed —
-    // offer a restart in case it's being reused for a second round.
-    return '<button class="ghost" data-act="start-timer" data-id="' + it.id + '">Restart ' + it.durationMinutes + 'm timer</button>';
-  }
-  return '';
+// -----------------------------------------------------------------
+// Dashboard
+// -----------------------------------------------------------------
+function renderDashboardStats() {
+  document.getElementById('stat-items').textContent = lots.length;
+  document.getElementById('stat-bids').textContent = allBids.length;
+  const raised = lots.reduce((sum, it) => sum + (it.winnerAmount || (it.active === false ? it.currentBid : 0)), 0);
+  document.getElementById('stat-raised').textContent = money(raised);
+  const distinctBidders = new Set(allBids.map(b => b.uid || (b.name || '').toLowerCase().trim()));
+  document.getElementById('stat-users').textContent = distinctBidders.size;
 }
 
-// Countdown badges tick down live — re-render the Items list once a second
-// while that page is open (cheap: local data only, no network calls).
-setInterval(() => {
-  if (document.getElementById('page-items').classList.contains('on')) renderLots();
-}, 1000);
+function renderRecentBids() {
+  const rows = allBids.slice(0, 10).map(b => {
+    const it = lots.find(l => l.id === b.itemId);
+    const t = b.timestamp && b.timestamp.toDate ? timeAgo(b.timestamp.toDate()) : '—';
+    return `<tr><td>${t}</td><td>${escapeHtml(b.name)}</td><td>${escapeHtml(it ? it.title : '—')}</td>
+      <td style="text-align:right;">${money(b.amount)}</td></tr>`;
+  }).join('');
+  document.getElementById('recent-bids-body').innerHTML = rows || '<tr><td colspan="4" style="color:var(--muted);">No bids yet.</td></tr>';
+}
+function timeAgo(d) {
+  const mins = Math.floor((Date.now() - d.getTime()) / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + ' min' + (mins === 1 ? '' : 's') + ' ago';
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  return Math.floor(hrs / 24) + 'd ago';
+}
 
+document.getElementById('chart-range').addEventListener('change', renderChart);
+function renderChart() {
+  const range = document.getElementById('chart-range').value;
+  const now = new Date();
+  let buckets, labels;
+  if (range === 'today') {
+    buckets = new Array(24).fill(0);
+    labels = buckets.map((_, h) => h % 3 === 0 ? (h % 12 || 12) + (h < 12 ? 'AM' : 'PM') : '');
+    allBids.forEach(b => {
+      if (!b.timestamp || !b.timestamp.toDate) return;
+      const d = b.timestamp.toDate();
+      if (d.toDateString() === now.toDateString()) buckets[d.getHours()]++;
+    });
+  } else {
+    const days = 14;
+    buckets = new Array(days).fill(0);
+    labels = buckets.map((_, i) => i % 2 === 0 ? (days - 1 - i) + 'd' : '');
+    allBids.forEach(b => {
+      if (!b.timestamp || !b.timestamp.toDate) return;
+      const d = b.timestamp.toDate();
+      const diffDays = Math.floor((now - d) / 86400000);
+      if (diffDays >= 0 && diffDays < days) buckets[days - 1 - diffDays]++;
+    });
+  }
+  document.getElementById('chart-holder').innerHTML = svgAreaChart(buckets, labels);
+}
+function svgAreaChart(values, labels) {
+  const w = 460, h = 180, pad = 24;
+  const max = Math.max(...values, 1);
+  const stepX = (w - pad * 2) / Math.max(values.length - 1, 1);
+  const pts = values.map((v, i) => {
+    const x = pad + i * stepX;
+    const y = h - pad - (v / max) * (h - pad * 2 - 16);
+    return [x, y];
+  });
+  const line = pts.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+  const area = line + ` L${pts[pts.length - 1][0].toFixed(1)},${h - pad} L${pts[0][0].toFixed(1)},${h - pad} Z`;
+  const labelsRow = labels.map((l, i) => l ? `<text x="${(pad + i * stepX).toFixed(1)}" y="${h - 4}" font-size="9" fill="#9C9086" text-anchor="middle">${l}</text>` : '').join('');
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%">
+    <defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#E3B75C" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#E3B75C" stop-opacity="0"/>
+    </linearGradient></defs>
+    <path d="${area}" fill="url(#ag)"/>
+    <path d="${line}" fill="none" stroke="#E3B75C" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    ${labelsRow}
+  </svg>`;
+}
+
+// -----------------------------------------------------------------
+// Items panel (add/edit/delete + photo)
+// -----------------------------------------------------------------
 function renderLots() {
   const el = document.getElementById('lots');
-  document.getElementById('lots-heading').textContent = lots.length ? 'Lots (' + lots.length + ')' : 'Lots';
-  if (!lots.length) { el.innerHTML = '<p class="empty-state">No lots yet — add the first one on the left.</p>'; return; }
-
-  el.innerHTML = lots.map(it => {
-    const search = (it.title + ' ' + (it.category || '')).toLowerCase();
-    const st = lotStatus(it);
-    const timerBtns = timerButtonsHtml(it, st);
-    return '<div class="lotcard" data-search="' + escapeHtml(search) + '">' +
-      '<img src="' + (it.imageUrl || '') + '" onerror="this.style.visibility=\'hidden\'">' +
-      '<div class="body">' +
-        '<div class="title">' + escapeHtml(lotLabel(it)) + ' <span class="status-badge ' + st.state + '">' + escapeHtml(st.label) + '</span></div>' +
-        '<div class="meta">' + money(it.currentBid) + ' · ' + (it.bidCount || 0) + ' bid(s)' +
-          (it.winnerName ? ' · <span class="winner-tag">Winner: ' + escapeHtml(it.winnerName) + ' (' + money(it.winnerAmount) + ')</span>' : ' · leader: ' + escapeHtml(it.currentBidderName || '—')) + '</div>' +
-        '<div class="actions">' +
-          timerBtns +
-          '<a class="ghost" href="index.html?id=' + it.id + '" target="_blank">View bid page</a>' +
-          '<button class="ghost" data-act="edit" data-id="' + it.id + '">Edit</button>' +
-          '<button class="ghost" data-act="toggle" data-id="' + it.id + '">' + (it.active === false ? 'Reopen' : 'Close bidding') + '</button>' +
-          '<button class="ghost" data-act="bids" data-id="' + it.id + '">' + (openBidLists.has(it.id) ? 'Hide bids' : 'Bids & winner') + '</button>' +
-          '<button class="ghost danger" data-act="delete" data-id="' + it.id + '">Delete</button>' +
-        '</div>' +
-        '<div class="bidlist ' + (openBidLists.has(it.id) ? 'open' : '') + '" id="bidlist-' + it.id + '"></div>' +
-      '</div></div>';
-  }).join('');
-
+  document.getElementById('lots-heading').textContent = lots.length ? `Lots (${lots.length})` : 'Lots';
+  if (!lots.length) { el.innerHTML = '<p class="empty-lots">No lots yet — add the first one on the left.</p>'; return; }
+  el.innerHTML = lots.map(it => `
+    <div class="lotcard">
+      <img src="${it.imageUrl || ''}" onerror="this.style.visibility='hidden'">
+      <div class="body">
+        <div class="title">LOT ${String(it.lotNumber).padStart(3,'0')} — ${escapeHtml(it.title)}</div>
+        <div class="meta">${money(it.currentBid)} · ${it.bidCount || 0} bid(s)${it.category ? ' · ' + escapeHtml(it.category) : ''}
+          ${it.winnerName ? ' · <span class="winner-tag">Winner: ' + escapeHtml(it.winnerName) + '</span>' : ''}
+          ${it.active === false ? ' · <span class="closed-tag">CLOSED</span>' : ''}</div>
+        <div class="actions">
+          <a class="btn-ghost" style="text-decoration:none;" href="index.html?id=${it.id}" target="_blank">View</a>
+          <button class="btn-ghost" data-act="edit" data-id="${it.id}">Edit</button>
+          <button class="btn-ghost" data-act="toggle" data-id="${it.id}">${it.active === false ? 'Reopen' : 'Close'}</button>
+          <button class="btn-ghost btn-danger" data-act="delete" data-id="${it.id}">Delete</button>
+        </div>
+      </div>
+    </div>`).join('');
   el.querySelectorAll('[data-act="edit"]').forEach(b => b.onclick = () => startEdit(b.dataset.id));
   el.querySelectorAll('[data-act="toggle"]').forEach(b => b.onclick = () => {
     const it = lots.find(l => l.id === b.dataset.id);
     db.collection('items').doc(b.dataset.id).update({ active: it.active === false });
-  });
-  el.querySelectorAll('[data-act="start-timer"]').forEach(b => b.onclick = () => {
-    const it = lots.find(l => l.id === b.dataset.id);
-    const mins = it.durationMinutes || 30;
-    db.collection('items').doc(b.dataset.id).update({
-      active: true,
-      closesAt: firebase.firestore.Timestamp.fromDate(new Date(Date.now() + mins * 60000)),
-    });
-  });
-  el.querySelectorAll('[data-act="extend"]').forEach(b => b.onclick = () => {
-    const it = lots.find(l => l.id === b.dataset.id);
-    const base = closesAtMillis(it.closesAt) || Date.now();
-    db.collection('items').doc(b.dataset.id).update({
-      closesAt: firebase.firestore.Timestamp.fromDate(new Date(Math.max(base, Date.now()) + 5 * 60000)),
-    });
-  });
-  el.querySelectorAll('[data-act="end-now"]').forEach(b => b.onclick = () => {
-    db.collection('items').doc(b.dataset.id).update({ closesAt: firebase.firestore.Timestamp.fromDate(new Date()) });
   });
   el.querySelectorAll('[data-act="delete"]').forEach(b => b.onclick = () => {
     if (confirm('Delete this lot and all its bids? This cannot be undone.')) {
@@ -695,75 +584,17 @@ function renderLots() {
       if (editingId === b.dataset.id) resetForm();
     }
   });
-  el.querySelectorAll('[data-act="bids"]').forEach(b => b.onclick = () => toggleBidList(b.dataset.id));
-  openBidLists.forEach(id => renderBidList(id, 'bidlist-' + id));
 }
 
-async function toggleBidList(itemId) {
-  if (openBidLists.has(itemId)) { openBidLists.delete(itemId); }
-  else {
-    openBidLists.add(itemId);
-    const snap = await db.collection('items').doc(itemId).collection('bids').orderBy('amount', 'desc').limit(50).get();
-    bidCache.set(itemId, snap.docs.map(d => ({ id: d.id, ...d.data() })));
-  }
-  renderLots();
-}
-
-async function ensureBidCache(itemId) {
-  if (!bidCache.has(itemId)) {
-    const snap = await db.collection('items').doc(itemId).collection('bids').orderBy('amount', 'desc').limit(50).get();
-    bidCache.set(itemId, snap.docs.map(d => ({ id: d.id, ...d.data() })));
-  }
-  return bidCache.get(itemId);
-}
-
-function renderBidList(itemId, containerId) {
-  const container = document.getElementById(containerId);
-  if (!container) return;
-  const it = lots.find(l => l.id === itemId);
-  const bids = bidCache.get(itemId) || [];
-  if (!bids.length) { container.innerHTML = '<p class="empty">No bids on this lot yet.</p>'; return; }
-  container.innerHTML = bids.map((b, i) => {
-    const isWinner = it && it.winnerBidId === b.id;
-    return '<div class="bidrow ' + (isWinner ? 'iswinner' : '') + '">' +
-      '<span class="rank">#' + (i + 1) + '</span>' +
-      '<span class="who">' + escapeHtml(b.name) + (b.isGoogle ? ' <span class="g">· Google verified</span>' : '') + '</span>' +
-      '<span class="amt">' + money(b.amount) + '</span>' +
-      '<button class="' + (isWinner ? '' : 'set') + '" data-set="' + b.id + '" data-item="' + itemId + '">' + (isWinner ? 'Winner ✓' : 'Set winner') + '</button>' +
-    '</div>';
-  }).join('');
-  container.querySelectorAll('[data-set]').forEach(btn => btn.onclick = () => {
-    const bids2 = bidCache.get(btn.dataset.item) || [];
-    const bid = bids2.find(b => b.id === btn.dataset.set);
-    db.collection('items').doc(btn.dataset.item).update({
-      winnerBidId: bid.id, winnerName: bid.name, winnerAmount: bid.amount,
-      winnerUid: bid.uid || null, winnerIsGoogle: !!bid.isGoogle,
-      winnerSetAt: firebase.firestore.FieldValue.serverTimestamp(),
-    });
-  });
-}
-
-// ---------------------------------------------------------------
-// Add / edit lot form
-// ---------------------------------------------------------------
 let editingId = null;
 let pendingFile = null;
 const fTitle = document.getElementById('f-title');
-const fCategory = document.getElementById('f-category');
+const fCat = document.getElementById('f-cat');
 const fDesc = document.getElementById('f-desc');
 const fImg = document.getElementById('f-img');
 const fStart = document.getElementById('f-start');
 const fInc = document.getElementById('f-inc');
-const fDuration = document.getElementById('f-duration');
-const fCloses = document.getElementById('f-closes');
-
-document.querySelectorAll('#duration-presets button').forEach(btn => btn.onclick = () => {
-  fDuration.value = btn.dataset.min;
-  document.querySelectorAll('#duration-presets button').forEach(b => b.classList.toggle('on', b === btn));
-});
-fDuration.addEventListener('input', () => {
-  document.querySelectorAll('#duration-presets button').forEach(b => b.classList.toggle('on', b.dataset.min === fDuration.value));
-});
+const fEnds = document.getElementById('f-ends');
 const fFile = document.getElementById('f-file');
 const photoPreview = document.getElementById('photo-preview');
 const urlWrap = document.getElementById('url-wrap');
@@ -772,7 +603,7 @@ const cancelEditBtn = document.getElementById('cancelEdit');
 const addErr = document.getElementById('addErr');
 
 fDesc.addEventListener('input', () => { document.getElementById('desc-count').textContent = fDesc.value.length + ' / 500'; });
-document.getElementById('urltoggle').onclick = () => { urlWrap.classList.toggle('on'); };
+document.getElementById('urltoggle').onclick = () => { urlWrap.style.display = urlWrap.style.display === 'none' ? 'block' : 'none'; };
 fFile.addEventListener('change', () => {
   const file = fFile.files[0];
   if (!file) return;
@@ -787,42 +618,37 @@ function startEdit(id) {
   editingId = id;
   pendingFile = null;
   fTitle.value = it.title || '';
-  fCategory.value = it.category || 'Art';
+  fCat.value = it.category || '';
   fDesc.value = it.description || '';
   document.getElementById('desc-count').textContent = fDesc.value.length + ' / 500';
   fImg.value = '';
   photoPreview.src = it.imageUrl || '';
   fStart.value = it.startingBid ?? it.currentBid ?? '';
   fInc.value = it.increment ?? 500;
-  fDuration.value = it.durationMinutes || '';
-  document.querySelectorAll('#duration-presets button').forEach(b => b.classList.toggle('on', b.dataset.min === String(it.durationMinutes || '')));
-  fCloses.value = it.closesAt ? toLocalInputValue(it.closesAt) : '';
+  fEnds.value = it.endsAt && it.endsAt.toDate ? toLocalInputValue(it.endsAt.toDate()) : '';
   document.getElementById('form-legend').textContent = 'Editing LOT ' + String(it.lotNumber).padStart(3, '0');
   submitBtn.textContent = 'Save changes';
   cancelEditBtn.style.display = 'inline-block';
   addErr.textContent = '';
-  document.querySelector('.sb-item[data-page="items"]').click();
-  document.querySelector('.form-col').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  document.querySelector('.navitem[data-panel="items"]').click();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
-
-function toLocalInputValue(closesAt) {
-  const d = closesAt && closesAt.toDate ? closesAt.toDate() : new Date(closesAt);
+function toLocalInputValue(d) {
   const pad = n => String(n).padStart(2, '0');
-  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
-
 function resetForm() {
   editingId = null;
   pendingFile = null;
   document.getElementById('lotForm').reset();
   photoPreview.src = '';
-  urlWrap.classList.remove('on');
-  document.querySelectorAll('#duration-presets button').forEach(b => b.classList.remove('on'));
+  urlWrap.style.display = 'none';
   document.getElementById('desc-count').textContent = '0 / 500';
   document.getElementById('form-legend').textContent = 'Add a lot';
   submitBtn.textContent = 'Add lot';
   cancelEditBtn.style.display = 'none';
   addErr.textContent = '';
+  fInc.value = 500;
 }
 cancelEditBtn.onclick = resetForm;
 
@@ -844,7 +670,10 @@ function compressImageToDataUrl(file, maxDim = 900, startQuality = 0.72) {
         canvas.getContext('2d').drawImage(img, 0, 0, width, height);
         let quality = startQuality;
         let dataUrl = canvas.toDataURL('image/jpeg', quality);
-        while (dataUrl.length > 700000 && quality > 0.3) { quality -= 0.1; dataUrl = canvas.toDataURL('image/jpeg', quality); }
+        while (dataUrl.length > 700000 && quality > 0.3) {
+          quality -= 0.1;
+          dataUrl = canvas.toDataURL('image/jpeg', quality);
+        }
         if (dataUrl.length > 700000) { reject(new Error('This photo is too large even compressed — try a smaller image.')); return; }
         resolve(dataUrl);
       };
@@ -858,15 +687,10 @@ document.getElementById('lotForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   addErr.textContent = '';
   const title = fTitle.value.trim();
+  const category = fCat.value.trim();
   const description = fDesc.value.trim();
-  const category = fCategory.value;
   const start = Number(fStart.value);
   const inc = Number(fInc.value);
-  const durationMinutes = Number(fDuration.value) || 0;
-  // Only touch closesAt when a fixed date/time was explicitly set here —
-  // otherwise leave whatever "Start timer" put there (or nothing) alone,
-  // so editing a lot's title mid-countdown doesn't reset its clock.
-  const fixedClosesAt = fCloses.value ? firebase.firestore.Timestamp.fromDate(new Date(fCloses.value)) : null;
   if (!title || !start || !inc) { addErr.textContent = 'Title, starting bid and increment are required.'; return; }
 
   submitBtn.disabled = true;
@@ -879,20 +703,21 @@ document.getElementById('lotForm').addEventListener('submit', async (e) => {
       document.getElementById('upload-status').textContent = 'Compressing photo…';
       imageUrl = await compressImageToDataUrl(pendingFile);
       document.getElementById('upload-status').textContent = '';
-    } else if (fImg.value.trim()) { imageUrl = fImg.value.trim(); }
+    } else if (fImg.value.trim()) {
+      imageUrl = fImg.value.trim();
+    }
+    const endsAt = fEnds.value ? firebase.firestore.Timestamp.fromDate(new Date(fEnds.value)) : null;
 
     if (editingId) {
       const it = lots.find(l => l.id === editingId);
-      const patch = { title, description, category, imageUrl, startingBid: start, increment: inc, durationMinutes };
-      if (fixedClosesAt) patch.closesAt = fixedClosesAt;
+      const patch = { title, category, description, imageUrl, startingBid: start, increment: inc, endsAt };
       if (!it || (it.bidCount || 0) === 0) patch.currentBid = start;
       await db.collection('items').doc(editingId).update(patch);
     } else {
       const nextLotNumber = lots.reduce((m, l) => Math.max(m, l.lotNumber || 0), 0) + 1;
       await db.collection('items').add({
-        lotNumber: nextLotNumber, title, description, category, imageUrl,
-        startingBid: start, increment: inc, currentBid: start,
-        durationMinutes, closesAt: fixedClosesAt,
+        lotNumber: nextLotNumber, title, category, description, imageUrl,
+        startingBid: start, increment: inc, currentBid: start, endsAt,
         currentBidderName: '', currentBidderUid: null, bidCount: 0, active: true,
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       });
@@ -906,218 +731,13 @@ document.getElementById('lotForm').addEventListener('submit', async (e) => {
   }
 });
 
-// ---------------------------------------------------------------
-// Dashboard: stats, recent bids, activity chart
-// ---------------------------------------------------------------
-function renderDashboard() {
-  document.getElementById('stat-items').textContent = lots.length;
-  const totalBids = lots.reduce((s, l) => s + (l.bidCount || 0), 0);
-  document.getElementById('stat-bids').textContent = totalBids;
-  const totalRaised = lots.reduce((s, l) => s + (l.currentBid || 0), 0);
-  document.getElementById('stat-raised').textContent = money(totalRaised);
-  const distinctUsers = new Set(allBids.map(b => b.deviceId || b.name));
-  document.getElementById('stat-users').textContent = distinctUsers.size;
-
-  const tbody = document.getElementById('recent-bids-body');
-  const recent = allBids.slice(0, 10);
-  if (!recent.length) {
-    tbody.innerHTML = '<tr><td colspan="4" class="empty-cell">No bids placed yet.</td></tr>';
-  } else {
-    tbody.innerHTML = recent.map(b => {
-      const it = lots.find(l => l.id === b.itemId);
-      return '<tr><td>' + relTime(b.timestamp) + '</td><td>' + escapeHtml(b.name) + '</td><td>' + escapeHtml(it ? it.title : '—') + '</td><td class="amt-gold">' + money(b.amount) + '</td></tr>';
-    }).join('');
-  }
-  drawActivityChart('activity-chart');
-}
-
-function relTime(ts) {
-  if (!ts || !ts.toDate) return '—';
-  const mins = Math.max(0, Math.round((Date.now() - ts.toDate().getTime()) / 60000));
-  if (mins < 1) return 'Just now';
-  if (mins < 60) return mins + ' min' + (mins === 1 ? '' : 's') + ' ago';
-  const hrs = Math.round(mins / 60);
-  if (hrs < 24) return hrs + ' hr' + (hrs === 1 ? '' : 's') + ' ago';
-  return Math.round(hrs / 24) + ' day(s) ago';
-}
-
-function drawActivityChart(canvasId) {
-  const canvas = document.getElementById(canvasId);
-  if (!canvas) return;
-  const dpr = window.devicePixelRatio || 1;
-  const w = canvas.clientWidth || 400, h = canvas.height || 180;
-  canvas.width = w * dpr; canvas.height = h * dpr;
-  const ctx = canvas.getContext('2d');
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, w, h);
-
-  const buckets = new Array(12).fill(0); // 12 two-hour buckets across the day
-  allBids.forEach(b => {
-    if (!b.timestamp || !b.timestamp.toDate) return;
-    const hr = b.timestamp.toDate().getHours();
-    buckets[Math.floor(hr / 2)]++;
-  });
-  const max = Math.max(1, ...buckets);
-  const padL = 8, padR = 8, padT = 12, padB = 20;
-  const cw = w - padL - padR, ch = h - padT - padB;
-  const stepX = cw / (buckets.length - 1);
-
-  ctx.beginPath();
-  buckets.forEach((v, i) => {
-    const x = padL + i * stepX;
-    const y = padT + ch - (v / max) * ch;
-    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-  });
-  ctx.lineTo(padL + cw, padT + ch);
-  ctx.lineTo(padL, padT + ch);
-  ctx.closePath();
-  const grad = ctx.createLinearGradient(0, padT, 0, padT + ch);
-  grad.addColorStop(0, 'rgba(199,154,75,.45)');
-  grad.addColorStop(1, 'rgba(199,154,75,.02)');
-  ctx.fillStyle = grad;
-  ctx.fill();
-
-  ctx.beginPath();
-  buckets.forEach((v, i) => {
-    const x = padL + i * stepX;
-    const y = padT + ch - (v / max) * ch;
-    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-  });
-  ctx.strokeStyle = '#C79A4B';
-  ctx.lineWidth = 2;
-  ctx.stroke();
-
-  ctx.fillStyle = '#6F675B';
-  ctx.font = '10px Inter, sans-serif';
-  [0, 4, 8, 11].forEach(i => {
-    const label = (i * 2) % 24;
-    const x = padL + i * stepX;
-    ctx.fillText((label === 0 ? '12' : (label > 12 ? label - 12 : label)) + (label < 12 ? 'AM' : 'PM'), Math.max(0, x - 12), h - 4);
-  });
-}
-
-function drawPerLotChart() {
-  const canvas = document.getElementById('perlot-chart');
-  if (!canvas) return;
-  const dpr = window.devicePixelRatio || 1;
-  const w = canvas.clientWidth || 400, h = canvas.height || 220;
-  canvas.width = w * dpr; canvas.height = h * dpr;
-  const ctx = canvas.getContext('2d');
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, w, h);
-
-  const data = lots.slice(0, 10);
-  if (!data.length) return;
-  const max = Math.max(1, ...data.map(l => l.bidCount || 0));
-  const padL = 8, padR = 8, padT = 10, padB = 34;
-  const cw = w - padL - padR, ch = h - padT - padB;
-  const bw = cw / data.length;
-
-  data.forEach((it, i) => {
-    const val = it.bidCount || 0;
-    const barH = (val / max) * ch;
-    const x = padL + i * bw + bw * 0.18;
-    const bw2 = bw * 0.64;
-    ctx.fillStyle = '#C79A4B';
-    ctx.beginPath();
-    ctx.roundRect ? ctx.roundRect(x, padT + ch - barH, bw2, barH, 4) : ctx.rect(x, padT + ch - barH, bw2, barH);
-    ctx.fill();
-    ctx.fillStyle = '#9C9284';
-    ctx.font = '10px Inter, sans-serif';
-    ctx.textAlign = 'center';
-    const label = 'L' + String(it.lotNumber).padStart(2, '0');
-    ctx.fillText(label, x + bw2 / 2, h - 18);
-    ctx.fillText(String(val), x + bw2 / 2, padT + ch - barH - 6);
-  });
-  ctx.textAlign = 'left';
-}
-
-function renderAnalytics() { drawActivityChart('activity-chart-2'); drawPerLotChart(); }
-
-// ---------------------------------------------------------------
-// Bids page
-// ---------------------------------------------------------------
-async function renderBidsPage() {
-  const el = document.getElementById('bids-lots');
-  if (!lots.length) { el.innerHTML = '<p class="empty-state">No lots yet.</p>'; return; }
-  el.innerHTML = lots.map(it => {
-    const st = lotStatus(it);
-    return '<div class="panel mb-14">' +
-      '<div class="panel-head-row">' +
-        '<h3>' + escapeHtml(lotLabel(it)) + '</h3>' +
-        '<span class="status-badge ' + st.state + '">' + escapeHtml(st.label) + '</span>' +
-      '</div>' +
-      '<div class="bidlist open" id="bp-bidlist-' + it.id + '"></div>' +
-    '</div>';
-  }).join('');
-  for (const it of lots) {
-    await ensureBidCache(it.id);
-    renderBidList(it.id, 'bp-bidlist-' + it.id);
-  }
-}
-
-// ---------------------------------------------------------------
-// Users page
-// ---------------------------------------------------------------
-function renderUsersPage() {
-  const el = document.getElementById('users-body');
-  el.innerHTML = registeredUsers.length ? registeredUsers.map(user =>
-    '<tr><td>' + escapeHtml(user.name) + '</td><td>' + escapeHtml(user.email) + '</td><td>' + escapeHtml(user.phone || '—') + '</td><td>Google account; phone self-reported</td></tr>'
-  ).join('') : '<tr><td colspan="4">No registrations yet.</td></tr>';
-}
-
-// ---------------------------------------------------------------
-// Payments page
-// ---------------------------------------------------------------
-function renderPaymentsPage() {
-  const el = document.getElementById('payments-body');
-  const withWinner = lots.filter(l => l.winnerName);
-  if (!withWinner.length) { el.innerHTML = '<tr><td colspan="5" class="empty-cell">No winners set yet — mark one from the Items or Bids tab.</td></tr>'; return; }
-  el.innerHTML = withWinner.map(it =>
-    '<tr><td>' + escapeHtml(lotLabel(it)) + '</td><td>' + escapeHtml(it.winnerName) + '</td>' +
-    '<td class="amt-gold">' + money(it.winnerAmount) + '</td>' +
-    '<td>' + (it.paid ? '<span class="winner-tag">Collected</span>' : '<span class="pending-tag">Pending</span>') + '</td>' +
-    '<td><button class="ghost" data-pay="' + it.id + '">' + (it.paid ? 'Mark unpaid' : 'Mark collected') + '</button></td></tr>').join('');
-  el.querySelectorAll('[data-pay]').forEach(b => b.onclick = () => {
-    const it = lots.find(l => l.id === b.dataset.pay);
-    db.collection('items').doc(b.dataset.pay).update({ paid: !it.paid });
-  });
-}
-
-// ---------------------------------------------------------------
-// Export / print
-// ---------------------------------------------------------------
-document.getElementById('exportCsv').onclick = async () => {
-  const btn = document.getElementById('exportCsv');
-  btn.disabled = true;
-  btn.textContent = 'Building export…';
-  const rows = [['Lot', 'Title', 'Rank', 'Bidder', 'Amount', 'Google verified', 'Marked winner']];
-  for (const it of lots) {
-    const lotLbl = 'LOT ' + String(it.lotNumber).padStart(3, '0');
-    const snap = await db.collection('items').doc(it.id).collection('bids').orderBy('amount', 'desc').limit(50).get();
-    if (snap.empty) { rows.push([lotLbl, it.title, '', '(no bids)', '', '', '']); continue; }
-    snap.docs.forEach((d, i) => {
-      const b = d.data();
-      rows.push([lotLbl, it.title, i + 1, b.name, b.amount, b.isGoogle ? 'Yes' : 'No', it.winnerBidId === d.id ? 'WINNER' : '']);
-    });
-  }
-  const csv = rows.map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'auction-results.csv';
-  a.click();
-  btn.disabled = false;
-  btn.textContent = 'Export winners (CSV)';
-};
-
 document.getElementById('printQr').onclick = () => {
   const sheet = document.getElementById('qrsheet');
   sheet.innerHTML = '';
   lots.forEach(it => {
     const tile = document.createElement('div');
     tile.className = 'qrtile';
-    tile.innerHTML = '<div class="qrtile-title">LOT ' + String(it.lotNumber).padStart(3, '0') + '<br>' + escapeHtml(it.title) + '</div><div class="qrbox"></div>';
+    tile.innerHTML = `<div style="font-weight:700;margin-bottom:6px;">LOT ${String(it.lotNumber).padStart(3,'0')}<br>${escapeHtml(it.title)}</div><div class="qrbox"></div>`;
     sheet.appendChild(tile);
     new QRCode(tile.querySelector('.qrbox'), {
       text: location.origin + location.pathname.replace('admin.html', 'index.html') + '?id=' + it.id,
@@ -1127,10 +747,101 @@ document.getElementById('printQr').onclick = () => {
   setTimeout(() => window.print(), 300);
 };
 
-window.addEventListener('resize', () => {
-  if (document.getElementById('page-dashboard').classList.contains('on')) drawActivityChart('activity-chart');
-  if (document.getElementById('page-analytics').classList.contains('on')) renderAnalytics();
-});
+// -----------------------------------------------------------------
+// Bids panel (ranked per lot + set winner)
+// -----------------------------------------------------------------
+const openBidLists = new Set();
+function renderBidsPanel() {
+  const el = document.getElementById('bids-lots');
+  if (!lots.length) { el.innerHTML = '<p class="empty-lots">No lots yet.</p>'; return; }
+  el.innerHTML = lots.map(it => `
+    <div class="lotcard" style="display:block;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+        <div>
+          <div class="title">LOT ${String(it.lotNumber).padStart(3,'0')} — ${escapeHtml(it.title)}</div>
+          <div class="meta">${it.bidCount || 0} bid(s)
+            ${it.winnerName ? ' · <span class="winner-tag">Winner: ' + escapeHtml(it.winnerName) + ' (' + money(it.winnerAmount) + ')</span>' : ''}
+            ${it.active === false ? ' · <span class="closed-tag">CLOSED</span>' : ''}</div>
+        </div>
+        <button class="btn-ghost" data-toggle="${it.id}">${openBidLists.has(it.id) ? 'Hide' : 'View bids'}</button>
+      </div>
+      <div class="bidlist ${openBidLists.has(it.id) ? 'open' : ''}" id="bidlist-${it.id}"></div>
+    </div>`).join('');
+  el.querySelectorAll('[data-toggle]').forEach(b => b.onclick = () => toggleBidList(b.dataset.toggle));
+  openBidLists.forEach(id => renderBidRows(id));
+}
+async function toggleBidList(itemId) {
+  if (openBidLists.has(itemId)) openBidLists.delete(itemId);
+  else openBidLists.add(itemId);
+  renderBidsPanel();
+}
+function renderBidRows(itemId) {
+  const container = document.getElementById('bidlist-' + itemId);
+  if (!container) return;
+  const it = lots.find(l => l.id === itemId);
+  const bids = allBids.filter(b => b.itemId === itemId).sort((a, b) => b.amount - a.amount);
+  if (!bids.length) { container.innerHTML = '<p class="empty">No bids on this lot yet.</p>'; return; }
+  container.innerHTML = bids.map((b, i) => {
+    const isWinner = it && it.winnerBidId === b.id;
+    return `<div class="bidrow ${isWinner ? 'iswinner' : ''}">
+      <span class="rank">#${i + 1}</span>
+      <span class="who">${escapeHtml(b.name)}${b.isGoogle ? ' <span class="g">· Google verified</span>' : ''}</span>
+      <span class="amt">${money(b.amount)}</span>
+      <button class="${isWinner ? '' : 'set'}" data-set="${b.id}">${isWinner ? 'Winner ✓' : 'Set winner'}</button>
+    </div>`;
+  }).join('');
+  container.querySelectorAll('[data-set]').forEach(btn => btn.onclick = () => {
+    const bid = bids.find(b => b.id === btn.dataset.set);
+    db.collection('items').doc(itemId).update({
+      winnerBidId: bid.id, winnerName: bid.name, winnerAmount: bid.amount,
+      winnerUid: bid.uid || null, winnerIsGoogle: !!bid.isGoogle,
+      winnerSetAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+  });
+}
+
+// -----------------------------------------------------------------
+// Users panel
+// -----------------------------------------------------------------
+function renderUsersPanel() {
+  const map = new Map();
+  allBids.forEach(b => {
+    const key = b.uid || ('n:' + (b.name || '').toLowerCase().trim());
+    if (!map.has(key)) map.set(key, { name: b.name, isGoogle: !!b.isGoogle, count: 0, total: 0 });
+    const rec = map.get(key);
+    rec.count++;
+    rec.total += b.amount || 0;
+  });
+  const rows = [...map.values()].sort((a, b) => b.total - a.total);
+  document.getElementById('users-body').innerHTML = rows.length
+    ? rows.map(r => `<tr><td>${escapeHtml(r.name)}</td><td>${r.isGoogle ? 'Yes' : 'No'}</td>
+        <td>${r.count}</td><td style="text-align:right;">${money(r.total)}</td></tr>`).join('')
+    : '<tr><td colspan="4" style="color:var(--muted);">No bidders yet.</td></tr>';
+}
+
+// -----------------------------------------------------------------
+// Payments panel — CSV export
+// -----------------------------------------------------------------
+document.getElementById('exportCsv').onclick = async () => {
+  const btn = document.getElementById('exportCsv');
+  btn.disabled = true;
+  btn.textContent = 'Building…';
+  const rows = [['Lot', 'Title', 'Rank', 'Bidder', 'Amount', 'Google verified', 'Marked winner']];
+  for (const it of lots) {
+    const lotLabel = 'LOT ' + String(it.lotNumber).padStart(3, '0');
+    const bids = allBids.filter(b => b.itemId === it.id).sort((a, b) => b.amount - a.amount);
+    if (!bids.length) { rows.push([lotLabel, it.title, '', '(no bids)', '', '', '']); continue; }
+    bids.forEach((b, i) => rows.push([lotLabel, it.title, i + 1, b.name, b.amount, b.isGoogle ? 'Yes' : 'No', it.winnerBidId === b.id ? 'WINNER' : '']));
+  }
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'auction-results.csv';
+  a.click();
+  btn.disabled = false;
+  btn.textContent = 'Export as CSV';
+};
 </script>
 </body>
 </html>

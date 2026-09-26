@@ -3,715 +3,644 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>JASHN — Silent Auction</title>
+<title>Silent Auction</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{
-  --bg:#0D0A08; --bg-2:#151110; --card:#191412; --card-2:#1E1815;
-  --line:#2A231D; --line-soft:#241E19;
-  --gold:#C79A4B; --gold-soft:#E7C888;
-  --cream:#F3ECDC; --paper:#F6F1E4;
-  --ink:#0D0A08; --muted:#9C9284; --muted-2:#6F675B;
-  --green:#5C9A76; --red:#C1594A;
-  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
-}
-*{box-sizing:border-box;}
-html,body{margin:0;background:var(--bg);color:var(--cream);height:100%;overflow-x:hidden;
-  font-family:'Inter',sans-serif; -webkit-tap-highlight-color:transparent;}
-h1,h2,h3{font-family:'Fraunces',serif;font-weight:600;margin:0;}
-a{color:inherit;text-decoration:none;}
-button{font-family:inherit;}
-img{-webkit-user-drag:none;}
-.screen{display:none;min-height:100%;min-height:100dvh;flex-direction:column;}
-.screen.active{display:flex;}
+  :root{
+    --bg:#0E0C0A; --bg2:#151210; --surface:#1B1815; --surface2:#221E19;
+    --border:#2E2820; --cream:#F3EBDA; --text:#F3EBDA; --muted:#9C9082;
+    --gold:#E3B75C; --green:#7FBF8E; --red:#D9836E;
+    padding-top: env(safe-area-inset-top,0px);
+    padding-bottom: env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--text);height:100%;
+    font-family:'IBM Plex Sans',sans-serif;-webkit-tap-highlight-color:transparent;}
+  .serif{font-family:'Newsreader',serif;}
+  a{color:inherit;}
+  button{font-family:inherit;}
+  img{display:block;}
+  svg{display:block;flex:none;}
 
-/* ---------- shared bits ---------- */
-.icon-btn{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:var(--cream);cursor:pointer;flex:none;}
-.icon-btn svg{width:17px;height:17px;}
-.pill-btn{display:block;width:100%;text-align:center;padding:15px;border-radius:999px;border:none;
-  font-size:15px;font-weight:600;cursor:pointer;}
-.pill-gold{background:var(--gold);color:#20150A;}
-.pill-cream{background:var(--cream);color:var(--ink);}
-.pill-outline{background:transparent;color:var(--cream);border:1px solid rgba(243,236,220,.3);}
-.pill-dark{background:var(--card-2);color:var(--cream);border:1px solid var(--line);}
-.pill-btn[disabled]{opacity:.4;pointer-events:none;}
-.tag{display:inline-flex;align-items:center;padding:6px 12px;border-radius:999px;font-size:12px;
-  font-weight:600;background:var(--card-2);border:1px solid var(--line);color:var(--cream);}
-.hairline{height:1px;background:var(--line);border:none;margin:0;}
+  .view{display:none;min-height:100vh;min-height:100dvh;padding-bottom:calc(84px + env(safe-area-inset-bottom,0px));}
+  .view.active{display:block;}
 
-/* ---------- bottom nav ---------- */
-.bottomnav{display:flex;border-top:1px solid var(--line);background:var(--bg-2);
-  padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));}
-.bottomnav button{flex:1;background:none;border:none;color:var(--muted-2);display:flex;flex-direction:column;
-  align-items:center;gap:4px;font-size:11px;cursor:pointer;padding:4px;}
-.bottomnav button.active{color:var(--gold-soft);}
-.bottomnav svg{width:21px;height:21px;}
+  /* ---------- shared bits ---------- */
+  .icon-btn{width:38px;height:38px;border-radius:50%;background:var(--surface);
+    border:1px solid var(--border);display:flex;align-items:center;justify-content:center;
+    color:var(--text);cursor:pointer;flex:none;}
+  .badge{display:inline-block;padding:5px 11px;font-size:11px;border:1px solid var(--border);
+    border-radius:20px;color:var(--muted);background:var(--surface);}
+  .cta{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
+    padding:15px;border:none;border-radius:12px;font-weight:600;font-size:15px;cursor:pointer;}
+  .cta-cream{background:var(--cream);color:#1B140A;}
+  .cta-outline{background:transparent;border:1px solid var(--border);color:var(--text);}
+  .cta[disabled]{opacity:.4;pointer-events:none;}
 
-/* ---------- SPLASH ---------- */
-#screen-splash{position:relative;background:#000;color:var(--cream);}
-.splash-bg{position:absolute;inset:0;background-size:contain;background-repeat:no-repeat;background-position:center;
-  filter:saturate(.85) brightness(.6);
-  /* Default look before any item photo is available (or if one fails to
-     load) — a warm gold-on-charcoal gradient in brand tones, no external
-     image needed. JS overrides background-image inline once a real item
-     photo exists; that inline style always wins over this. */
-  background-image:
-    radial-gradient(circle at 18% 12%, rgba(199,154,75,.38), transparent 52%),
-    radial-gradient(circle at 88% 82%, rgba(199,154,75,.16), transparent 48%),
-    linear-gradient(160deg, #1E1712 0%, #120D0A 55%, #000000 100%);}
-.splash-scrim{position:absolute;inset:0;
-  background:linear-gradient(180deg,rgba(13,10,8,.55) 0%,rgba(13,10,8,.35) 40%,rgba(13,10,8,.97) 92%);}
-.splash-inner{position:relative;z-index:1;display:flex;flex-direction:column;min-height:100vh;min-height:100dvh;
-  padding:calc(26px + env(safe-area-inset-top,0px)) 24px calc(28px + env(safe-area-inset-bottom,0px));}
-#explore-btn{min-height:64px;padding:21px 24px;flex-shrink:0;}
-.splash-logo{font-family:'Fraunces',serif;font-size:20px;letter-spacing:.14em;font-weight:600;}
-.splash-mid{flex:1;display:flex;align-items:flex-end;}
-.splash-headline{font-size:44px;line-height:1.06;font-weight:600;margin:0 0 16px;}
-.splash-sub{font-size:14px;line-height:1.55;color:#D8CFBD;max-width:360px;margin:0 0 26px;}
-.adminlink{display:block;text-align:center;margin-top:12px;font-size:12px;color:#7C8A7F;}
+  /* ---------- Home ---------- */
+  #view-home .top{padding:calc(20px + env(safe-area-inset-top,0px)) 20px 4px;
+    display:flex;align-items:center;justify-content:space-between;}
+  .wordmark{font-size:20px;letter-spacing:.06em;font-weight:600;}
+  .searchbar{margin:10px 20px 0;display:none;}
+  .searchbar.open{display:block;}
+  .searchbar input{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);
+    background:var(--surface);color:var(--text);font-size:14px;}
+  .pills{display:flex;gap:8px;overflow-x:auto;padding:16px 20px;scrollbar-width:none;}
+  .pills::-webkit-scrollbar{display:none;}
+  .pill{flex:none;padding:9px 16px;border-radius:20px;border:1px solid var(--border);
+    background:var(--surface);color:var(--muted);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;}
+  .pill.on{background:var(--cream);color:#1B140A;border-color:var(--cream);}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:0 20px 20px;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;cursor:pointer;}
+  .card .img{width:100%;aspect-ratio:1/1;object-fit:cover;background:var(--surface2);}
+  .card .body{padding:10px 12px 13px;}
+  .card .title{font-size:14px;font-weight:600;margin:0 0 6px;line-height:1.25;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .card .price{font-size:14px;font-weight:600;margin:0 0 2px;}
+  .card .left{font-size:11px;color:var(--muted);}
+  .empty-state{padding:60px 24px;text-align:center;color:var(--muted);}
 
-/* ---------- CATALOG ---------- */
-#screen-catalog{background:var(--bg);}
-.cat-header{display:flex;align-items:center;justify-content:space-between;gap:12px;
-  padding:calc(20px + env(safe-area-inset-top,0px)) 20px 4px;}
-.cat-logo{font-family:'Fraunces',serif;font-size:19px;letter-spacing:.1em;font-weight:600;}
-.cat-search-wrap{padding:14px 20px 0;}
-.cat-search{display:none;width:100%;padding:11px 14px;border-radius:12px;background:var(--card);
-  border:1px solid var(--line);color:var(--cream);font-size:14px;font-family:inherit;}
-.tabs{display:flex;gap:8px;padding:14px 20px 4px;overflow-x:auto;scrollbar-width:none;}
-.tabs::-webkit-scrollbar{display:none;}
-.tab{flex:none;padding:9px 16px;border-radius:999px;font-size:13px;font-weight:600;
-  background:var(--card);color:var(--muted);border:1px solid var(--line);cursor:pointer;}
-.tab.active{background:var(--cream);color:var(--ink);border-color:var(--cream);}
-.grid{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:16px 20px 12px;
-  overflow-y:auto;align-content:start;}
-.card{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;cursor:pointer;}
-.card-img-wrap{position:relative;aspect-ratio:1/1;background:var(--card-2);}
-.card-img-wrap img{width:100%;height:100%;object-fit:cover;display:block;}
-.card-heart{position:absolute;top:8px;right:8px;width:28px;height:28px;border-radius:50%;
-  background:rgba(13,10,8,.55);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;}
-.card-heart svg{width:14px;height:14px;}
-.card-closed-flag{position:absolute;left:8px;top:8px;background:rgba(193,89,74,.92);color:#fff;
-  font-size:10px;font-weight:700;padding:4px 8px;border-radius:999px;}
-.card-body{padding:10px 12px 14px;}
-.card-title{font-size:13.5px;font-weight:600;line-height:1.3;margin:0 0 6px;
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
-.card-price{font-size:13px;color:var(--gold-soft);font-weight:600;margin:0 0 2px;}
-.card-time{font-size:11px;color:var(--muted-2);}
-.empty-state{margin:auto;text-align:center;color:var(--muted);padding:40px 20px;font-size:14px;}
+  /* ---------- Item detail ---------- */
+  #view-item .hero-wrap{position:relative;}
+  .hero-img{width:100%;aspect-ratio:1/1;object-fit:cover;background:var(--surface2);}
+  .hero-nav{position:absolute;top:calc(16px + env(safe-area-inset-top,0px));left:16px;right:16px;
+    display:flex;justify-content:space-between;}
+  #view-item .body{padding:20px;}
+  .item-title{font-size:22px;font-weight:600;margin:0 0 4px;line-height:1.25;}
+  .item-sub{font-size:13px;color:var(--muted);margin:0 0 14px;}
+  .badges{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+  .item-desc{font-size:14px;line-height:1.6;color:#D9D0C0;margin-bottom:20px;}
+  .stat-row{display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid var(--border);
+    border-bottom:1px solid var(--border);padding:16px 0;margin-bottom:90px;}
+  .stat-row .stat .k{font-size:11px;color:var(--muted);margin:0 0 4px;}
+  .stat-row .stat .v{font-size:16px;font-weight:600;}
+  .stat-row .stat .v.gold{color:var(--gold);}
+  .item-cta-bar{position:fixed;left:0;right:0;bottom:0;padding:14px 20px calc(14px + env(safe-area-inset-bottom,0px));
+    background:linear-gradient(180deg,transparent,var(--bg) 30%);z-index:6;}
+  .closed-note{text-align:center;font-size:13px;color:var(--muted);padding:14px;
+    background:var(--surface);border:1px solid var(--border);border-radius:12px;}
 
-/* ---------- DETAIL ---------- */
-#screen-detail{background:var(--bg);}
-.detail-topbar{position:relative;}
-.detail-hero{width:100%;height:320px;object-fit:contain;background:var(--card-2);display:block;}
-.detail-actions{position:absolute;top:calc(16px + env(safe-area-inset-top,0px));left:16px;right:16px;
-  display:flex;justify-content:space-between;}
-.detail-actions .grp{display:flex;gap:8px;}
-.detail-body{padding:20px 20px 4px;flex:1;}
-.detail-title{font-size:24px;line-height:1.2;margin-bottom:6px;}
-.detail-sub{font-size:13px;color:var(--muted);margin-bottom:14px;}
-.detail-tags{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
-.detail-desc{font-size:14px;line-height:1.65;color:#CFC6B5;margin-bottom:20px;}
-.detail-status{display:flex;justify-content:space-between;border-top:1px solid var(--line);
-  border-bottom:1px solid var(--line);padding:16px 0;margin-bottom:16px;}
-.detail-status .label{font-size:12px;color:var(--muted-2);margin:0 0 4px;}
-.detail-status .value{font-size:22px;font-weight:700;color:var(--gold-soft);font-family:'Fraunces',serif;}
-.detail-status.closed .value{color:var(--red);}
-.detail-meta-row{display:flex;justify-content:space-between;margin-bottom:22px;}
-.detail-meta-row .k{font-size:12px;color:var(--muted-2);margin:0 0 4px;}
-.detail-meta-row .v{font-size:15px;font-weight:600;}
-.detail-footer{padding:0 20px calc(22px + env(safe-area-inset-bottom,0px));}
-.feed-box{margin-bottom:20px;}
-.feed-box h3{font-size:13px;color:var(--muted);font-weight:600;font-family:'Inter',sans-serif;margin-bottom:8px;}
-.feed-row{display:flex;justify-content:space-between;font-size:13px;padding:7px 0;border-bottom:1px solid var(--line-soft);}
-.feed-row .amt{color:var(--gold-soft);font-weight:600;}
-.feed-empty{color:var(--muted-2);font-size:13px;padding:4px 0;}
+  /* ---------- Bid sheet ---------- */
+  .sheet-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:20;display:none;}
+  .sheet-backdrop.open{display:block;}
+  .sheet{position:fixed;left:0;right:0;bottom:-100%;background:var(--bg2);border-top:1px solid var(--border);
+    border-radius:20px 20px 0 0;z-index:21;padding:20px 20px calc(20px + env(safe-area-inset-bottom,0px));
+    transition:bottom .28s ease;max-height:85vh;overflow-y:auto;}
+  .sheet.open{bottom:0;}
+  .sheet-head{display:flex;gap:12px;align-items:center;margin-bottom:18px;}
+  .sheet-head img{width:48px;height:48px;border-radius:8px;object-fit:cover;background:var(--surface2);flex:none;}
+  .sheet-head .t{font-weight:600;font-size:15px;}
+  .sheet-head .s{font-size:12px;color:var(--muted);}
+  .sheet-close{margin-left:auto;}
+  .sheet-current{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    padding:14px;margin-bottom:16px;}
+  .sheet-current .k{font-size:12px;color:var(--muted);margin:0 0 4px;}
+  .sheet-current .v{font-size:22px;font-weight:600;}
+  .sheet-min{font-size:12px;color:var(--muted);margin-top:8px;}
+  .amount-field{display:flex;align-items:center;gap:8px;border:1px solid var(--border);
+    border-radius:12px;padding:14px;margin:16px 0 10px;background:var(--surface);}
+  .amount-field span{color:var(--muted);font-size:18px;}
+  .amount-field input{flex:1;background:none;border:none;color:var(--text);font-size:20px;
+    font-weight:600;outline:none;width:100%;}
+  .quick-row{display:flex;gap:8px;margin-bottom:16px;}
+  .quick-btn{flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);
+    background:var(--surface);color:var(--text);font-size:13px;cursor:pointer;}
+  .biddername{display:flex;justify-content:space-between;align-items:center;font-size:13px;
+    color:var(--muted);margin-bottom:16px;padding:0 2px;}
+  .biddername button{background:none;border:none;color:var(--gold);text-decoration:underline;
+    font-size:12px;cursor:pointer;}
+  .name-edit{display:none;margin-bottom:16px;}
+  .name-edit.open{display:block;}
+  .name-edit input{width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);
+    background:var(--surface);color:var(--text);font-size:14px;}
+  .sheet-err{color:var(--red);font-size:13px;margin-top:10px;min-height:16px;}
 
-/* ---------- BID SHEET (modal) ---------- */
-#sheet-overlay{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.6);display:none;
-  align-items:flex-end;justify-content:center;}
-#sheet-overlay.active{display:flex;}
-.sheet{width:100%;max-width:560px;background:var(--bg-2);border-top-left-radius:22px;border-top-right-radius:22px;
-  padding:22px 20px calc(22px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);}
-.sheet-head{display:flex;align-items:center;gap:12px;margin-bottom:18px;}
-.sheet-head img{width:52px;height:52px;border-radius:10px;object-fit:cover;background:var(--card-2);flex:none;}
-.sheet-head .t{flex:1;min-width:0;}
-.sheet-head h2{font-size:17px;margin:0 0 2px;}
-.sheet-head .sub{font-size:12px;color:var(--muted-2);}
-.sheet-close{width:30px;height:30px;border-radius:50%;background:var(--card);border:1px solid var(--line);
-  display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;color:var(--cream);}
-.sheet-box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:14px;}
-.sheet-box-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:13px;}
-.sheet-box-row + .sheet-box-row{border-top:1px solid var(--line-soft);}
-.sheet-box-row .k{color:var(--muted);}
-.sheet-box-row .v{font-weight:700;}
-.sheet-box-row.min .v{color:var(--gold-soft);}
-.amount-field{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);
-  border-radius:14px;padding:14px 16px;margin-bottom:12px;}
-.amount-field .cur{font-size:20px;color:var(--gold-soft);font-weight:600;}
-.amount-field input{flex:1;background:none;border:none;color:var(--cream);font-size:22px;font-weight:600;
-  font-family:'Fraunces',serif;outline:none;width:100%;}
-.quick-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px;}
-.quickbtn{padding:11px 4px;border-radius:10px;background:var(--card);border:1px solid var(--line);
-  color:var(--cream);font-size:13px;font-weight:600;cursor:pointer;}
-.name-field{margin-bottom:14px;}
-.name-field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;}
-.name-field input{width:100%;background:var(--card);border:1px solid var(--line);border-radius:12px;
-  padding:12px 14px;color:var(--cream);font-size:15px;font-family:inherit;}
-.g-row{display:flex;align-items:center;gap:10px;margin:2px 0 12px;font-size:11px;color:var(--muted-2);}
-.g-row .line{flex:1;height:1px;background:var(--line);}
-.gbtn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px;
-  border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--cream);
-  font-family:inherit;font-size:13px;cursor:pointer;margin-bottom:12px;}
-.signedin{font-size:12px;color:var(--green);margin-bottom:12px;}
-.err{color:var(--red);font-size:13px;margin-top:10px;min-height:14px;}
+  /* ---------- Success ---------- */
+  .success-overlay{position:fixed;inset:0;z-index:30;background:var(--bg);display:none;
+    flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px;
+    overflow:hidden;}
+  .success-overlay.open{display:flex;}
+  .success-badge{position:relative;width:88px;height:88px;border-radius:50%;background:var(--gold);
+    display:flex;align-items:center;justify-content:center;margin-bottom:24px;}
+  .spark{position:absolute;color:var(--gold);opacity:.8;}
+  .success-overlay h1{font-size:24px;margin:0 0 10px;}
+  .success-overlay p{font-size:14px;color:var(--muted);max-width:300px;line-height:1.5;margin:0 0 28px;}
+  .success-actions{width:100%;max-width:300px;display:flex;flex-direction:column;gap:10px;}
+  .link-btn{background:none;border:none;color:var(--muted);text-decoration:underline;
+    font-size:14px;cursor:pointer;padding:8px;}
 
-/* ---------- SUCCESS ---------- */
-#screen-success{background:radial-gradient(circle at 50% 30%,#241A0E 0%,var(--bg) 62%);align-items:center;
-  justify-content:center;text-align:center;padding:32px 26px;}
-.badge-ok{width:100px;height:100px;border-radius:50%;background:var(--gold);color:#1B140A;
-  display:flex;align-items:center;justify-content:center;margin:0 auto 26px;
-  box-shadow:0 0 0 10px rgba(199,154,75,.12), 0 0 40px rgba(199,154,75,.25);}
-.badge-ok svg{width:42px;height:42px;}
-#screen-success h1{font-size:25px;margin:0 0 12px;}
-#screen-success .sub{font-size:14px;color:#CFC6AC;margin-bottom:30px;max-width:320px;line-height:1.55;}
-.success-actions{width:100%;max-width:320px;display:flex;flex-direction:column;gap:10px;}
-.linklike{display:block;text-align:center;margin-top:4px;font-size:13px;color:var(--muted);cursor:pointer;}
+  /* ---------- My Bids ---------- */
+  #view-mybids .top, #view-profile .top{padding:calc(20px + env(safe-area-inset-top,0px)) 20px 16px;}
+  #view-mybids .top h1, #view-profile .top h1{font-size:22px;margin:0;}
+  .tabs{display:flex;gap:6px;padding:0 20px 16px;}
+  .tab{flex:1;text-align:center;padding:10px 6px;border-radius:10px;border:1px solid var(--border);
+    background:var(--surface);color:var(--muted);font-size:13px;font-weight:500;cursor:pointer;}
+  .tab.on{background:var(--cream);color:#1B140A;border-color:var(--cream);}
+  .biditem{display:flex;gap:12px;align-items:center;margin:0 20px 12px;padding:12px;
+    background:var(--surface);border:1px solid var(--border);border-radius:14px;cursor:pointer;}
+  .biditem img{width:56px;height:56px;border-radius:10px;object-fit:cover;background:var(--surface2);flex:none;}
+  .biditem .b{flex:1;min-width:0;}
+  .biditem .t{font-weight:600;font-size:14px;margin:0 0 4px;}
+  .biditem .p{font-size:14px;font-weight:600;}
+  .biditem .s{font-size:12px;color:var(--muted);margin-top:2px;}
+  .biditem .s.won{color:var(--green);}
+  .biditem .s.lost{color:var(--red);}
+  .biditem .chev{color:var(--muted);}
 
-/* ---------- MY BIDS ---------- */
-#screen-mybids{background:var(--bg);}
-.mb-header{padding:calc(24px + env(safe-area-inset-top,0px)) 20px 10px;}
-.mb-header h1{font-size:24px;}
-.mb-tabs{display:flex;gap:8px;padding:8px 20px 16px;}
-.mb-tab{flex:1;text-align:center;padding:9px 4px;border-radius:10px;font-size:12.5px;font-weight:600;
-  background:var(--card);color:var(--muted);border:1px solid var(--line);cursor:pointer;}
-.mb-tab.active{background:var(--gold);color:#20150A;border-color:var(--gold);}
-.mb-list{flex:1;overflow-y:auto;padding:0 20px 12px;}
-.mb-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line-soft);cursor:pointer;}
-.mb-row img{width:56px;height:56px;border-radius:10px;object-fit:cover;background:var(--card-2);flex:none;}
-.mb-row .body{flex:1;min-width:0;}
-.mb-row .t{font-size:14px;font-weight:600;margin:0 0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.mb-row .p{font-size:14px;color:var(--gold-soft);font-weight:700;margin:0 0 2px;}
-.mb-row .s{font-size:11px;color:var(--muted-2);}
-.mb-row .chev{color:var(--muted-2);flex:none;}
-.mb-row .s.won{color:var(--green);}
-.mb-row .s.lost{color:var(--red);}
+  /* ---------- Profile ---------- */
+  .profile-card{margin:0 20px 16px;padding:18px;background:var(--surface);border:1px solid var(--border);
+    border-radius:14px;}
+  .profile-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;
+    border-bottom:1px solid var(--border);font-size:14px;}
+  .profile-row:last-child{border-bottom:none;}
+  .profile-row .k{color:var(--muted);font-size:12px;}
+  .profile-input{width:100%;padding:11px;border-radius:10px;border:1px solid var(--border);
+    background:var(--surface2);color:var(--text);font-size:14px;margin-top:6px;}
+  .adminlink{display:block;text-align:center;margin-top:30px;font-size:12px;color:var(--muted);}
 
-@media (min-width:600px){
-  body{display:flex;justify-content:center;background:#000;}
-  .app-shell{width:420px;min-height:100vh;background:var(--bg);box-shadow:0 0 60px rgba(0,0,0,.6);}
-}
+  /* ---------- Bottom nav ---------- */
+  .bottomnav{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--bg2);
+    border-top:1px solid var(--border);display:flex;
+    padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px));}
+  .navbtn{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
+    background:none;border:none;color:var(--muted);font-size:11px;padding:6px;cursor:pointer;}
+  .navbtn.on{color:var(--cream);}
 </style>
 </head>
 <body>
-<div class="app-shell">
 
-<!-- SPLASH -->
-<section class="screen active" id="screen-splash">
-  <div class="splash-bg" id="splash-bg"></div>
-  <div class="splash-scrim"></div>
-  <div class="splash-inner">
-    <div class="splash-logo">JASHN</div>
-    <div class="splash-mid">
-      <div>
-        <h1 class="splash-headline">Bid.<br>Support.<br>Create<br>Change.</h1>
-        <p class="splash-sub" id="splash-sub">Exclusive items. Meaningful impact. Every bid supports the cause behind this auction.</p>
-      </div>
-    </div>
-    <button class="pill-btn pill-cream" id="explore-btn">Explore Items →</button>
-    <a class="adminlink" href="admin.html">Auction organizer? Open admin</a>
+<!-- ============ HOME ============ -->
+<section class="view active" id="view-home">
+  <div class="top">
+    <div class="wordmark serif" id="event-name">JASHN</div>
+    <button class="icon-btn" id="search-toggle"></button>
   </div>
+  <div class="searchbar" id="searchbar"><input id="search-input" placeholder="Search items…"></div>
+  <div class="pills" id="pills"></div>
+  <div class="grid" id="grid"></div>
+  <div class="empty-state" id="empty-state" style="display:none;">No lots yet — check back shortly.</div>
 </section>
 
-<!-- CATALOG -->
-<section class="screen" id="screen-catalog">
-  <div class="cat-header">
-    <div class="cat-logo">JASHN</div>
-    <button class="icon-btn" id="search-toggle" aria-label="Search">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-    </button>
+<!-- ============ ITEM DETAIL ============ -->
+<section class="view" id="view-item">
+  <div class="hero-wrap">
+    <img class="hero-img" id="item-img">
+    <div class="hero-nav">
+      <button class="icon-btn" id="item-back"></button>
+      <button class="icon-btn" id="item-share"></button>
+    </div>
   </div>
-  <div class="cat-search-wrap">
-    <input class="cat-search" id="cat-search" placeholder="Search items…">
+  <div class="body">
+    <h1 class="item-title serif" id="item-title"></h1>
+    <p class="item-sub" id="item-lotnum"></p>
+    <div class="badges" id="item-badges"></div>
+    <p class="item-desc" id="item-desc"></p>
+    <div class="stat-row">
+      <div class="stat"><p class="k" id="item-bid-label">Current Bid</p><p class="v gold" id="item-bid-value"></p></div>
+      <div class="stat"><p class="k">Time Left</p><p class="v" id="item-time-value">—</p></div>
+      <div class="stat"><p class="k">Total Bids</p><p class="v" id="item-bidcount-value">0</p></div>
+    </div>
   </div>
-  <div class="tabs" id="cat-tabs"></div>
-  <div class="grid" id="cat-grid"></div>
-  <nav class="bottomnav">
-    <button class="active" data-nav="catalog">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>
-      Home
-    </button>
-    <button data-nav="mybids">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h5"/></svg>
-      My Bids
-    </button>
-    <button data-nav="profile">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.6-4 5-6 8-6s6.4 2 8 6"/></svg>
-      Profile
-    </button>
-  </nav>
+  <div class="item-cta-bar" id="item-cta-bar"></div>
 </section>
 
-<!-- DETAIL -->
-<section class="screen" id="screen-detail">
-  <div class="detail-topbar">
-    <img class="detail-hero" id="d-img">
-    <div class="detail-actions">
-      <div class="grp">
-        <button class="icon-btn" id="d-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
-      </div>
-      <div class="grp">
-        <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.5l6.8-3.8M8.6 13.5l6.8 3.8"/></svg></button>
-        <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 8.6c0 4-4.4 7.2-8.8 10.8C7.6 15.8 3.2 12.6 3.2 8.6a4.8 4.8 0 018.8-2.6 4.8 4.8 0 018.8 2.6z"/></svg></button>
-      </div>
-    </div>
+<!-- ============ MY BIDS ============ -->
+<section class="view" id="view-mybids">
+  <div class="top"><h1 class="serif">My Bids</h1></div>
+  <div class="tabs" id="mybids-tabs">
+    <button class="tab on" data-tab="active">Active</button>
+    <button class="tab" data-tab="won">Won</button>
+    <button class="tab" data-tab="lost">Lost</button>
   </div>
-  <div class="detail-body">
-    <p class="num" id="d-num" style="font-size:12px;color:var(--muted-2);margin:14px 0 4px;"></p>
-    <h1 class="detail-title" id="d-title"></h1>
-    <p class="detail-sub" id="d-sub"></p>
-    <div class="detail-tags" id="d-tags"></div>
-    <p class="detail-desc" id="d-desc"></p>
-    <div class="detail-status" id="d-status">
-      <div><p class="label" id="d-status-label">Current bid</p><p class="value" id="d-value"></p></div>
-      <div style="text-align:right;"><p class="label" id="d-time-label">Time Left</p><p class="value" id="d-time" style="font-size:16px;"></p></div>
-    </div>
-    <div class="detail-meta-row">
-      <div><p class="k">Total Bids</p><p class="v" id="d-bidcount"></p></div>
-      <div style="text-align:right;"><p class="k" id="d-lead-label">Leading</p><p class="v" id="d-leader"></p></div>
-    </div>
-    <div class="feed-box">
-      <h3>Recent bids</h3>
-      <div id="d-feed"></div>
-    </div>
-  </div>
-  <div class="detail-footer">
-    <button class="pill-gold" id="d-bid-btn">Place a Bid</button>
-  </div>
+  <div id="mybids-list"></div>
+  <div class="empty-state" id="mybids-empty" style="display:none;">Nothing here yet.</div>
 </section>
 
-<!-- BID SHEET -->
-<div id="sheet-overlay">
-  <div class="sheet">
-    <div class="sheet-head">
-      <img id="s-img">
-      <div class="t"><h2>Place a Bid</h2><div class="sub" id="s-title"></div></div>
-      <button class="sheet-close" id="s-close">✕</button>
-    </div>
-    <div class="sheet-box">
-      <div class="sheet-box-row"><span class="k">Current Bid</span><span class="v" id="s-current"></span></div>
-      <div class="sheet-box-row min"><span class="k">Your Bid Must Be At Least</span><span class="v" id="s-min"></span></div>
-    </div>
-    <div class="amount-field">
-      <span class="cur">₹</span>
-      <input id="s-amount" type="number" inputmode="numeric">
-    </div>
-    <div class="quick-row" id="s-quick"></div>
-    <div class="g-row"><div class="line"></div>Sign in to bid<div class="line"></div></div>
-    <div id="s-signin-area"></div>
-    <div class="name-field">
-      <label for="s-name">Your name (from Google)</label>
-      <input id="s-name" placeholder="Sign in with Google" maxlength="79" readonly>
-    </div>
-    <button class="pill-gold" id="s-confirm">Confirm Bid</button>
-    <div class="err" id="s-err"></div>
+<!-- ============ PROFILE ============ -->
+<section class="view" id="view-profile">
+  <div class="top"><h1 class="serif">Profile</h1></div>
+  <div class="profile-card">
+    <label class="k" style="font-size:12px;color:var(--muted);">Your name (used on bids)</label>
+    <input class="profile-input" id="profile-name">
   </div>
+  <div class="profile-card" id="profile-google"></div>
+  <div class="profile-card">
+    <button class="cta cta-outline" id="clear-bids-btn">Clear my bid history on this device</button>
+  </div>
+  <a class="adminlink" href="admin.html">Auction organizer? Open admin</a>
+</section>
+
+<!-- ============ Bottom nav ============ -->
+<nav class="bottomnav">
+  <button class="navbtn on" data-view="home" id="nav-home"></button>
+  <button class="navbtn" data-view="mybids" id="nav-mybids"></button>
+  <button class="navbtn" data-view="profile" id="nav-profile"></button>
+</nav>
+
+<!-- ============ Bid sheet ============ -->
+<div class="sheet-backdrop" id="sheet-backdrop"></div>
+<div class="sheet" id="bidsheet">
+  <div class="sheet-head">
+    <img id="sheet-img">
+    <div><div class="t" id="sheet-title"></div><div class="s" id="sheet-lot"></div></div>
+    <button class="icon-btn sheet-close" id="sheet-close"></button>
+  </div>
+  <div class="sheet-current">
+    <p class="k">Current Bid</p>
+    <p class="v" id="sheet-current-bid"></p>
+    <p class="sheet-min" id="sheet-min-text"></p>
+  </div>
+  <div class="amount-field"><span>₹</span><input id="sheet-amount" type="number" inputmode="numeric"></div>
+  <div class="quick-row" id="sheet-quick"></div>
+  <div class="biddername">
+    <span>Bidding as <strong id="sheet-name-display"></strong></span>
+    <button id="sheet-name-change">Change</button>
+  </div>
+  <div class="name-edit" id="sheet-name-edit"><input id="sheet-name-input" placeholder="Full name" maxlength="79"></div>
+  <button class="cta cta-cream" id="sheet-confirm">Confirm Bid</button>
+  <div class="sheet-err" id="sheet-err"></div>
 </div>
 
-<!-- SUCCESS -->
-<section class="screen" id="screen-success">
-  <div class="badge-ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 13l5 5L20 6"/></svg></div>
-  <h1>Bid Placed Successfully!</h1>
-  <p class="sub" id="success-msg"></p>
+<!-- ============ Success ============ -->
+<div class="success-overlay" id="success-overlay">
+  <div class="success-badge" id="success-badge"></div>
+  <h1 class="serif">Bid Placed Successfully!</h1>
+  <p id="success-msg"></p>
   <div class="success-actions">
-    <button class="pill-cream" id="success-view">View Item</button>
-    <span class="linklike" id="success-browse">Keep Browsing</span>
+    <button class="cta cta-cream" id="success-view">View Item</button>
+    <button class="link-btn" id="success-browse">Keep Browsing</button>
   </div>
-</section>
-
-<!-- MY BIDS -->
-<section class="screen" id="screen-mybids">
-  <div class="mb-header"><h1>My Bids</h1></div>
-  <div class="mb-tabs">
-    <div class="mb-tab active" data-tab="active">Active <span id="mb-count-active"></span></div>
-    <div class="mb-tab" data-tab="won">Won <span id="mb-count-won"></span></div>
-    <div class="mb-tab" data-tab="lost">Lost <span id="mb-count-lost"></span></div>
-  </div>
-  <div class="mb-list" id="mb-list"></div>
-  <nav class="bottomnav">
-    <button data-nav="catalog">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>
-      Home
-    </button>
-    <button class="active" data-nav="mybids">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h5"/></svg>
-      My Bids
-    </button>
-    <button data-nav="profile">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.6-4 5-6 8-6s6.4 2 8 6"/></svg>
-      Profile
-    </button>
-  </nav>
-</section>
-
-<!-- PROFILE -->
-<section class="screen" id="screen-profile">
-  <div class="mb-header"><h1>Profile</h1></div>
-  <div class="detail-body" style="flex:1;">
-    <div class="name-field">
-      <label for="p-name">Your name (from Google)</label>
-      <input id="p-name" placeholder="Sign in with Google" maxlength="79" readonly>
-    </div>
-    <div id="p-signin-area" style="margin-bottom:16px;"></div>
-    <hr class="hairline" style="margin:20px 0;">
-    <a class="pill-dark" style="display:block;text-align:center;padding:13px;" href="admin.html">Auction organizer? Open admin</a>
-  </div>
-  <nav class="bottomnav">
-    <button data-nav="catalog">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>
-      Home
-    </button>
-    <button data-nav="mybids">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h5"/></svg>
-      My Bids
-    </button>
-    <button class="active" data-nav="profile">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.6-4 5-6 8-6s6.4 2 8 6"/></svg>
-      Profile
-    </button>
-  </nav>
-</section>
-
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="firebase-init.js"></script>
-<script src="guest-auth.js"></script>
 <script>
-// ---------------------------------------------------------------
-// State
-// ---------------------------------------------------------------
+// -----------------------------------------------------------------
+// Icons — small inline SVGs, stroke = currentColor
+// -----------------------------------------------------------------
+const ICONS = {
+  search: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>',
+  close: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>',
+  back: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
+  share: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M5 15v3a2 2 0 002 2h10a2 2 0 002-2v-3"/></svg>',
+  check: '<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#1B140A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>',
+  chev: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
+  home: '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v9a1 1 0 001 1h4v-6h4v6h4a1 1 0 001-1v-9"/></svg>',
+  tag: '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 12.6L12.6 20.6a2 2 0 01-2.8 0L3 13.8V4a1 1 0 011-1h9.8a2 2 0 011.4.6l5.4 5.4a2 2 0 010 2.8z"/><circle cx="8" cy="8" r="1.4" fill="currentColor" stroke="none"/></svg>',
+  user: '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 5-6 8-6s6.5 2 8 6"/></svg>',
+  spark: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/></svg>',
+};
+function setIcon(id, name) { document.getElementById(id).innerHTML = ICONS[name]; }
+
+// -----------------------------------------------------------------
+// State + navigation
+// -----------------------------------------------------------------
+const EVENT_NAME = document.getElementById('event-name').textContent; // rename in the HTML if you like
 let lots = [];
-let activeTab = 'All';
-let searchQ = '';
-let detailLotId = null;
-let sheetLotId = null;
-let currentDetailItem = null;
-let unsubDetail = null, unsubFeed = null, lastFeedSnap = null;
-const imgCache = new Map();
+let activeCategory = 'All';
+let searchTerm = '';
+let currentItemId = null;
+let googleUser = null;
+let itemCountdownTimer = null;
+let gridCountdownTimer = null;
+let mybidsTab = 'active';
 
-function showScreen(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === id));
-}
+setIcon('search-toggle', 'search');
+setIcon('item-back', 'back');
+setIcon('item-share', 'share');
+setIcon('sheet-close', 'close');
+setIcon('nav-home', 'home');
+setIcon('nav-mybids', 'tag');
+setIcon('nav-profile', 'user');
+setIcon('success-badge', 'check');
+document.getElementById('nav-home').insertAdjacentHTML('beforeend', '<span>Home</span>');
+document.getElementById('nav-mybids').insertAdjacentHTML('beforeend', '<span>My Bids</span>');
+document.getElementById('nav-profile').insertAdjacentHTML('beforeend', '<span>Profile</span>');
+// A few decorative sparkles around the success checkmark, like the reference.
+['top:-10px;left:-16px;', 'bottom:0;right:-20px;', 'top:20px;right:-24px;'].forEach(pos => {
+  document.getElementById('success-badge').insertAdjacentHTML('beforeend',
+    `<span class="spark" style="${pos}">${ICONS.spark}</span>`);
+});
 
-function myBids() {
-  try { return JSON.parse(localStorage.getItem('auction_my_bids') || '{}'); } catch (e) { return {}; }
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
+  document.querySelectorAll('.navbtn').forEach(b => b.classList.toggle('on', b.dataset.view === name));
+  if (name !== 'item' && itemCountdownTimer) { clearInterval(itemCountdownTimer); itemCountdownTimer = null; }
+  if (name === 'mybids') renderMyBids();
+  if (name === 'profile') renderProfile();
+  window.scrollTo(0, 0);
 }
-function recordMyBid(lotId, amount) {
-  const mb = myBids();
-  mb[lotId] = { amount, ts: Date.now() };
-  localStorage.setItem('auction_my_bids', JSON.stringify(mb));
-}
+document.querySelectorAll('.navbtn').forEach(b => b.onclick = () => showView(b.dataset.view));
 
-// Guest sign-in and registration are handled by guest-auth.js.
-// ---------------------------------------------------------------
+// -----------------------------------------------------------------
+// Auth
+// -----------------------------------------------------------------
+auth.getRedirectResult().then(res => { if (res.user) { googleUser = res.user; renderProfile(); } }).catch(() => {});
+auth.onAuthStateChanged(u => { googleUser = u || null; renderProfile(); });
+
+// -----------------------------------------------------------------
 // Load lots
-// ---------------------------------------------------------------
+// -----------------------------------------------------------------
 const params = new URLSearchParams(location.search);
 const directId = params.get('id');
-const savedName = bidderProfile ? bidderProfile.name : '';
-document.getElementById('s-name').value = savedName;
-document.getElementById('p-name').value = savedName;
-
+let openedDirect = false;
 
 db.collection('items').orderBy('lotNumber').onSnapshot(snap => {
   lots = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  lots.forEach(it => {
-    if (it.imageUrl && !imgCache.has(it.id)) { const img = new Image(); img.src = it.imageUrl; imgCache.set(it.id, img); }
-  });
-  if (lots.length && lots[0].imageUrl) {
-    // Preload before swapping in, so a broken/missing photo URL just keeps
-    // the default gradient background instead of leaving a blank gap.
-    const preload = new Image();
-    preload.onload = () => { document.getElementById('splash-bg').style.backgroundImage = 'url(' + lots[0].imageUrl + ')'; };
-    preload.src = lots[0].imageUrl;
-  }
-  renderTabs();
+  renderPills();
   renderGrid();
-  renderMyBids();
-  if (currentDetailItem) {
-    const fresh = lots.find(l => l.id === currentDetailItem.id);
-    if (fresh) renderDetail(fresh);
+  if (document.getElementById('view-item').classList.contains('active') && currentItemId) {
+    const it = lots.find(l => l.id === currentItemId);
+    if (it) renderItemView(it);
   }
-  if (directId && !detailLotId) {
+  if (document.getElementById('view-mybids').classList.contains('active')) renderMyBids();
+
+  if (directId && !openedDirect) {
     const it = lots.find(l => l.id === directId);
-    if (it) { showScreen('screen-catalog'); openDetail(it.id); }
+    if (it) { openedDirect = true; openItem(it.id); }
   }
 });
 
-function categories() {
-  const set = new Set();
-  lots.forEach(it => set.add(it.category || 'Item'));
-  return ['All', ...Array.from(set)];
-}
-
-function renderTabs() {
-  const cats = categories();
-  if (!cats.includes(activeTab)) activeTab = 'All';
-  document.getElementById('cat-tabs').innerHTML = cats.map(c =>
-    '<button class="tab' + (c === activeTab ? ' active' : '') + '" data-cat="' + c + '">' + c + '</button>').join('');
-  document.querySelectorAll('.tab').forEach(b => b.onclick = () => { activeTab = b.dataset.cat; renderTabs(); renderGrid(); });
+function renderPills() {
+  const cats = ['All', ...new Set(lots.map(l => l.category).filter(Boolean))];
+  document.getElementById('pills').innerHTML = cats.map(c =>
+    `<button class="pill ${c === activeCategory ? 'on' : ''}" data-cat="${escapeHtml(c)}">${escapeHtml(c)}</button>`
+  ).join('');
+  document.querySelectorAll('.pill').forEach(p => p.onclick = () => {
+    activeCategory = p.dataset.cat;
+    renderPills();
+    renderGrid();
+  });
 }
 
 function renderGrid() {
-  const grid = document.getElementById('cat-grid');
-  let list = lots.filter(it => activeTab === 'All' || (it.category || 'Item') === activeTab);
-  if (searchQ) list = list.filter(it => (it.title || '').toLowerCase().includes(searchQ));
-  if (!list.length) { grid.innerHTML = ''; grid.insertAdjacentHTML('beforeend', '<div class="empty-state" style="grid-column:1/-1;">No lots here yet — check back shortly.</div>'); return; }
-  grid.innerHTML = list.map(it => {
-    const st = lotStatus(it);
-    return '<div class="card" data-id="' + it.id + '">' +
-      '<div class="card-img-wrap">' +
-        (st.state !== 'live' ? '<div class="card-closed-flag" style="' + (st.state === 'notstarted' ? 'background:rgba(156,146,132,.9);' : '') + '">' + (st.state === 'notstarted' ? 'SOON' : 'CLOSED') + '</div>' : '') +
-        '<img src="' + (it.imageUrl || '') + '" onerror="this.style.visibility=\'hidden\'">' +
-        '<div class="card-heart"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M20.8 8.6c0 4-4.4 7.2-8.8 10.8C7.6 15.8 3.2 12.6 3.2 8.6a4.8 4.8 0 018.8-2.6 4.8 4.8 0 018.8 2.6z"/></svg></div>' +
-      '</div>' +
-      '<div class="card-body">' +
-        '<p class="card-title">' + escapeHtml(it.title || '') + '</p>' +
-        '<p class="card-price">' + money(it.currentBid) + '</p>' +
-        '<p class="card-time">' + (st.state === 'notstarted' ? 'Not started yet' : (st.state === 'closed' ? 'Bidding closed' : st.label)) + '</p>' +
-      '</div></div>';
-  }).join('');
-  grid.querySelectorAll('.card').forEach(c => c.onclick = () => openDetail(c.dataset.id));
+  let list = lots;
+  if (activeCategory !== 'All') list = list.filter(l => (l.category || '') === activeCategory);
+  if (searchTerm) {
+    const q = searchTerm.toLowerCase();
+    list = list.filter(l => (l.title || '').toLowerCase().includes(q) || (l.description || '').toLowerCase().includes(q));
+  }
+  const grid = document.getElementById('grid');
+  document.getElementById('empty-state').style.display = list.length ? 'none' : 'block';
+  grid.innerHTML = list.map(it => `
+    <div class="card" data-id="${it.id}">
+      <img class="img" src="${it.imageUrl || ''}" onerror="this.style.visibility='hidden'">
+      <div class="body">
+        <p class="title">${escapeHtml(it.title)}</p>
+        <p class="price">${money(it.currentBid)}</p>
+        <p class="left" data-endsat>${gridTimeLabel(it)}</p>
+      </div>
+    </div>`).join('');
+  grid.querySelectorAll('.card').forEach(c => c.onclick = () => openItem(c.dataset.id));
+
+  clearInterval(gridCountdownTimer);
+  gridCountdownTimer = setInterval(() => {
+    document.querySelectorAll('#grid .card').forEach(c => {
+      const it = lots.find(l => l.id === c.dataset.id);
+      if (it) c.querySelector('[data-endsat]').textContent = gridTimeLabel(it);
+    });
+  }, 30000);
+}
+function gridTimeLabel(it) {
+  if (it.active === false) return 'Closed';
+  return timeLeftText(it.endsAt) || 'Open';
 }
 
 document.getElementById('search-toggle').onclick = () => {
-  const s = document.getElementById('cat-search');
-  s.style.display = s.style.display === 'block' ? 'none' : 'block';
-  if (s.style.display === 'block') s.focus();
+  const bar = document.getElementById('searchbar');
+  bar.classList.toggle('open');
+  if (bar.classList.contains('open')) document.getElementById('search-input').focus();
 };
-document.getElementById('cat-search').addEventListener('input', e => { searchQ = e.target.value.trim().toLowerCase(); renderGrid(); });
+document.getElementById('search-input').addEventListener('input', (e) => {
+  searchTerm = e.target.value;
+  renderGrid();
+});
 
-function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-
-// ---------------------------------------------------------------
-// Detail screen
-// ---------------------------------------------------------------
-function openDetail(id) {
-  detailLotId = id;
-  showScreen('screen-detail');
+// -----------------------------------------------------------------
+// Item detail
+// -----------------------------------------------------------------
+function openItem(id) {
+  currentItemId = id;
   const it = lots.find(l => l.id === id);
-  if (it) renderDetail(it);
-
-  if (unsubDetail) unsubDetail();
-  if (unsubFeed) unsubFeed();
-  const ref = db.collection('items').doc(id);
-  unsubDetail = ref.onSnapshot(doc => { if (doc.exists) renderDetail({ id: doc.id, ...doc.data() }); });
-  unsubFeed = ref.collection('bids').orderBy('timestamp', 'desc').limit(8)
-    .onSnapshot(snap => { lastFeedSnap = snap; renderDetailFeed(); });
+  if (!it) return;
+  renderItemView(it);
+  showView('item');
 }
-
-function renderDetail(it) {
-  currentDetailItem = it;
-  const st = lotStatus(it);
-  const closed = st.state === 'closed';
-  document.getElementById('d-img').src = it.imageUrl || '';
-  document.getElementById('d-num').textContent = 'LOT ' + String(it.lotNumber).padStart(3, '0');
-  document.getElementById('d-title').textContent = it.title || '';
-  document.getElementById('d-sub').textContent = it.subtitle || (it.category ? it.category + ' lot' : '');
-  document.getElementById('d-tags').innerHTML =
-    '<span class="tag">' + escapeHtml(it.category || 'Item') + '</span>' +
-    '<span class="tag">' + (it.bidCount ? it.bidCount + ' bid' + (it.bidCount === 1 ? '' : 's') : 'No bids yet') + '</span>';
-  document.getElementById('d-desc').textContent = it.description || '';
-  document.getElementById('d-status').classList.toggle('closed', closed);
-  document.getElementById('d-status-label').textContent = closed ? 'Winning bid' : 'Current Bid';
-  document.getElementById('d-value').textContent = money(it.currentBid);
-  document.getElementById('d-time-label').textContent = closed ? 'Status' : (st.state === 'notstarted' ? 'Status' : 'Time Left');
-  document.getElementById('d-time').textContent = st.state === 'notstarted' ? 'Starts soon' : st.label;
-  document.getElementById('d-bidcount').textContent = it.bidCount || 0;
-  document.getElementById('d-lead-label').textContent = closed ? 'Won by' : 'Leading';
-  document.getElementById('d-leader').textContent = it.currentBidderName || '— none yet —';
-  const btn = document.getElementById('d-bid-btn');
-  btn.disabled = st.state !== 'live';
-  btn.textContent = st.state === 'notstarted' ? 'Bidding Not Started' : (closed ? 'Bidding Closed' : 'Place a Bid');
-}
-
-// Tick the visible countdown every second without waiting on Firestore.
-setInterval(() => {
-  if (!currentDetailItem || !document.getElementById('screen-detail').classList.contains('active')) return;
-  const st = lotStatus(currentDetailItem);
-  if (st.state === 'live') document.getElementById('d-time').textContent = st.label;
-}, 1000);
-
-function renderDetailFeed() {
-  const el = document.getElementById('d-feed');
-  if (lastFeedSnap && !lastFeedSnap.empty) {
-    el.innerHTML = lastFeedSnap.docs.map(d => {
-      const b = d.data();
-      return '<div class="feed-row"><span>' + escapeHtml(b.name) + '</span><span class="amt">' + money(b.amount) + '</span></div>';
-    }).join('');
-  } else {
-    el.innerHTML = '<div class="feed-empty">No bids yet — be the first.</div>';
-  }
-}
-
-document.getElementById('d-back').onclick = () => {
-  if (unsubDetail) unsubDetail();
-  if (unsubFeed) unsubFeed();
-  showScreen('screen-catalog');
+document.getElementById('item-back').onclick = () => showView('home');
+document.getElementById('item-share').onclick = async () => {
+  const url = location.origin + location.pathname + '?id=' + currentItemId;
+  if (navigator.share) { navigator.share({ title: 'Silent Auction', url }).catch(() => {}); }
+  else { await navigator.clipboard.writeText(url); alert('Link copied.'); }
 };
-document.getElementById('d-bid-btn').onclick = () => openSheet(detailLotId);
 
-// ---------------------------------------------------------------
+function renderItemView(it) {
+  const closed = it.active === false;
+  document.getElementById('item-img').src = it.imageUrl || '';
+  document.getElementById('item-title').textContent = it.title;
+  document.getElementById('item-lotnum').textContent = 'LOT ' + String(it.lotNumber).padStart(3, '0');
+  document.getElementById('item-desc').textContent = it.description || '';
+  document.getElementById('item-badges').innerHTML = it.category ? `<span class="badge">${escapeHtml(it.category)}</span>` : '';
+  document.getElementById('item-bid-label').textContent = closed ? 'Winning Bid' : 'Current Bid';
+  document.getElementById('item-bid-value').textContent = money(it.currentBid);
+  document.getElementById('item-bidcount-value').textContent = it.bidCount || 0;
+
+  const timeEl = document.getElementById('item-time-value');
+  clearInterval(itemCountdownTimer);
+  const tick = () => { timeEl.textContent = closed ? 'Ended' : (timeLeftText(it.endsAt) || 'Open'); };
+  tick();
+  if (!closed && it.endsAt) itemCountdownTimer = setInterval(tick, 1000);
+
+  const ctaBar = document.getElementById('item-cta-bar');
+  ctaBar.innerHTML = closed
+    ? `<div class="closed-note">Bidding closed — won by <strong>${escapeHtml(it.currentBidderName || '—')}</strong> at ${money(it.currentBid)}</div>`
+    : `<button class="cta cta-cream" id="place-bid-btn">Place a Bid</button>`;
+  const placeBtn = document.getElementById('place-bid-btn');
+  if (placeBtn) placeBtn.onclick = () => openBidSheet(it);
+}
+
+// -----------------------------------------------------------------
 // Bid sheet
-// ---------------------------------------------------------------
-function openSheet(id) {
-  const it = lots.find(l => l.id === id);
-  if (!it || lotStatus(it).state !== 'live') return;
-  sheetLotId = id;
-  document.getElementById('s-img').src = it.imageUrl || '';
-  document.getElementById('s-title').textContent = it.title || '';
-  document.getElementById('s-current').textContent = money(it.currentBid);
+// -----------------------------------------------------------------
+let sheetItem = null;
+const backdrop = document.getElementById('sheet-backdrop');
+const sheet = document.getElementById('bidsheet');
+
+function openBidSheet(it) {
+  sheetItem = it;
+  document.getElementById('sheet-img').src = it.imageUrl || '';
+  document.getElementById('sheet-title').textContent = it.title;
+  document.getElementById('sheet-lot').textContent = 'LOT ' + String(it.lotNumber).padStart(3, '0');
+  document.getElementById('sheet-current-bid').textContent = money(it.currentBid);
   const minNext = it.currentBid + it.increment;
-  document.getElementById('s-min').textContent = money(minNext);
-  document.getElementById('s-amount').value = minNext;
-  document.getElementById('s-amount').placeholder = String(minNext);
-  document.getElementById('s-quick').innerHTML = [it.increment, it.increment * 2, it.increment * 4].map(inc =>
-    '<button class="quickbtn" data-inc="' + inc + '">+' + money(inc) + '</button>').join('');
-  document.querySelectorAll('.quickbtn').forEach(b => b.onclick = () => {
-    const cur = Number(document.getElementById('s-amount').value) || minNext;
-    document.getElementById('s-amount').value = cur + Number(b.dataset.inc);
+  document.getElementById('sheet-min-text').textContent = `Your bid must be at least ${money(minNext)}`;
+  document.getElementById('sheet-amount').value = minNext;
+  document.getElementById('sheet-quick').innerHTML = [it.increment, it.increment * 2, it.increment * 5]
+    .map(v => `<button class="quick-btn" data-add="${v}">+${money(v)}</button>`).join('');
+  document.querySelectorAll('.quick-btn').forEach(b => b.onclick = () => {
+    const inp = document.getElementById('sheet-amount');
+    inp.value = Number(inp.value || 0) + Number(b.dataset.add);
   });
-  document.getElementById('s-name').value = (bidderProfile ? bidderProfile.name : '');
-  document.getElementById('s-err').textContent = '';
-  renderSigninAreas();
-  document.getElementById('sheet-overlay').classList.add('active');
+
+  const savedName = localStorage.getItem('auction_name') || (googleUser ? (googleUser.displayName || '') : '');
+  document.getElementById('sheet-name-input').value = savedName;
+  document.getElementById('sheet-name-display').textContent = savedName || 'someone new';
+  document.getElementById('sheet-name-edit').classList.toggle('open', !savedName);
+  document.getElementById('sheet-err').textContent = '';
+
+  backdrop.classList.add('open');
+  sheet.classList.add('open');
 }
-document.getElementById('s-close').onclick = () => document.getElementById('sheet-overlay').classList.remove('active');
+document.getElementById('sheet-close').onclick = closeBidSheet;
+backdrop.onclick = closeBidSheet;
+function closeBidSheet() { backdrop.classList.remove('open'); sheet.classList.remove('open'); }
 
-document.getElementById('s-confirm').onclick = async () => {
-  const errEl = document.getElementById('s-err');
+document.getElementById('sheet-name-change').onclick = () => {
+  document.getElementById('sheet-name-edit').classList.add('open');
+};
+document.getElementById('sheet-name-input').addEventListener('input', (e) => {
+  document.getElementById('sheet-name-display').textContent = e.target.value.trim() || 'someone new';
+});
+
+document.getElementById('sheet-confirm').onclick = async () => {
+  const errEl = document.getElementById('sheet-err');
   errEl.textContent = '';
-  const name = document.getElementById('s-name').value.trim();
-  const amount = Number(document.getElementById('s-amount').value);
-  const it = lots.find(l => l.id === sheetLotId);
-  if (!isGoogleGuest(auth.currentUser) || !bidderProfile) { errEl.textContent = 'Continue with Google before confirming your bid.'; return; }
-  if (!it) { errEl.textContent = 'This lot could not be found.'; return; }
-  const minNext = it.currentBid + it.increment;
-  if (!amount || amount < minNext) { errEl.textContent = 'Bid must be at least ' + money(minNext) + '.'; return; }
+  const name = document.getElementById('sheet-name-input').value.trim();
+  const amount = Number(document.getElementById('sheet-amount').value);
+  if (!name) { errEl.textContent = 'Enter your name to bid.'; return; }
+  if (!amount || amount <= 0) { errEl.textContent = 'Enter a bid amount.'; return; }
 
-  const btn = document.getElementById('s-confirm');
+  const btn = document.getElementById('sheet-confirm');
   btn.disabled = true;
   localStorage.setItem('auction_name', name);
-  const itemRef = db.collection('items').doc(sheetLotId);
+
+  const itemRef = db.collection('items').doc(sheetItem.id);
   const bidRef = itemRef.collection('bids').doc();
+  const limitRef = db.collection('bidLimits').doc(getDeviceId());
   try {
-    const user = await saveRegistration('s');
     await db.runTransaction(async (tx) => {
       const doc = await tx.get(itemRef);
       if (!doc.exists) throw new Error('This lot no longer exists.');
-      const d = doc.data();
-      if (lotStatus(d).state !== 'live') throw new Error('Bidding on this lot has just closed.');
-      const need = d.currentBid + d.increment;
-      if (amount < need) throw new Error('Someone beat you to it — bid must now be at least ' + money(need) + '.');
+      const it = doc.data();
+      if (it.active === false) throw new Error('Bidding on this lot has just closed.');
+      const minNext = it.currentBid + it.increment;
+      if (amount < minNext) throw new Error(`Someone beat you to it — bid must now be at least ${money(minNext)}.`);
       tx.update(itemRef, {
         currentBid: amount, currentBidderName: name,
-        currentBidderUid: user.uid,
-        bidCount: (d.bidCount || 0) + 1,
+        currentBidderUid: googleUser ? googleUser.uid : null,
+        bidCount: (it.bidCount || 0) + 1,
       });
       tx.set(bidRef, {
-        name, amount, uid: user.uid, isGoogle: true,
-        deviceId: getDeviceId(), timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        name, amount, uid: googleUser ? googleUser.uid : null,
+        isGoogle: !!googleUser, deviceId: getDeviceId(),
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
       });
+      // Server-enforced cooldown — see firestore.rules. If this device bid
+      // within the last few seconds, this write (and so the whole
+      // transaction) gets rejected atomically.
+      tx.set(limitRef, { lastBidAt: firebase.firestore.FieldValue.serverTimestamp() });
     });
-    recordMyBid(sheetLotId, amount);
-    document.getElementById('sheet-overlay').classList.remove('active');
+    recordMyBid(sheetItem.id, bidRef.id, amount);
+    closeBidSheet();
     document.getElementById('success-msg').textContent =
-      'Your bid of ' + money(amount) + ' has been placed on ' + (it.title || 'this item') + '.';
-    showScreen('screen-success');
+      `Your bid of ${money(amount)} has been placed on ${sheetItem.title}.`;
+    document.getElementById('success-overlay').classList.add('open');
   } catch (e) {
-    errEl.textContent = e.message || 'Could not place that bid — try again.';
+    if (e.code === 'permission-denied') {
+      errEl.textContent = "You're bidding too fast — wait a few seconds and try again.";
+    } else {
+      errEl.textContent = e.message || 'Could not place that bid — try again.';
+    }
   } finally {
     btn.disabled = false;
   }
 };
 
-// ---------------------------------------------------------------
-// Success screen
-// ---------------------------------------------------------------
-document.getElementById('success-view').onclick = () => showScreen('screen-detail');
-document.getElementById('success-browse').onclick = () => showScreen('screen-catalog');
+document.getElementById('success-view').onclick = () => {
+  document.getElementById('success-overlay').classList.remove('open');
+  openItem(currentItemId);
+};
+document.getElementById('success-browse').onclick = () => {
+  document.getElementById('success-overlay').classList.remove('open');
+  showView('home');
+};
 
-// ---------------------------------------------------------------
-// Bottom nav
-// ---------------------------------------------------------------
-document.querySelectorAll('[data-nav]').forEach(b => b.onclick = () => {
-  const nav = b.dataset.nav;
-  if (nav === 'catalog') showScreen('screen-catalog');
-  if (nav === 'mybids') { renderMyBids(); showScreen('screen-mybids'); }
-  if (nav === 'profile') { renderSigninAreas(); showScreen('screen-profile'); }
-});
-document.getElementById('explore-btn').onclick = () => showScreen('screen-catalog');
-
-// ---------------------------------------------------------------
+// -----------------------------------------------------------------
 // My Bids
-// ---------------------------------------------------------------
-let mbActiveTab = 'active';
-document.querySelectorAll('.mb-tab').forEach(t => t.onclick = () => {
-  mbActiveTab = t.dataset.tab;
-  document.querySelectorAll('.mb-tab').forEach(x => x.classList.toggle('active', x === t));
+// -----------------------------------------------------------------
+document.querySelectorAll('#mybids-tabs .tab').forEach(t => t.onclick = () => {
+  mybidsTab = t.dataset.tab;
+  document.querySelectorAll('#mybids-tabs .tab').forEach(x => x.classList.toggle('on', x === t));
   renderMyBids();
 });
 
-function classifyMyBids() {
-  const mb = myBids();
-  const active = [], won = [], lost = [];
-  Object.keys(mb).forEach(lotId => {
-    const it = lots.find(l => l.id === lotId);
-    if (!it) return;
-    const mine = mb[lotId];
-    if (lotStatus(it).state === 'closed') {
-      const isWinner = it.winnerName && Math.abs((it.winnerAmount || 0) - mine.amount) < 0.5 &&
-        it.winnerName === (localStorage.getItem('auction_name') || '');
-      (isWinner ? won : lost).push({ it, mine });
-    } else {
-      active.push({ it, mine });
+function renderMyBids() {
+  const mine = getMyBids();
+  const rows = mine.map(m => {
+    const it = lots.find(l => l.id === m.itemId);
+    if (!it) return null;
+    const closed = it.active === false;
+    let bucket = 'active', statusText = 'Current highest bid', statusClass = '';
+    if (closed) {
+      if (it.winnerBidId) {
+        if (it.winnerBidId === m.bidId) { bucket = 'won'; statusText = 'You won this item!'; statusClass = 'won'; }
+        else { bucket = 'lost'; statusText = `Won by ${it.currentBidderName || 'another bidder'}`; statusClass = 'lost'; }
+      } else {
+        bucket = 'active'; statusText = 'Results pending';
+      }
     }
+    return { it, m, bucket, statusText, statusClass, closed };
+  }).filter(Boolean).sort((a, b) => b.m.ts - a.m.ts);
+
+  document.querySelectorAll('#mybids-tabs .tab').forEach(t => {
+    const n = rows.filter(r => r.bucket === t.dataset.tab).length;
+    t.textContent = t.dataset.tab[0].toUpperCase() + t.dataset.tab.slice(1) + (n ? ` (${n})` : '');
   });
-  return { active, won, lost };
+
+  const shown = rows.filter(r => r.bucket === mybidsTab);
+  document.getElementById('mybids-empty').style.display = shown.length ? 'none' : 'block';
+  document.getElementById('mybids-list').innerHTML = shown.map(r => `
+    <div class="biditem" data-id="${r.it.id}">
+      <img src="${r.it.imageUrl || ''}" onerror="this.style.visibility='hidden'">
+      <div class="b">
+        <p class="t">${escapeHtml(r.it.title)}</p>
+        <p class="p">${money(r.it.currentBid)}</p>
+        <p class="s ${r.statusClass}">${r.statusText}${!r.closed ? ' · ' + gridTimeLabel(r.it) : ''}</p>
+      </div>
+      <span class="chev">${ICONS.chev}</span>
+    </div>`).join('');
+  document.querySelectorAll('#mybids-list .biditem').forEach(el => el.onclick = () => openItem(el.dataset.id));
 }
 
-function renderMyBids() {
-  const { active, won, lost } = classifyMyBids();
-  document.getElementById('mb-count-active').textContent = '(' + active.length + ')';
-  document.getElementById('mb-count-won').textContent = '(' + won.length + ')';
-  document.getElementById('mb-count-lost').textContent = '(' + lost.length + ')';
-  const map = { active, won, lost };
-  const rows = map[mbActiveTab] || [];
-  const list = document.getElementById('mb-list');
-  if (!rows.length) { list.innerHTML = '<div class="empty-state">Nothing here yet.</div>'; return; }
-  list.innerHTML = rows.map(({ it, mine }) => {
-    let statusText, statusClass = '';
-    if (mbActiveTab === 'active') {
-      const leading = it.currentBidderName === (localStorage.getItem('auction_name') || '');
-      statusText = (leading ? 'Current highest bid' : 'Outbid — you bid ' + money(mine.amount)) + (timeLeft(it.closesAt) ? ' · ' + timeLeft(it.closesAt) : '');
-    } else if (mbActiveTab === 'won') { statusText = 'Won — congratulations!'; statusClass = 'won'; }
-    else { statusText = 'Final bid: ' + money(mine.amount); statusClass = 'lost'; }
-    return '<div class="mb-row" data-id="' + it.id + '">' +
-      '<img src="' + (it.imageUrl || '') + '" onerror="this.style.visibility=\'hidden\'">' +
-      '<div class="body"><p class="t">' + escapeHtml(it.title || '') + '</p>' +
-      '<p class="p">' + money(mbActiveTab === 'active' ? it.currentBid : mine.amount) + '</p>' +
-      '<p class="s ' + statusClass + '">' + statusText + '</p></div>' +
-      '<span class="chev">›</span></div>';
-  }).join('');
-  list.querySelectorAll('.mb-row').forEach(r => r.onclick = () => openDetail(r.dataset.id));
+// -----------------------------------------------------------------
+// Profile
+// -----------------------------------------------------------------
+function renderProfile() {
+  document.getElementById('profile-name').value = localStorage.getItem('auction_name') || '';
+  const gwrap = document.getElementById('profile-google');
+  if (googleUser) {
+    gwrap.innerHTML = `
+      <div class="profile-row"><span class="k">Google account</span><span>${escapeHtml(googleUser.displayName || googleUser.email)}</span></div>
+      <button class="cta cta-outline" style="margin-top:12px;" id="signout-btn">Sign out</button>`;
+    document.getElementById('signout-btn').onclick = () => auth.signOut();
+  } else {
+    gwrap.innerHTML = `
+      <p style="font-size:13px;color:var(--muted);margin:0 0 12px;">Optional — ties your name to a real Google account for high-value lots.</p>
+      <button class="cta cta-outline" id="signin-btn">Sign in with Google</button>`;
+    document.getElementById('signin-btn').onclick = () => auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());
+  }
 }
+document.getElementById('profile-name').addEventListener('change', (e) => {
+  localStorage.setItem('auction_name', e.target.value.trim());
+});
+document.getElementById('clear-bids-btn').onclick = () => {
+  if (confirm('Clear your local bid history on this device? This only affects what "My Bids" shows you — it does not withdraw any bids.')) {
+    localStorage.removeItem('my_bids');
+    renderMyBids();
+  }
+};
 </script>
 </body>
 </html>
-

@@ -181,6 +181,7 @@ button.danger{color:var(--red);border-color:rgba(193,89,74,.4);}
   <div class="logo">JASHN ADMIN</div>
   <p>Sign in with the Google account approved as an organizer.</p>
   <button class="gbtn" id="signin" style="margin-top:16px;">Sign in with Google</button>
+  <p id="signin-err" style="color:var(--red);font-size:12.5px;margin-top:12px;"></p>
 </div>
 
 <div class="gate" id="denied" style="display:none;">
@@ -389,11 +390,17 @@ const gate = document.getElementById('gate');
 const denied = document.getElementById('denied');
 const app = document.getElementById('app');
 
-document.getElementById('signin').onclick = () => auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());
+document.getElementById('signin').onclick = () => {
+  const errEl = document.getElementById('signin-err');
+  if (errEl) errEl.textContent = '';
+  auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(err => {
+    console.error('Sign-in failed:', err);
+    if (errEl) errEl.textContent = 'Sign-in failed: ' + err.message + ' (' + err.code + ')';
+  });
+};
 document.getElementById('signout').onclick = () => auth.signOut();
 document.getElementById('signout2').onclick = () => auth.signOut();
 
-auth.getRedirectResult().catch(() => {});
 auth.onAuthStateChanged(u => {
   gate.style.display = denied.style.display = 'none';
   app.classList.remove('on');

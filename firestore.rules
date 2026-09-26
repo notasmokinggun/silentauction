@@ -3,22 +3,23 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // Admin check has two layers, so there's no chicken-and-egg problem:
-    // 1. A tiny hardcoded bootstrap list — paste the SAME uid(s) you put in
-    //    ADMIN_UIDS in firebase-init.js. This is how the very first admin
-    //    (you) gets in, since nobody exists yet to add you via the app.
-    // 2. Anyone with a doc in the `admins` collection — this is what the
-    //    in-app "Manage Admins" page writes to, so every admin after the
-    //    first one is added without ever touching this file again.
+    // 1. A tiny hardcoded bootstrap list — paste the SAME lowercase email(s)
+    //    you put in ADMIN_EMAILS in firebase-init.js. This is how the very
+    //    first admin (you) gets in, since nobody exists yet to add you.
+    // 2. Anyone with a doc in the `admins` collection, keyed by their
+    //    lowercase email — this is what the in-app "Manage Admins" page
+    //    writes to. You add someone by typing their email; they don't need
+    //    to sign in first to get a UID for you to paste anywhere.
     function isAdmin() {
-      return request.auth != null && (
-        request.auth.uid in [
-          // "AbCdEfGhIjKlMnOpQrStUvWxYz12",
+      return request.auth != null && request.auth.token.email != null && (
+        request.auth.token.email.lower() in [
+          // "you@example.com",
         ]
-        || exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        || exists(/databases/$(database)/documents/admins/$(request.auth.token.email.lower()))
       );
     }
 
-    match /admins/{uid} {
+    match /admins/{email} {
       allow read, write: if isAdmin();
     }
 

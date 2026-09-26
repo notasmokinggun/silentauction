@@ -12,16 +12,17 @@ const firebaseConfig = {
 };
 
 // ─────────────────────────────────────────────────────────────
-// 2. Bootstrap admin(s) only — paste the UID of the FIRST admin (you)
-//    here so you can get in at all. After that, add every other admin
-//    through the in-app "Manage Admins" page instead (admin.html →
-//    Settings) — you should never need to edit this array again except
-//    for yourself. This is UI-only; the real enforcement lives in
-//    firestore.rules, which needs the SAME uid pasted into its bootstrap
-//    list too.
+// 2. Bootstrap admin(s) only — paste the email of the FIRST admin (you)
+//    here, lowercase, exactly as your Google account shows it. That's the
+//    one manual step. After that, add every other admin through the
+//    in-app "Manage Admins" page instead (admin.html → Settings) by
+//    typing their email — you should never need to edit this array again
+//    except for yourself. This is UI-only; the real enforcement lives in
+//    firestore.rules, which needs the SAME email pasted into its
+//    bootstrap list too.
 // ─────────────────────────────────────────────────────────────
-const ADMIN_UIDS = [
-  "NEt1uQMYZlhRMUuuB6K3dFArQF23",
+const ADMIN_EMAILS = [
+  // "you@example.com",
 ];
 
 firebase.initializeApp(firebaseConfig);
@@ -46,17 +47,20 @@ function money(n) {
 }
 
 // Fast, sync, bootstrap-only check — use for an instant UI decision.
-function isAdminUid(uid) {
-  return !!uid && ADMIN_UIDS.includes(uid);
+function isAdminEmail(email) {
+  return !!email && ADMIN_EMAILS.includes(email.toLowerCase());
 }
 
-// Authoritative check: bootstrap list OR a live admins/{uid} doc in
-// Firestore. Always use this before showing the admin panel — isAdminUid()
-// alone would miss anyone added through Manage Admins.
-async function checkIsAdmin(uid) {
-  if (isAdminUid(uid)) return true;
+// Authoritative check: bootstrap list OR a live admins/{email} doc in
+// Firestore, keyed by lowercase email. Always use this before showing the
+// admin panel — isAdminEmail() alone would miss anyone added through
+// Manage Admins. Takes a Firebase Auth user object (needs .email).
+async function checkIsAdmin(user) {
+  if (!user || !user.email) return false;
+  const email = user.email.toLowerCase();
+  if (isAdminEmail(email)) return true;
   try {
-    const doc = await db.collection("admins").doc(uid).get();
+    const doc = await db.collection("admins").doc(email).get();
     return doc.exists;
   } catch {
     return false; // Firestore rules will also block a non-admin regardless.

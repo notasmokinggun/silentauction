@@ -22,18 +22,18 @@ Bids / Profile), full sidebar dashboard for admin.
 - **`item.html`** — a one-line redirect to `index.html?id=...`, kept only
   so QR codes printed before this version still work.
 
-## Adding more admins — no email/password anywhere
+## Adding more admins — no email verification, no password
 
 The first admin (you) gets in via a small hardcoded list in
 `firebase-init.js` / `firestore.rules` — that's the only manual step,
-ever. Every admin after that is added through the app itself:
+ever. Every admin after that is added through the app itself, by email:
 
-1. Have the new person open `admin.html` and **Sign in with Google**.
-2. They land on a "not an admin yet" screen showing their UID.
-3. You (already an admin) go to **Settings → Manage admins**, paste their
-   UID and an optional name, click **Add admin**.
-4. They reload the page — they're in. No email, no password, no rules
-   file to touch.
+1. You (already an admin) go to **Settings → Manage admins**, type the
+   new person's email (the one their Google account uses) and an
+   optional name, click **Add admin**.
+2. They open `admin.html` and **Sign in with Google** using that same
+   email — they're in immediately. No prior sign-in step needed, no
+   password, no verification email.
 
 Admins can also be removed from that same page (except the bootstrap
 admin, which is still edited by hand in the two files above, as the
@@ -90,9 +90,10 @@ not bytes.
 ## 3. Make yourself the bootstrap admin
 
 1. Open `admin.html` on your deployed site and **Sign in with Google**.
-2. You'll land on a "not an admin yet" screen showing your UID.
+2. You'll land on a "not an admin yet" screen showing your email.
 3. Copy it into **both**:
-   - `ADMIN_UIDS` in `firebase-init.js`
+   - `ADMIN_EMAILS` in `firebase-init.js` (lowercase, exactly as Google shows it)
+   - the bootstrap list inside `isAdmin()` in `firestore.rules`
    - the bootstrap list inside `isAdmin()` in `firestore.rules`
 4. Publish the rules — paste `firestore.rules` straight into **Firestore Database → Rules** in the console (or `firebase deploy --only firestore:rules` if you're using the CLI).
 5. Redeploy your hosting for the `firebase-init.js` change, then reload `admin.html` — you're in.
@@ -133,5 +134,5 @@ not a bug.
 | `index.html` | The whole guest app: Home grid → item → bid sheet → confirm → success, plus My Bids and Profile tabs |
 | `admin.html` | Sidebar dashboard: Dashboard, Items, Bids, Users, Payments, Settings (incl. Manage Admins) |
 | `item.html` | Redirects old `?id=` links into `index.html` |
-| `firebase-init.js` | Your Firebase config, bootstrap admin UID, and shared helper functions |
+| `firebase-init.js` | Your Firebase config, bootstrap admin email, and shared helper functions |
 | `firestore.rules` | Server-side rules: bidding logic, rate limit, and the two-layer admin check |

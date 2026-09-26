@@ -152,7 +152,7 @@
 
 <div id="denied" class="gate" style="display:none;">
   <p>You're signed in, but this account isn't on the admin list yet.</p>
-  <p>Add this UID to <code>ADMIN_UIDS</code> in <code>firebase-init.js</code> and to <code>isAdmin()</code> in <code>firestore.rules</code>, then reload:</p>
+  <p>Add your email to <code>ADMIN_EMAILS</code> in <code>firebase-init.js</code> and to <code>isAdmin()</code> in <code>firestore.rules</code>, then reload:</p>
   <p class="uid" id="myuid"></p>
 </div>
 
@@ -288,12 +288,12 @@
       <div class="block" style="margin-bottom:16px;">
         <h2>Manage admins</h2>
         <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">
-          Have the new person sign in once at this admin URL — they'll land on a
-          "not an admin yet" screen showing their UID. Paste it below to add them.
-          No email or password involved.
+          Add someone as admin by their email — the one their Google account
+          uses. They don't need to sign in first; the moment they do sign in
+          with that Google account, they're in. No password, no separate step.
         </p>
         <div class="row2" style="margin-bottom:10px;">
-          <div class="form-row"><input id="admin-new-uid" placeholder="Their UID"></div>
+          <div class="form-row"><input id="admin-new-email" placeholder="their@email.com"></div>
           <div class="form-row"><input id="admin-new-label" placeholder="Name (optional, for your reference)"></div>
         </div>
         <button class="btn-ghost" id="admin-add-btn">Add admin</button>
@@ -302,8 +302,8 @@
       </div>
       <div class="block" style="margin-bottom:16px;">
         <h2>Bootstrap admin</h2>
-        <p style="font-size:13px;color:var(--muted);">The one admin who can never be removed from here — set by editing <code>ADMIN_UIDS</code> in <code>firebase-init.js</code> and <code>isAdmin()</code> in <code>firestore.rules</code> directly. That's you, presumably.</p>
-        <p style="font-size:12px;color:var(--muted);margin-top:10px;">Your UID: <span id="settings-uid" style="font-family:monospace;"></span></p>
+        <p style="font-size:13px;color:var(--muted);">The one admin who can never be removed from here — set by editing <code>ADMIN_EMAILS</code> in <code>firebase-init.js</code> and <code>isAdmin()</code> in <code>firestore.rules</code> directly. That's you, presumably.</p>
+        <p style="font-size:12px;color:var(--muted);margin-top:10px;">Your email: <span id="settings-uid" style="font-family:monospace;"></span></p>
       </div>
       <div class="block">
         <h2>Sign out</h2>
@@ -360,16 +360,16 @@ auth.getRedirectResult().catch(() => {});
 auth.onAuthStateChanged(async (u) => {
   gate.style.display = denied.style.display = shell.style.display = 'none';
   if (!u) { gate.style.display = 'flex'; return; }
-  const admin = await checkIsAdmin(u.uid);
+  const admin = await checkIsAdmin(u);
   if (!admin) {
     denied.style.display = 'flex';
-    document.getElementById('myuid').textContent = u.uid;
+    document.getElementById('myuid').textContent = u.email || '(no email on this account)';
     return;
   }
   shell.style.display = 'flex';
   document.getElementById('avatar').textContent = (u.displayName || u.email || 'A')[0].toUpperCase();
-  document.getElementById('settings-uid').textContent = u.uid;
-  currentAdminUid = u.uid;
+  document.getElementById('settings-uid').textContent = u.email;
+  currentAdminEmail = (u.email || '').toLowerCase();
   loadLots();
   loadAllBids();
   loadAdmins();
@@ -399,13 +399,13 @@ document.getElementById('global-search').addEventListener('input', (e) => {
 // -----------------------------------------------------------------
 function loadAdmins() {
   db.collection('admins').onSnapshot(snap => {
-    const rows = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+    const rows = snap.docs.map(d => ({ email: d.id, ...d.data() }));
     const el = document.getElementById('admins-list');
     el.innerHTML = rows.length ? rows.map(r => `
       <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid var(--border);font-size:13px;">
         <div><div>${escapeHtml(r.label || '(no name given)')}</div>
-          <div style="font-family:monospace;font-size:11px;color:var(--muted);">${escapeHtml(r.uid)}</div></div>
-        <button class="btn-ghost btn-danger" data-remove="${r.uid}" ${r.uid === currentAdminUid ? 'disabled title="Can\'t remove yourself"' : ''}>Remove</button>
+          <div style="font-size:11px;color:var(--muted);">${escapeHtml(r.email)}</div></div>
+        <button class="btn-ghost btn-danger" data-remove="${r.email}" ${r.email === currentAdminEmail ? 'disabled title="Can\'t remove yourself"' : ''}>Remove</button>
       </div>`).join('')
       : '<p style="font-size:13px;color:var(--muted);">No admins added here yet — just the bootstrap admin below.</p>';
     el.querySelectorAll('[data-remove]').forEach(b => b.onclick = () => {
@@ -418,19 +418,23 @@ function loadAdmins() {
 }
 
 document.getElementById('admin-add-btn').onclick = async () => {
-  const uidInput = document.getElementById('admin-new-uid');
+  const emailInput = document.getElementById('admin-new-email');
   const labelInput = document.getElementById('admin-new-label');
   const errEl = document.getElementById('admin-add-err');
   errEl.textContent = '';
-  const uid = uidInput.value.trim();
-  if (!uid || uid.length < 10) { errEl.textContent = 'Paste a real UID — it should be a long string, not a name or email.'; return; }
+  const email = emailInput.value.trim().toLowerCase();
+  if (!email || !email.includes('@') || !email.includes('.')) {
+    errEl.textContent = 'Enter a real email address.';
+    return;
+  }
   try {
-    await db.collection('admins').doc(uid).set({
+    await db.collection('admins').doc(email).set({
+      email,
       label: labelInput.value.trim(),
-      addedByUid: currentAdminUid,
+      addedByEmail: currentAdminEmail,
       addedAt: firebase.firestore.FieldValue.serverTimestamp(),
     });
-    uidInput.value = '';
+    emailInput.value = '';
     labelInput.value = '';
   } catch (e) {
     errEl.textContent = e.message || 'Could not add that admin.';
@@ -441,7 +445,7 @@ document.getElementById('admin-add-btn').onclick = async () => {
 // Load lots (catalog + live bid state)
 // -----------------------------------------------------------------
 let lots = [];
-let currentAdminUid = null;
+let currentAdminEmail = null;
 function loadLots() {
   db.collection('items').orderBy('lotNumber').onSnapshot(snap => {
     lots = snap.docs.map(d => ({ id: d.id, ...d.data() }));

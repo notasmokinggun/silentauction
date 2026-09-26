@@ -53,7 +53,15 @@ img{-webkit-user-drag:none;}
 /* ---------- SPLASH ---------- */
 #screen-splash{position:relative;background:#000;color:var(--cream);}
 .splash-bg{position:absolute;inset:0;background-size:cover;background-position:center;
-  filter:saturate(.85) brightness(.6);}
+  filter:saturate(.85) brightness(.6);
+  /* Default look before any item photo is available (or if one fails to
+     load) — a warm gold-on-charcoal gradient in brand tones, no external
+     image needed. JS overrides background-image inline once a real item
+     photo exists; that inline style always wins over this. */
+  background-image:
+    radial-gradient(circle at 18% 12%, rgba(199,154,75,.38), transparent 52%),
+    radial-gradient(circle at 88% 82%, rgba(199,154,75,.16), transparent 48%),
+    linear-gradient(160deg, #1E1712 0%, #120D0A 55%, #000000 100%);}
 .splash-scrim{position:absolute;inset:0;
   background:linear-gradient(180deg,rgba(13,10,8,.55) 0%,rgba(13,10,8,.35) 40%,rgba(13,10,8,.97) 92%);}
 .splash-inner{position:relative;z-index:1;display:flex;flex-direction:column;min-height:100vh;min-height:100dvh;
@@ -426,7 +434,13 @@ db.collection('items').orderBy('lotNumber').onSnapshot(snap => {
   lots.forEach(it => {
     if (it.imageUrl && !imgCache.has(it.id)) { const img = new Image(); img.src = it.imageUrl; imgCache.set(it.id, img); }
   });
-  if (lots.length && lots[0].imageUrl) document.getElementById('splash-bg').style.backgroundImage = 'url(' + lots[0].imageUrl + ')';
+  if (lots.length && lots[0].imageUrl) {
+    // Preload before swapping in, so a broken/missing photo URL just keeps
+    // the default gradient background instead of leaving a blank gap.
+    const preload = new Image();
+    preload.onload = () => { document.getElementById('splash-bg').style.backgroundImage = 'url(' + lots[0].imageUrl + ')'; };
+    preload.src = lots[0].imageUrl;
+  }
   renderTabs();
   renderGrid();
   renderMyBids();

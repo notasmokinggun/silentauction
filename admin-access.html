@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin Access · Jashn</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#17120f;color:#f3ecdc;font:16px system-ui,sans-serif}main{max-width:800px;margin:48px auto;padding:24px}h1{font-family:Georgia,serif;font-size:38px}a{color:#d9b87b}p{line-height:1.6;color:#d4cabc}form,.panel{background:#251e18;padding:24px;border:1px solid #493a2c;border-radius:16px;margin:24px 0}label{display:block;margin-bottom:8px}input{width:100%;padding:14px;background:#17120f;color:#f3ecdc;border:1px solid #75634f;border-radius:8px;font:inherit}button{padding:12px 18px;border:0;border-radius:8px;background:#ddbd83;color:#21160a;font:inherit;cursor:pointer;margin:12px 8px 0 0}button:disabled{opacity:.5;cursor:default}ul{list-style:none;padding:0}li{padding:18px 0;border-bottom:1px solid #493a2c;overflow-wrap:anywhere}.email{font-weight:600}#status{min-height:28px}header{display:flex;justify-content:space-between;align-items:center;gap:16px}[hidden]{display:none!important}
+</style>
+</head>
+<body><main>
+<header><a href="admin.html">← Auction admin</a><button id="signout" hidden>Sign out</button></header>
+<h1>Admin Access</h1>
+<p>Add an organizer by email or remove their admin access.</p>
+<p id="status" role="status">Checking access…</p>
+<p id="login" hidden><a href="admin.html">Sign in with your admin email and password</a>, then return here.</p>
+<section id="manager" hidden>
+<form id="add-admin"><label for="email">New admin email</label><input id="email" type="email" autocomplete="email" maxlength="254" required><button id="add" type="submit">Add admin</button><p>The new admin can use “Set or reset password” on the admin login page to receive a password setup email.</p></form>
+<div class="panel"><h2>Approved admins</h2><button id="refresh">Refresh list</button><ul id="admins"></ul></div>
+</section>
+</main>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
+<script src="firebase-init.js"></script>
+<script src="admin-access.js"></script>
+</body></html>

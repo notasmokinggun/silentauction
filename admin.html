@@ -181,6 +181,7 @@ button.danger{color:var(--red);border-color:rgba(193,89,74,.4);}
   <div class="logo">JASHN ADMIN</div>
   <p>Sign in with your approved organizer email and password.</p>
   <form id="admin-login"><label>Email <input id="admin-email" type="email" autocomplete="username" required></label><label>Password <input id="admin-password" type="password" autocomplete="current-password" required></label><button class="gbtn" id="signin" type="submit" style="margin-top:16px;">Sign in</button></form>
+  <button id="reset-password" class="gbtn" type="button">Set or reset password</button>
   <p id="signin-err" style="color:var(--red);font-size:12.5px;margin-top:12px;"></p>
 </div>
 
@@ -364,6 +365,7 @@ button.danger{color:var(--red);border-color:rgba(193,89,74,.4);}
           <h3>Your account</h3>
           <p style="font-size:13px;color:var(--muted);margin-bottom:6px;">Signed in as</p>
           <p style="font-size:14px;margin-bottom:14px;" id="settings-email"></p>
+          <a class="ghost" href="admin-access.html">Manage admin access</a>
           <button class="ghost" id="signout2">Sign out</button>
         </div>
         <div class="panel">
@@ -390,6 +392,17 @@ const gate = document.getElementById('gate');
 const denied = document.getElementById('denied');
 const app = document.getElementById('app');
 
+document.getElementById('reset-password').onclick = async event => {
+  const email = document.getElementById('admin-email');
+  const status = document.getElementById('signin-err');
+  if (!email.reportValidity()) return;
+  event.target.disabled = true;
+  try {
+    await auth.sendPasswordResetEmail(email.value.trim());
+    status.textContent = 'If this email has an account, a password setup link has been sent. Check your inbox and spam folder.';
+  } catch (err) { status.textContent = 'Could not request a password email: ' + err.message; }
+  finally { event.target.disabled = false; }
+};
 document.getElementById('admin-login').onsubmit = async event => {
   event.preventDefault();
   const button = document.getElementById('signin');

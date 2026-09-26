@@ -28,6 +28,58 @@ No emails or SMS are sent automatically.
 5. Publish `firestore.rules` and deploy all updated static files, including
    **guest-auth.js**. Then test on the deployed domain before the event.
 
+## Manage admin email addresses
+
+After signing in, open **Settings → Manage admin access** (`admin-access.html`).
+Enter an email and click **Add admin**. The backend finds or creates the Firebase
+Auth account and approves its UID. The new organizer opens `admin.html`, enters
+that email and clicks **Set or reset password** to receive Firebase's email link.
+Existing passwords are not changed by granting access. There is no frontend
+email list, no service-account key in the site, and no password exposed to the
+operator. Anyone approved as an admin can manage other admins.
+
+**Remove admin** revokes organizer permissions while keeping the person's guest
+account and bids. Self-removal is blocked. Each mutation rechecks the caller's
+approval inside a transaction, preventing concurrently revoked admins from
+removing each other. Changes are recorded in the private `adminAudit` collection.
+Client writes and list queries on `admins` remain denied by Firestore rules;
+only authenticated, authorized callable functions perform management operations.
+
+### First admin (one time)
+
+The Firebase project owner must create the first account in Authentication →
+Users and create `admins/{its UID}` with `approved: true` in Firestore, as above.
+Optionally add its `email` field. This bootstrap is deliberately not a public
+"make me admin" page. After that, use email addresses in Admin Access; no manual
+UID copying is needed for subsequent admins.
+
+### Deploy the admin backend
+
+Cloud Functions requires the **Blaze billing plan**. Billing has not been changed
+by this code. The frontend can remain on GitHub Pages; these three callable
+functions run in Firebase's `us-central1` region.
+
+```sh
+cd functions
+npm install
+cd ..
+npm install -g firebase-tools
+firebase login
+firebase deploy --project cas-silent-auction --only functions,firestore:rules
+```
+
+Use Node 22 for the functions. Then publish `admin-access.html`, `admin-access.js`
+and the updated `admin.html` along with the existing static files. No hosting
+configuration is changed by `firebase.json`. Never upload service-account JSON
+or put Admin SDK credentials into the site. Cloud Functions uses its runtime
+service account; the project owner may need to grant that account Firebase Auth
+administration and Firestore access if default permissions were restricted.
+
+The server authorization tests run with `node --test tests/*.test.cjs`. They use
+mocked Auth/Firestore; actual deployment, email delivery, Firestore rules and
+cross-origin callable requests still need a smoke test in the configured project.
+See https://firebase.google.com/docs/functions/get-started for deployment requirements.
+
 ## How sign-in completes
 
 `guest-auth.js` loads Google Identity Services and renders its standard button.

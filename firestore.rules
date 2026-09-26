@@ -2,19 +2,42 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function verifiedEmail() {
+      return request.auth != null && request.auth.token.email_verified == true &&
+        request.auth.token.email is string;
+    }
+    function ownEmail() { return request.auth.token.email.lower(); }
     function isAdmin() {
-      return request.auth != null &&
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.approved == true;
+      return verifiedEmail() &&
+        exists(/databases/$(database)/documents/adminEmails/$(ownEmail())) &&
+        get(/databases/$(database)/documents/adminEmails/$(ownEmail())).data.approved == true;
+    }
+    // The owner is bootstrapped only through the Firebase Console. Browser
+    // clients cannot create, edit or delete an owner, even if they are admins.
+    match /adminEmails/{email} {
+      allow get: if isAdmin() || (verifiedEmail() && email == ownEmail());
+      allow list: if isAdmin();
+      allow create: if isAdmin() && validApproval(email);
+      allow update: if isAdmin() && resource.data.role != 'owner' &&
+        email != ownEmail() && validApproval(email);
+      allow delete: if isAdmin() && resource.data.role != 'owner' && email != ownEmail();
+    }
+    function validApproval(email) {
+      return request.resource.data.keys().hasOnly(['email', 'approved', 'role', 'updatedBy', 'updatedAt']) &&
+        email == email.lower() && email.size() <= 254 &&
+        email.matches('^[^ @/]+@[^ @/]+[.][^ @/]+$') &&
+        request.resource.data.email == email &&
+        request.resource.data.approved == true &&
+        request.resource.data.role == 'admin' &&
+        request.resource.data.updatedBy == request.auth.uid &&
+        request.resource.data.updatedAt == request.time;
     }
     function registered() {
       return request.auth != null && request.auth.token.firebase.sign_in_provider == 'google.com' &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid));
     }
-    match /admins/{uid} {
-      allow get: if request.auth != null && request.auth.uid == uid;
-      allow list, write: if false;
-    }
+    // Legacy UID approvals are intentionally ignored and inaccessible.
+    match /admins/{uid} { allow read, write: if false; }
     match /users/{uid} {
       allow read: if isAdmin() || (request.auth != null && request.auth.uid == uid);
       allow create, update: if request.auth != null && request.auth.uid == uid &&

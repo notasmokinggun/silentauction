@@ -1,4 +1,3 @@
-const backend = firebase.app().functions('us-central1');
 const accessStatus = document.getElementById('status');
 const manager = document.getElementById('manager');
 let stopAccess = null;
@@ -6,24 +5,25 @@ let accessVersion = 0;
 async function refreshAdmins() {
   const version = accessVersion;
   try {
-    const result = await backend.httpsCallable('listAdmins')();
+    const result = await db.collection('adminEmails').get();
     if (version !== accessVersion) return;
     const list = document.getElementById('admins');
     list.replaceChildren();
-    result.data.admins.forEach(admin => {
+    result.docs.forEach(doc => {
+      const admin = { ...doc.data(), email: doc.id, self: doc.id === adminEmail(auth.currentUser) };
       const row = document.createElement('li');
       const label = document.createElement('div');
       label.className = 'email';
-      label.textContent = admin.email + (admin.self ? ' (you)' : '');
+      label.textContent = admin.email + (admin.self ? ' (you)' : '') + (admin.role === 'owner' ? ' · Owner' : '');
       row.appendChild(label);
-      if (!admin.self) {
+      if (!admin.self && admin.role !== 'owner') {
         const remove = document.createElement('button');
         remove.textContent = 'Remove admin';
         remove.onclick = async () => {
           if (!confirm('Remove admin access for ' + admin.email + '?')) return;
           remove.disabled = true;
           try {
-            await backend.httpsCallable('removeAdmin')({ uid: admin.uid });
+            await db.collection('adminEmails').doc(admin.email).delete();
             accessStatus.textContent = 'Admin access removed for ' + admin.email + '.';
             await refreshAdmins();
           } catch (err) { accessStatus.textContent = err.message; remove.disabled = false; }
@@ -45,9 +45,9 @@ auth.onAuthStateChanged(user => {
   manager.hidden = true;
   document.getElementById('admins').replaceChildren();
   document.getElementById('signout').hidden = !user;
-  document.getElementById('login').hidden = !!user && !user.isAnonymous;
-  if (!user || user.isAnonymous) { accessStatus.textContent = 'Sign in as an approved admin to continue.'; return; }
-  stopAccess = db.collection('admins').doc(user.uid).onSnapshot(doc => {
+  document.getElementById('login').hidden = !!user && user.emailVerified;
+  if (!user || !user.emailVerified) { accessStatus.textContent = 'Sign in with a verified, approved admin email to continue.'; return; }
+  stopAccess = adminApprovalRef(user).onSnapshot(doc => {
     accessVersion++;
     manager.hidden = true;
     if (!doc.exists || doc.data().approved !== true) {
@@ -65,8 +65,16 @@ document.getElementById('add-admin').onsubmit = async event => {
   button.disabled = true;
   accessStatus.textContent = 'Adding admin…';
   try {
-    const result = await backend.httpsCallable('addAdmin')({ email: document.getElementById('email').value.trim() });
-    accessStatus.textContent = 'Admin access granted to ' + result.data.email + '. They can set their password on the admin login page.';
+    const email = document.getElementById('email').value.trim().toLowerCase();
+    if (email.includes('/')) throw new Error('Enter a valid email address.');
+    const ref = db.collection('adminEmails').doc(email);
+    await db.runTransaction(async tx => {
+      const existing = await tx.get(ref);
+      if (existing.exists && existing.data().approved === true) return;
+      tx.set(ref, { email, approved: true, role: 'admin', updatedBy: auth.currentUser.uid,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    });
+    accessStatus.textContent = 'Admin email approved: ' + email + '. They can create their account and verify their email on the admin login page.';
     event.target.reset();
     await refreshAdmins();
   } catch (err) { accessStatus.textContent = 'Could not add admin: ' + err.message; }

@@ -14,14 +14,13 @@
 <p id="status" role="status">Checking access…</p>
 <p id="login" hidden><a href="admin.html">Sign in with your admin email and password</a>, then return here.</p>
 <section id="manager" hidden>
-<form id="add-admin"><label for="email">New admin email</label><input id="email" type="email" autocomplete="email" maxlength="254" required><button id="add" type="submit">Add admin</button><p>The new admin can use “Set or reset password” on the admin login page to receive a password setup email.</p></form>
+<form id="add-admin"><label for="email">New admin email</label><input id="email" type="email" autocomplete="email" maxlength="254" required><button id="add" type="submit">Add admin</button><p>The new admin creates an email/password account on the admin login page and verifies their email. Existing accounts can sign in normally.</p></form>
 <div class="panel"><h2>Approved admins</h2><button id="refresh">Refresh list</button><ul id="admins"></ul></div>
 </section>
 </main>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
 <script src="firebase-init.js"></script>
 <script src="admin-access.js"></script>
 </body></html>

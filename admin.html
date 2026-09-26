@@ -181,15 +181,18 @@ button.danger{color:var(--red);border-color:rgba(193,89,74,.4);}
   <div class="logo">JASHN ADMIN</div>
   <p>Sign in with your approved organizer email and password.</p>
   <form id="admin-login"><label>Email <input id="admin-email" type="email" autocomplete="username" required></label><label>Password <input id="admin-password" type="password" autocomplete="current-password" required></label><button class="gbtn" id="signin" type="submit" style="margin-top:16px;">Sign in</button></form>
-  <button id="reset-password" class="gbtn" type="button">Set or reset password</button>
+  <button id="create-admin-account" class="gbtn" type="button">Create admin account</button>
+  <button id="reset-password" class="gbtn" type="button">Reset password</button>
   <p id="signin-err" style="color:var(--red);font-size:12.5px;margin-top:12px;"></p>
 </div>
 
 <div class="gate" id="denied" style="display:none;">
   <div class="logo">JASHN ADMIN</div>
-  <p>You're signed in, but this account isn't on the admin list yet.</p>
-  <p>Ask the project owner to approve this UID in the private admins collection, then reload:</p>
-  <p class="uid" id="myuid"></p><button id="denied-signout">Use another account</button>
+  <p id="denied-message">Your email must be verified and approved by an organizer.</p>
+  <p id="myuid"></p>
+  <button id="send-verification" class="gbtn">Send verification email</button>
+  <button id="refresh-approval" class="gbtn">I've verified my email / Check access</button>
+  <p id="verification-status" role="status"></p><button id="denied-signout">Use another account</button>
 </div>
 
 <!-- APP -->
@@ -392,6 +395,38 @@ const gate = document.getElementById('gate');
 const denied = document.getElementById('denied');
 const app = document.getElementById('app');
 
+document.getElementById('create-admin-account').onclick = async event => {
+  if (!document.getElementById('admin-login').reportValidity()) return;
+  const status = document.getElementById('signin-err');
+  event.target.disabled = true;
+  try {
+    await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+    const result = await auth.createUserWithEmailAndPassword(
+      document.getElementById('admin-email').value.trim().toLowerCase(), document.getElementById('admin-password').value);
+    await result.user.sendEmailVerification();
+    document.getElementById('verification-status').textContent = 'Verification email sent. Open the link, then click Check access.';
+  } catch (err) {
+    status.textContent = err.message;
+    document.getElementById('verification-status').textContent = err.message;
+  } finally { event.target.disabled = false; }
+};
+document.getElementById('send-verification').onclick = async event => {
+  event.target.disabled = true;
+  try {
+    await auth.currentUser.sendEmailVerification();
+    document.getElementById('verification-status').textContent = 'Verification email sent. Check your inbox and spam folder.';
+  } catch (err) { document.getElementById('verification-status').textContent = err.message; }
+  finally { event.target.disabled = false; }
+};
+document.getElementById('refresh-approval').onclick = async event => {
+  event.target.disabled = true;
+  try {
+    await auth.currentUser.reload();
+    await auth.currentUser.getIdToken(true);
+    checkAdminAccess(auth.currentUser);
+  } catch (err) { document.getElementById('verification-status').textContent = err.message; }
+  finally { event.target.disabled = false; }
+};
 document.getElementById('reset-password').onclick = async event => {
   const email = document.getElementById('admin-email');
   const status = document.getElementById('signin-err');
@@ -421,18 +456,26 @@ document.getElementById('admin-login').onsubmit = async event => {
 });
 let stopApproval = null, stopLots = null, stopUsers = null;
 let registeredUsers = [];
-auth.onAuthStateChanged(user => {
+function checkAdminAccess(user) {
   if (stopApproval) stopApproval();
   if (stopLots) stopLots();
   if (stopUsers) stopUsers();
   gate.style.display = denied.style.display = 'none';
   app.classList.remove('on');
   if (!user || user.isAnonymous) { gate.style.display = 'block'; return; }
-  stopApproval = db.collection('admins').doc(user.uid).onSnapshot(approval => {
+  document.getElementById('myuid').textContent = user.email || '';
+  document.getElementById('send-verification').hidden = user.emailVerified;
+  if (!user.emailVerified) {
+    denied.style.display = 'block';
+    document.getElementById('denied-message').textContent = 'Verify your email before accessing the admin panel.';
+    return;
+  }
+  document.getElementById('denied-message').textContent = 'This email has not been approved. Ask an organizer to add it in Admin Access.';
+  stopApproval = adminApprovalRef(user).onSnapshot(approval => {
     const approved = approval.exists && approval.data().approved === true;
     app.classList.toggle('on', approved);
     denied.style.display = approved ? 'none' : 'block';
-    document.getElementById('myuid').textContent = user.uid;
+    document.getElementById('myuid').textContent = user.email;
     if (stopLots) stopLots();
     if (stopUsers) stopUsers();
     if (!approved) return;
@@ -448,7 +491,8 @@ auth.onAuthStateChanged(user => {
     gate.style.display = 'block';
     document.getElementById('signin-err').textContent = 'Could not check admin approval: ' + err.message;
   });
-});
+}
+auth.onAuthStateChanged(checkAdminAccess);
 
 // ---------------------------------------------------------------
 // Sidebar navigation

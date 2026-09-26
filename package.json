@@ -1,0 +1,13 @@
+{
+  "name": "silentauction",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/guest-auth.test.cjs",
+    "test:rules": "firebase emulators:exec --project demo-silentauction --only firestore 'node --test tests/firestore-rules.test.cjs'"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^4.0.1",
+    "firebase": "^11.0.0",
+    "firebase-tools": "13.35.1"
+  }
+}

@@ -81,8 +81,10 @@ function lotStatus(it) {
   return { state: "live", label: timeLeft(it.closesAt) };
 }
 
-// Approval is enforced by Firestore rules, never by a browser allowlist.
-async function isApprovedAdmin(uid) {
-  const approval = await db.collection('admins').doc(uid).get();
-  return approval.exists && approval.data().approved === true;
+// Email approval is stored in Firestore and enforced by server-side rules.
+function adminEmail(user) {
+  return user && user.email ? user.email.trim().toLowerCase() : '';
+}
+function adminApprovalRef(user) {
+  return db.collection('adminEmails').doc(adminEmail(user));
 }

@@ -10,75 +10,88 @@ are private `users/{uid}` documents, readable only by that user and approved
 admins. UID is an internal database key, never something a guest must enter.
 No emails or SMS are sent automatically.
 
-## One-time setup
+## Spark-only setup (no billing upgrade)
 
-1. Firebase Console → Authentication → Sign-in method: enable **Google** and
-   **Email/Password**. Anonymous authentication is no longer used by the guest page.
-2. Google provider → Web SDK configuration: confirm its Web client ID matches
-   `GOOGLE_CLIENT_ID` in `firebase-init.js`.
-3. In Google Cloud Console → APIs & Services → Credentials, open that web OAuth
-   client and add the exact deployed origin to **Authorized JavaScript origins**.
-   For GitHub Pages this is `https://notasmokinggun.github.io` (no repository path).
-   Add any custom domain too. In Firebase Authentication → Settings → Authorized
-   domains, add the deployed hostname. Serve through HTTPS, not a local file.
-4. Authentication → Users → Add user: create the organizer email/password account.
-   Copy its UID. In Firestore create `admins/{that UID}` with boolean `approved: true`.
-   This is organizer setup only. Browser clients cannot grant approval. Delete the
-   document or set approved to false to revoke access.
-5. Publish `firestore.rules` and deploy all updated static files, including
-   **guest-auth.js**. Then test on the deployed domain before the event.
+This version uses Firebase Authentication and Cloud Firestore on **Spark**.
+There are no Cloud Functions, Admin SDK, service-account credentials, or paid
+extensions. The static site can stay on GitHub Pages. Firestore's server-side
+security rules enforce every admin read/write; changing browser code cannot
+approve an unapproved user. Normal Spark quotas still apply.
 
-## Manage admin email addresses
+1. Firebase Authentication → Sign-in method: enable **Google** and **Email/Password**.
+2. Confirm the Google Web client ID matches `GOOGLE_CLIENT_ID` in `firebase-init.js`.
+   In Google Cloud → APIs & Services → Credentials → that OAuth client, add the
+   exact origin to Authorized JavaScript origins (for GitHub Pages:
+   `https://notasmokinggun.github.io`, without `/silentauction`). Add the hostname
+   to Firebase Authentication → Settings → Authorized domains as well.
+3. In Firestore Console → Rules, paste and publish **firestore.rules** from this
+   branch. Alternatively run `firebase deploy --project cas-silent-auction --only firestore:rules`.
+4. Publish the static files, including `guest-auth.js`, `admin-access.html`,
+   `admin-access.js`, `firebase-init.js` and `admin.html`.
 
-After signing in, open **Settings → Manage admin access** (`admin-access.html`).
-Enter an email and click **Add admin**. The backend finds or creates the Firebase
-Auth account and approves its UID. The new organizer opens `admin.html`, enters
-that email and clicks **Set or reset password** to receive Firebase's email link.
-Existing passwords are not changed by granting access. There is no frontend
-email list, no service-account key in the site, and no password exposed to the
-operator. Anyone approved as an admin can manage other admins.
+### First admin: approve your email once in Firebase Console
 
-**Remove admin** revokes organizer permissions while keeping the person's guest
-account and bids. Self-removal is blocked. Each mutation rechecks the caller's
-approval inside a transaction, preventing concurrently revoked admins from
-removing each other. Changes are recorded in the private `adminAudit` collection.
-Client writes and list queries on `admins` remain denied by Firestore rules;
-only authenticated, authorized callable functions perform management operations.
+Create collection **adminEmails**, with a document whose ID is your full email
+address **in lowercase**, for example `you@example.com`. Add these fields:
 
-### First admin (one time)
+| Field | Type | Value |
+|---|---|---|
+| email | string | your lowercase email |
+| approved | boolean | true |
+| role | string | owner |
 
-The Firebase project owner must create the first account in Authentication →
-Users and create `admins/{its UID}` with `approved: true` in Firestore, as above.
-Optionally add its `email` field. This bootstrap is deliberately not a public
-"make me admin" page. After that, use email addresses in Admin Access; no manual
-UID copying is needed for subsequent admins.
+Then open `admin.html`, enter that email and a password, and click **Create admin
+account**. Open the verification email, return to the page, and click **I've
+verified my email / Check access**. Existing accounts can sign in and use **Send
+verification email** if needed. Existing Google-only accounts can use **Reset
+password** to set up password access. Never put passwords in Firestore.
 
-### Deploy the admin backend
+This owner approval cannot be edited or removed from the website. Only the
+Firebase project owner can change it in the Console. This prevents the admin
+page from accidentally removing the last protected owner. You do not copy a UID.
 
-Cloud Functions requires the **Blaze billing plan**. Billing has not been changed
-by this code. The frontend can remain on GitHub Pages; these three callable
-functions run in Firebase's `us-central1` region.
+### Add or remove other admin emails
+
+Go to **Admin → Settings → Manage admin access**. Enter the organizer's email and
+click **Add admin**. That saves an approval in Firestore; it does not create an
+Authentication account or send an invitation. The organizer creates their own
+email/password account on `admin.html`, verifies the email, then signs in.
+Existing verified accounts can sign in immediately. Account creation alone never
+grants admin permissions; an approved email AND verified ownership are required.
+
+**Remove admin** deletes that email's approval. Firestore rules reject subsequent
+admin requests even with an existing login session. The person's Firebase Auth
+account and guest bids remain. Admins cannot remove themselves or edit/remove an
+owner. All approved admins can manage other non-owner admins.
+
+The browser requests Firestore operations using its normal Firebase SDK, but the
+backend rules decide whether those operations are allowed. The email list lives
+in the private `adminEmails` collection, not in JavaScript. Writes validate the
+email, role, actor UID and server timestamp. No browser can create an owner role.
+
+### Migration from the earlier branch revision
+
+The earlier `admins/{UID}` approvals are no longer used. Create the first
+`adminEmails/{lowercase-email}` owner document before using this revision and
+publish the new rules. Old approval documents can be left in place; the new rules
+make them inaccessible and they grant no permissions. The functions directory
+and callable endpoints were removed from the project. No functions deployment
+or Blaze subscription is needed.
+
+### Checks
 
 ```sh
-cd functions
 npm install
-cd ..
-npm install -g firebase-tools
-firebase login
-firebase deploy --project cas-silent-auction --only functions,firestore:rules
+npm test
+npm run test:rules
 ```
 
-Use Node 22 for the functions. Then publish `admin-access.html`, `admin-access.js`
-and the updated `admin.html` along with the existing static files. No hosting
-configuration is changed by `firebase.json`. Never upload service-account JSON
-or put Admin SDK credentials into the site. Cloud Functions uses its runtime
-service account; the project owner may need to grant that account Firebase Auth
-administration and Firestore access if default permissions were restricted.
-
-The server authorization tests run with `node --test tests/*.test.cjs`. They use
-mocked Auth/Firestore; actual deployment, email delivery, Firestore rules and
-cross-origin callable requests still need a smoke test in the configured project.
-See https://firebase.google.com/docs/functions/get-started for deployment requirements.
+The rules tests use a local Firestore emulator and demo project, never production.
+They check unauthorized/self-approval attempts, email verification, owner
+protection, revocation, and malformed writes. Java 17+ is required with the
+pinned emulator CLI. On the live site, also test email verification delivery,
+Google sign-in, and admin access after the rules and pages have been published.
+The testing packages are development tools, not dependencies for the hosted site.
 
 ## How sign-in completes
 

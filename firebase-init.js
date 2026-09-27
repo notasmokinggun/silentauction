@@ -12,9 +12,10 @@ const firebaseConfig = {
 };
 
 // ─────────────────────────────────────────────────────────────
-// 2. Guest Google sign-in (guest-auth.js). Web OAuth client ID from
-//    Firebase Authentication → Google → Web SDK configuration. Guests
-//    only — admins never use Google, see ADMIN_EMAILS below.
+// 2. Guest Google sign-in (used in index.html's bid sheet). Web OAuth
+//    client ID from Firebase Authentication → Google → Web SDK
+//    configuration. Guests only — admins never use Google, see
+//    ADMIN_EMAILS below.
 // ─────────────────────────────────────────────────────────────
 const GOOGLE_CLIENT_ID = "423062787372-3fdpdp077o7hse14ap6nrj43aifeejch.apps.googleusercontent.com";
 
@@ -62,7 +63,7 @@ function money(n) {
 // so a tampered client can't bypass either check.
 // ─────────────────────────────────────────────────────────────
 const MAX_BID_AMOUNT = 100000000; // ₹10,00,00,000 = 10 crore
-const BID_BLOCK_MINUTES = 5;
+const BID_BLOCK_MINUTES = 10;
 
 function bidBlockRef() {
   return db.collection("bidBlocks").doc(getDeviceId());
@@ -99,6 +100,35 @@ async function triggerBidBlock() {
 function minutesLeftText(untilDate) {
   const mins = Math.max(1, Math.ceil((untilDate.getTime() - Date.now()) / 60000));
   return `${mins} minute${mins === 1 ? "" : "s"}`;
+}
+
+// A concrete mm:ss countdown (not just a rounded-up "X minutes" string) —
+// used anywhere a person needs to see exactly how long a block/cooldown has
+// left, ticking down in real time.
+function countdownText(untilDate) {
+  const totalSecs = Math.max(0, Math.round((untilDate.getTime() - Date.now()) / 1000));
+  const m = Math.floor(totalSecs / 60);
+  const s = totalSecs % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Phone number — mandatory alongside every bidder's email, checked once
+// with a simple, deliberately basic rule: 10 digits, starting with 7, 8
+// or 9 (standard Indian mobile numbers). No OTP/SMS verification — this
+// project is trusting people to enter a real number, not proving it.
+// ─────────────────────────────────────────────────────────────
+const PHONE_REGEX = /^[789]\d{9}$/;
+function isValidPhone(raw) {
+  return PHONE_REGEX.test(String(raw || "").trim());
+}
+function normalizePhoneInput(raw) {
+  // Strips spaces/dashes/+91 so someone pasting "+91 98765 43210" or
+  // "098765-43210" still passes the same 10-digit check.
+  let digits = String(raw || "").replace(/[^\d]/g, "");
+  if (digits.length === 12 && digits.startsWith("91")) digits = digits.slice(2);
+  if (digits.length === 11 && digits.startsWith("0")) digits = digits.slice(1);
+  return digits;
 }
 
 // Fast, sync, bootstrap-only check — use for an instant UI decision.

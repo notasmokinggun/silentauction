@@ -133,16 +133,17 @@ service cloud.firestore {
     // and any bid create underneath /items/{itemId}/bids while this doc
     // is still "in the future" is rejected server-side too (see below) —
     // so this can't be bypassed by skipping the client-side check.
-    // The window must land 4–6 minutes out from the server's own clock
+    // The window must land 9–11 minutes out from the server's own clock
     // (never exactly equal, to tolerate normal network/clock skew), which
     // stops a client from writing a block that expires immediately or
-    // lasts far longer than intended.
+    // lasts far longer than intended. Matches BID_BLOCK_MINUTES = 10 in
+    // firebase-init.js — change both together.
     match /bidBlocks/{deviceId} {
       allow read: if true;
       allow create, update: if request.resource.data.keys().hasOnly(['blockedUntil']) &&
         request.resource.data.blockedUntil is timestamp &&
-        request.resource.data.blockedUntil > request.time + duration.value(4, 'm') &&
-        request.resource.data.blockedUntil <= request.time + duration.value(6, 'm');
+        request.resource.data.blockedUntil > request.time + duration.value(9, 'm') &&
+        request.resource.data.blockedUntil <= request.time + duration.value(11, 'm');
       allow delete: if isAdmin();
     }
     // Absolute ceiling on any bid amount — an obviously-absurd value (fat-
@@ -153,8 +154,10 @@ service cloud.firestore {
         get(/databases/$(database)/documents/bidBlocks/$(deviceId)).data.blockedUntil > request.time;
     }
 
-    // Guest profiles saved by guest-auth.js after Google sign-in (name/
-    // email/phone for high-value lots). Unrelated to admin identity.
+    // Guest profiles — unused by the current app (name/email/phone live on
+    // each bid document instead) but kept available for anyone who wants
+    // to build a standalone guest-profile page against it.
+    // Unrelated to admin identity.
     match /users/{uid} {
       allow read: if isAdmin() || (request.auth != null && request.auth.uid == uid);
       allow create, update: if request.auth != null && request.auth.uid == uid &&
@@ -197,10 +200,16 @@ service cloud.firestore {
         // A bid document is only ever valid if its uid is the account that
         // is actually signed in right now — a guest can't write someone
         // else's uid, and can't write a bid with no uid at all.
+        // Phone is mandatory alongside the name on every bid (no OTP — this
+        // is a single basic format check, not a verification step): 10
+        // digits, starting with 7, 8 or 9. See PHONE_REGEX in
+        // firebase-init.js for the identical client-side check.
         allow create: if isVerifiedBidder() &&
           request.resource.data.name is string &&
           request.resource.data.name.size() > 0 &&
           request.resource.data.name.size() < 80 &&
+          request.resource.data.phone is string &&
+          request.resource.data.phone.matches('^[789][0-9]{9}$') &&
           request.resource.data.amount is number &&
           underMaxBid(request.resource.data.amount) &&
           request.resource.data.uid == request.auth.uid &&

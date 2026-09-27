@@ -166,6 +166,15 @@
   .name-edit.open{display:block;}
   .name-edit input{width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);
     background:var(--surface);color:var(--text);font-size:14px;}
+  .contact-block{margin-bottom:16px;border:1px solid var(--border);border-radius:12px;padding:12px 14px;background:var(--surface);}
+  .contact-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:4px 0;}
+  .contact-row .k{color:var(--muted);}
+  .contact-row .v{font-weight:500;}
+  .contact-block label{display:block;font-size:12px;color:var(--muted);margin:10px 0 6px;}
+  .contact-block label .req{color:var(--red);}
+  .contact-block input{width:100%;padding:11px 12px;border-radius:9px;border:1px solid var(--border);
+    background:var(--surface2);color:var(--text);font-size:14px;}
+  .contact-hint{font-size:11px;color:var(--muted);margin-top:6px;}
   .sheet-err{color:var(--red);font-size:13px;margin-top:10px;min-height:16px;}
   #sheet-amount:disabled,.quick-btn:disabled{opacity:.4;pointer-events:none;}
 
@@ -224,6 +233,17 @@
     background:none;border:none;color:var(--muted);font-size:11px;padding:6px;cursor:pointer;}
   .navbtn.on{color:var(--cream);}
   #view-splash.active ~ .bottomnav{display:none;}
+
+  /* ---------- Laptop/desktop: this is a phone-shaped app, so on a wide
+     screen show it as a centered, contained "phone frame" instead of
+     stretching cards and the bottom nav edge-to-edge across the window. ---------- */
+  @media (min-width:640px){
+    html,body{background:var(--bg2);}
+    .view{max-width:480px;margin:0 auto;box-shadow:0 0 0 1px var(--border),0 30px 70px rgba(0,0,0,.5);}
+    .bottomnav,.sheet,.reading-overlay,.lightbox-overlay,.success-overlay{
+      max-width:480px;width:100%;left:50%;right:auto;transform:translateX(-50%);
+    }
+  }
 </style>
 </head>
 <body>
@@ -352,6 +372,12 @@
       <button id="sheet-name-change">Change</button>
     </div>
     <div class="name-edit" id="sheet-name-edit"><input id="sheet-name-input" placeholder="Full name" maxlength="79"></div>
+    <div class="contact-block">
+      <div class="contact-row"><span class="k">Email</span><span class="v" id="sheet-email-display"></span></div>
+      <label for="sheet-phone-input">Phone number <span class="req">*</span></label>
+      <input id="sheet-phone-input" type="tel" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number">
+      <p class="contact-hint">Required so we can confirm your bid with you. No OTP — just double-check it's correct.</p>
+    </div>
     <button class="cta cta-cream" id="sheet-confirm">Confirm Bid</button>
   </div>
   <div class="sheet-err" id="sheet-err"></div>
@@ -496,6 +522,7 @@ function updateSheetAuthGate() {
   document.getElementById('sheet-signin-gate').style.display = signedIn ? 'none' : 'block';
   document.getElementById('sheet-bidform').style.display = signedIn ? 'block' : 'none';
   if (!signedIn) renderGoogleButton();
+  else document.getElementById('sheet-email-display').textContent = googleUser.email || '—';
 }
 
 // -----------------------------------------------------------------
@@ -712,6 +739,7 @@ function openBidSheet(it) {
   document.getElementById('sheet-name-input').value = savedName;
   document.getElementById('sheet-name-display').textContent = savedName || 'someone new';
   document.getElementById('sheet-name-edit').classList.toggle('open', !savedName);
+  document.getElementById('sheet-phone-input').value = localStorage.getItem('auction_phone') || '';
   document.getElementById('sheet-err').textContent = '';
   updateSheetAuthGate();
 
@@ -764,7 +792,7 @@ function setSheetBlockedUI(until) {
       return;
     }
     lock();
-    errEl.textContent = `You're temporarily blocked from bidding — try again in ${minutesLeftText(until)}.`;
+    errEl.textContent = `You're temporarily blocked from bidding — try again in ${countdownText(until)}.`;
   };
   tick();
   bidBlockInterval = setInterval(tick, 1000);
@@ -781,9 +809,11 @@ document.getElementById('sheet-confirm').onclick = async () => {
   const errEl = document.getElementById('sheet-err');
   errEl.textContent = '';
   const name = document.getElementById('sheet-name-input').value.trim();
+  const phone = normalizePhoneInput(document.getElementById('sheet-phone-input').value);
   const amount = Number(document.getElementById('sheet-amount').value);
   if (!googleUser) { errEl.textContent = 'Sign in with Google to bid.'; return; }
   if (!name) { errEl.textContent = 'Enter your name to bid.'; return; }
+  if (!isValidPhone(phone)) { errEl.textContent = 'Enter a valid 10-digit phone number starting with 7, 8, or 9.'; return; }
   if (!Number.isFinite(amount) || amount <= 0) { errEl.textContent = 'Enter a bid amount — it can\'t be zero or negative.'; return; }
 
   // Already blocked from an earlier absurd bid? Don't even try.
@@ -808,6 +838,7 @@ document.getElementById('sheet-confirm').onclick = async () => {
   const btn = document.getElementById('sheet-confirm');
   btn.disabled = true;
   localStorage.setItem('auction_name', name);
+  localStorage.setItem('auction_phone', phone);
 
   const itemRef = db.collection('items').doc(sheetItem.id);
   const bidRef = itemRef.collection('bids').doc();
@@ -826,7 +857,7 @@ document.getElementById('sheet-confirm').onclick = async () => {
         bidCount: (it.bidCount || 0) + 1,
       });
       tx.set(bidRef, {
-        name, amount, uid: googleUser.uid,
+        name, phone, email: googleUser.email || '', amount, uid: googleUser.uid,
         isGoogle: true, deviceId: getDeviceId(),
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
       });

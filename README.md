@@ -98,17 +98,30 @@ not bytes.
 4. Publish the rules — paste `firestore.rules` straight into **Firestore Database → Rules** in the console (or `firebase deploy --only firestore:rules` if you're using the CLI).
 5. Redeploy your hosting for the `firebase-init.js` change, then reload `admin.html` — you're in.
 
+## Bidder phone numbers
+
+Every bid requires a phone number alongside the bidder's (Google-verified)
+email — no OTP, just a basic format check enforced both in the browser and
+in `firestore.rules`: 10 digits, starting with 7, 8, or 9. It's shown next
+to each bid in the admin **Bids** panel and in the **Users** panel, so you
+can actually reach a bidder to confirm a high bid is real before relying on
+it.
+
+## Revoking a bid
+
+**Bids** panel → **View bids** on a lot → **Revoke bid** on any row. This
+permanently removes that bid and recalculates the lot's leading bid from
+whatever's left (or resets to the starting bid if nothing remains). If the
+revoked bid was the marked winner, that's cleared too. There's no "undo" —
+it's a real delete, same as removing a lot.
+
 ## 4. One-time Firestore index (Dashboard/Bids/Users panels)
 
-The Dashboard, Bids, and Users panels all read every bid across every
-lot at once using a Firestore "collection group" query. The **first**
-time `admin.html` runs after you deploy, that query will likely fail
-with a console error containing a link like
-`https://console.firebase.google.com/.../indexes?create_composite=...`.
-Click it once (or manually: Firestore → Indexes → Add a **Collection
-group** index → collection `bids`, field `timestamp`, descending), wait
-a minute for it to build, then reload. This is a one-time setup step,
-not a bug.
+Nothing to do here — the Dashboard, Bids, Users, and Payments panels each
+read bids straight from each lot's own `bids` subcollection (one listener
+per lot), not a cross-collection query, so there's no manual Firestore
+index to create. If you're seeing empty panels, it's a genuine connectivity/
+permissions issue, not a missing index — check the browser console.
 
 ## 5. Run the event
 
@@ -122,7 +135,7 @@ not a bug.
 
 ## On identity — what this does and doesn't guarantee
 
-- **Name is always required** on every bid.
+- **Name and phone number are always required** on every bid.
 - **Google sign-in is optional**, attaches a real account ID to a bid — use it as a tie-breaker/verification step on high-value lots.
 - The **device ID** is a convenience (remembers a name, and is the rate-limit key), not a security mechanism.
 - Someone technical enough could still call the Firestore API directly with a fabricated name — the rules stop a bid that's too low, closed, missing a name, or too fast, but not a determined bad actor. For real money and strangers-to-you, the next hardening step is a **Cloud Function** so nothing writes to Firestore directly from the browser (needs Blaze). Say the word if you want that version.

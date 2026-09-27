@@ -52,8 +52,6 @@
   .topbar .searchwrap svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--muted);}
   .topbar input{width:100%;padding:10px 14px 10px 38px;border-radius:10px;border:1px solid var(--border);
     background:var(--surface);color:var(--text);font-size:13px;}
-  .topbar .bell{width:38px;height:38px;border-radius:50%;background:var(--surface);border:1px solid var(--border);
-    display:flex;align-items:center;justify-content:center;color:var(--muted);flex:none;}
   .topbar .avatar{width:32px;height:32px;border-radius:50%;background:var(--gold);color:#1B140A;
     display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex:none;}
 
@@ -124,6 +122,7 @@
   .bidrow .rank{width:20px;color:var(--muted);flex:none;}
   .bidrow .who{flex:1;}
   .bidrow .who .g{font-size:11px;color:var(--muted);}
+  .bidrow .who .c{font-size:11px;color:var(--muted);display:block;}
   .bidrow .amt{font-weight:600;width:80px;text-align:right;flex:none;}
   .bidrow.iswinner{background:#2A2416;margin:0 -6px;padding:6px;border-radius:8px;}
   .bidrow button{flex:none;padding:5px 9px;font-size:11px;border:1px solid var(--border);
@@ -213,8 +212,7 @@
   <div class="main">
     <div class="topbar">
       <button class="btn-ghost menu-toggle" id="menu-toggle" style="display:none;">☰</button>
-      <div class="searchwrap"><span class="ic"></span><input id="global-search" placeholder="Search items, users, bids…"></div>
-      <div class="bell"><span class="ic"></span></div>
+      <div class="searchwrap"><span class="ic"></span><input id="global-search" placeholder="Search items…"></div>
       <div class="avatar" id="avatar">A</div>
     </div>
 
@@ -272,8 +270,13 @@
                 <div class="form-row"><label for="f-start">Starting bid (₹)</label><input id="f-start" type="number" min="0" max="100000000" required></div>
                 <div class="form-row"><label for="f-inc">Increment (₹)</label><input id="f-inc" type="number" min="1" max="100000000" value="500" required></div>
               </div>
-              <div class="form-row"><label for="f-ends">Bidding closes at <span style="font-weight:400;">(optional)</span></label>
-                <input id="f-ends" type="datetime-local"></div>
+              <div class="form-row"><label>Bidding closes at <span style="font-weight:400;">(optional — leave blank for no deadline)</span></label>
+                <div class="row2">
+                  <input id="f-ends-date" type="date" aria-label="Closing date">
+                  <input id="f-ends-time" type="time" aria-label="Closing time">
+                </div>
+                <button type="button" class="btn-ghost" id="f-ends-clear" style="margin-top:8px;">Clear deadline</button>
+              </div>
               <div class="form-actions">
                 <button class="btn-primary" id="submitLot" type="submit">Add lot</button>
                 <button class="btn-cancel" id="cancelEdit" type="button">Cancel edit</button>
@@ -295,7 +298,10 @@
     <!-- ===================== BIDS ===================== -->
     <div class="panel" id="panel-bids">
       <h1>Bids &amp; winners</h1>
-      <p class="sub">Rank bids per lot and mark the winner. If they don't pay, just set the next row down.</p>
+      <p class="sub">Rank bids per lot and mark the winner. See exactly who placed what, and revoke any bid you don't trust — it's removed for good and the leading bid recalculates automatically.</p>
+      <div style="display:flex;justify-content:flex-end;margin-bottom:14px;">
+        <button class="btn-ghost" id="exportCsvBids">Export bids as CSV</button>
+      </div>
       <div id="bids-lots"></div>
     </div>
 
@@ -304,7 +310,7 @@
       <h1>Users</h1>
       <p class="sub">Everyone who's placed at least one bid, aggregated from bid history.</p>
       <div class="block">
-        <table><thead><tr><th>Bidder</th><th>Verified</th><th>Bids placed</th><th style="text-align:right;">Total bid ₹</th></tr></thead>
+        <table><thead><tr><th>Bidder</th><th>Phone</th><th>Verified</th><th>Bids placed</th><th style="text-align:right;">Total bid ₹</th></tr></thead>
           <tbody id="users-body"></tbody></table>
       </div>
     </div>
@@ -376,7 +382,6 @@ document.querySelectorAll('.navitem[data-panel] .ic').forEach((el, i) => {
   el.innerHTML = ic(names[i]);
 });
 document.querySelector('.searchwrap .ic').innerHTML = ic('search');
-document.querySelector('.bell .ic').innerHTML = ic('bell');
 document.querySelectorAll('.statcard .lbl .ic').forEach((el, i) => {
   el.innerHTML = ic(['box','gavel','wallet','users'][i]);
 });
@@ -463,7 +468,6 @@ async function refreshGate(u) {
   document.getElementById('settings-uid').textContent = u.email;
   currentAdminEmail = (u.email || '').toLowerCase();
   loadLots();
-  loadAllBids();
 }
 auth.onAuthStateChanged(refreshGate);
 
@@ -479,11 +483,12 @@ document.querySelectorAll('.navitem[data-panel]').forEach(nav => nav.onclick = (
 });
 document.getElementById('menu-toggle').onclick = () => document.getElementById('sidebar').classList.toggle('open');
 
+let itemsSearchTerm = '';
 document.getElementById('global-search').addEventListener('input', (e) => {
-  const q = e.target.value.trim();
-  if (!q) return;
-  // A search is most useful jumping straight to item management.
-  document.querySelector('.navitem[data-panel="items"]').click();
+  itemsSearchTerm = e.target.value.trim().toLowerCase();
+  const itemsNav = document.querySelector('.navitem[data-panel="items"]');
+  if (!itemsNav.classList.contains('on')) itemsNav.click();
+  renderLots();
 });
 
 // -----------------------------------------------------------------
@@ -503,27 +508,47 @@ function loadLots() {
     renderLots();
     renderDashboardStats();
     if (document.getElementById('panel-bids').classList.contains('active')) renderBidsPanel();
+    resyncEditFormDeadline();
+    syncBidListeners();
   });
 }
 
-// All bids across every lot, via a collection-group query. The FIRST time
-// this runs, Firestore may show a console error with a "create index" link —
-// click it once (or add it manually under Firestore → Indexes → Collection
-// group, field "timestamp", scope "Collection group"); after that it's instant.
+// All bids across every lot. Instead of one collection-group query (which
+// needs a manual, easy-to-miss Firestore index before it'll return
+// anything — the silent cause behind Dashboard/Bids/Users/Payments all
+// looking empty on a fresh setup), this attaches one plain listener per
+// lot's own bids subcollection. Plain single-collection queries need no
+// index setup at all, so Users/Dashboard/Bids/CSV export all work the
+// moment there are bids, with nothing to configure in the Firebase console.
 let allBids = [];
-function loadAllBids() {
-  db.collectionGroup('bids').orderBy('timestamp', 'desc').limit(500)
-    .onSnapshot(snap => {
-      allBids = snap.docs.map(d => ({ id: d.id, itemId: d.ref.parent.parent.id, ...d.data() }));
-      renderDashboardStats();
-      renderRecentBids();
-      renderChart();
-      if (document.getElementById('panel-users').classList.contains('active')) renderUsersPanel();
-    }, err => {
-      console.warn('Bids collection-group query needs an index — see console link.', err);
-      document.getElementById('recent-bids-body').innerHTML =
-        '<tr><td colspan="4" style="color:var(--muted);">Waiting on a one-time Firestore index — see browser console for the link, or check the README.</td></tr>';
-    });
+const bidListeners = {}; // itemId -> unsubscribe
+function syncBidListeners() {
+  const currentIds = new Set(lots.map(l => l.id));
+  Object.keys(bidListeners).forEach(id => {
+    if (!currentIds.has(id)) {
+      bidListeners[id]();
+      delete bidListeners[id];
+      allBids = allBids.filter(b => b.itemId !== id);
+    }
+  });
+  lots.forEach(it => {
+    if (bidListeners[it.id]) return;
+    bidListeners[it.id] = db.collection('items').doc(it.id).collection('bids')
+      .onSnapshot(snap => {
+        const itemBids = snap.docs.map(d => ({ id: d.id, itemId: it.id, ...d.data() }));
+        allBids = allBids.filter(b => b.itemId !== it.id).concat(itemBids);
+        onBidsChanged();
+      }, err => console.warn('Could not load bids for lot', it.id, err));
+  });
+}
+function bidMillis(b) { return b.timestamp && b.timestamp.toDate ? b.timestamp.toDate().getTime() : 0; }
+function onBidsChanged() {
+  allBids.sort((a, b) => bidMillis(b) - bidMillis(a));
+  renderDashboardStats();
+  renderRecentBids();
+  renderChart();
+  if (document.getElementById('panel-users').classList.contains('active')) renderUsersPanel();
+  if (document.getElementById('panel-bids').classList.contains('active')) renderBidsPanel();
 }
 
 // -----------------------------------------------------------------
@@ -610,9 +635,13 @@ function svgAreaChart(values, labels) {
 // -----------------------------------------------------------------
 function renderLots() {
   const el = document.getElementById('lots');
-  document.getElementById('lots-heading').textContent = lots.length ? `Lots (${lots.length})` : 'Lots';
+  const list = itemsSearchTerm
+    ? lots.filter(it => (it.title || '').toLowerCase().includes(itemsSearchTerm) || (it.category || '').toLowerCase().includes(itemsSearchTerm))
+    : lots;
+  document.getElementById('lots-heading').textContent = lots.length ? `Lots (${list.length}${itemsSearchTerm ? ' of ' + lots.length : ''})` : 'Lots';
   if (!lots.length) { el.innerHTML = '<p class="empty-lots">No lots yet — add the first one on the left.</p>'; return; }
-  el.innerHTML = lots.map(it => `
+  if (!list.length) { el.innerHTML = '<p class="empty-lots">No lots match "' + escapeHtml(itemsSearchTerm) + '".</p>'; return; }
+  el.innerHTML = list.map(it => `
     <div class="lotcard">
       <img src="${it.imageUrl || ''}" onerror="this.style.visibility='hidden'">
       <div class="body">
@@ -665,6 +694,7 @@ async function extendLotDeadline(itemId, seconds) {
 }
 
 let editingId = null;
+let editingEndsAtMillis = null;
 let pendingFile = null;
 const fTitle = document.getElementById('f-title');
 const fCat = document.getElementById('f-cat');
@@ -672,7 +702,9 @@ const fDesc = document.getElementById('f-desc');
 const fImg = document.getElementById('f-img');
 const fStart = document.getElementById('f-start');
 const fInc = document.getElementById('f-inc');
-const fEnds = document.getElementById('f-ends');
+const fEndsDate = document.getElementById('f-ends-date');
+const fEndsTime = document.getElementById('f-ends-time');
+const fEndsClear = document.getElementById('f-ends-clear');
 const fFile = document.getElementById('f-file');
 const photoPreview = document.getElementById('photo-preview');
 const urlWrap = document.getElementById('url-wrap');
@@ -703,7 +735,8 @@ function startEdit(id) {
   photoPreview.src = it.imageUrl || '';
   fStart.value = it.startingBid ?? it.currentBid ?? '';
   fInc.value = it.increment ?? 500;
-  fEnds.value = it.endsAt && it.endsAt.toDate ? toLocalInputValue(it.endsAt.toDate()) : '';
+  setEndsFields(it.endsAt && it.endsAt.toDate ? it.endsAt.toDate() : null);
+  editingEndsAtMillis = it.endsAt && it.endsAt.toDate ? it.endsAt.toDate().getTime() : null;
   document.getElementById('form-legend').textContent = 'Editing LOT ' + String(it.lotNumber).padStart(3, '0');
   submitBtn.textContent = 'Save changes';
   cancelEditBtn.style.display = 'inline-block';
@@ -711,14 +744,45 @@ function startEdit(id) {
   document.querySelector('.navitem[data-panel="items"]').click();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
-function toLocalInputValue(d) {
+// Splits a Date into the separate date/time inputs (or blanks both if null) —
+// two plain native inputs are far more reliable to read, set and CLEAR across
+// browsers than a single datetime-local field, which some mobile browsers
+// won't let you empty out once a value is set.
+function setEndsFields(d) {
   const pad = n => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  fEndsDate.value = d ? `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}` : '';
+  fEndsTime.value = d ? `${pad(d.getHours())}:${pad(d.getMinutes())}` : '';
+}
+function readEndsFields() {
+  if (!fEndsDate.value) return null;
+  const time = fEndsTime.value || '23:59';
+  const d = new Date(`${fEndsDate.value}T${time}:00`);
+  return isNaN(d.getTime()) ? null : d;
+}
+fEndsClear.onclick = () => setEndsFields(null);
+
+// While a lot is open for editing, if its deadline changes underneath us
+// (e.g. someone clicks one of the "Extend deadline" quick buttons on the
+// same lot while the edit form is still open) the form used to keep
+// showing the OLD time — and saving would silently overwrite the extension
+// right back to it. Re-sync just this one field, and only when the person
+// isn't actively typing in it.
+function resyncEditFormDeadline() {
+  if (!editingId) return;
+  const it = lots.find(l => l.id === editingId);
+  if (!it) return;
+  const millis = it.endsAt && it.endsAt.toDate ? it.endsAt.toDate().getTime() : null;
+  if (millis === editingEndsAtMillis) return;
+  if (document.activeElement === fEndsDate || document.activeElement === fEndsTime) return;
+  setEndsFields(it.endsAt && it.endsAt.toDate ? it.endsAt.toDate() : null);
+  editingEndsAtMillis = millis;
 }
 function resetForm() {
   editingId = null;
+  editingEndsAtMillis = null;
   pendingFile = null;
   document.getElementById('lotForm').reset();
+  setEndsFields(null);
   photoPreview.src = '';
   urlWrap.style.display = 'none';
   document.getElementById('desc-count').textContent = '0 / 4000';
@@ -786,13 +850,15 @@ document.getElementById('lotForm').addEventListener('submit', async (e) => {
     } else if (fImg.value.trim()) {
       imageUrl = fImg.value.trim();
     }
-    const endsAt = fEnds.value ? firebase.firestore.Timestamp.fromDate(new Date(fEnds.value)) : null;
+    const endsDate = readEndsFields();
+    const endsAt = endsDate ? firebase.firestore.Timestamp.fromDate(endsDate) : null;
 
     if (editingId) {
       const it = lots.find(l => l.id === editingId);
       const patch = { title, category, description, imageUrl, startingBid: start, increment: inc, endsAt };
       if (!it || (it.bidCount || 0) === 0) patch.currentBid = start;
       await db.collection('items').doc(editingId).update(patch);
+      editingEndsAtMillis = endsDate ? endsDate.getTime() : null;
     } else {
       const nextLotNumber = lots.reduce((m, l) => Math.max(m, l.lotNumber || 0), 0) + 1;
       await db.collection('items').add({
@@ -863,12 +929,15 @@ function renderBidRows(itemId) {
   if (!bids.length) { container.innerHTML = '<p class="empty">No bids on this lot yet.</p>'; return; }
   container.innerHTML = bids.map((b, i) => {
     const isWinner = it && it.winnerBidId === b.id;
+    const contact = [b.phone ? '📞 ' + escapeHtml(b.phone) : '', b.email ? escapeHtml(b.email) : '']
+      .filter(Boolean).join(' · ');
     return `<div class="bidrow ${isWinner ? 'iswinner' : ''}">
       <span class="rank">#${i + 1}</span>
-      <span class="who">${escapeHtml(b.name)}${b.isGoogle ? ' <span class="g">· Google verified</span>' : ''}</span>
+      <span class="who">${escapeHtml(b.name)}${b.isGoogle ? ' <span class="g">· Google verified</span>' : ''}
+        ${contact ? '<span class="c">' + contact + '</span>' : ''}</span>
       <span class="amt">${money(b.amount)}</span>
-      <button class="${isWinner ? '' : 'set'}" data-set="${b.id}">${isWinner ? 'Winner ✓' : 'Set winner'}</button>
-      <button class="btn-danger" data-invalidate="${b.id}">Delete bid</button>
+      <button class="${isWinner ? '' : 'set'}" data-set="${b.id}" ${isWinner ? 'disabled' : ''}>${isWinner ? 'Winner ✓' : 'Set winner'}</button>
+      <button class="btn-danger" data-invalidate="${b.id}">Revoke bid</button>
     </div>`;
   }).join('');
   container.querySelectorAll('[data-set]').forEach(btn => btn.onclick = () => {
@@ -879,14 +948,15 @@ function renderBidRows(itemId) {
       winnerSetAt: firebase.firestore.FieldValue.serverTimestamp(),
     });
   });
-  container.querySelectorAll('[data-invalidate]').forEach(btn => btn.onclick = () => invalidateBid(itemId, btn.dataset.invalidate));
+  container.querySelectorAll('[data-invalidate]').forEach(btn => btn.onclick = () => invalidateBid(itemId, btn.dataset.invalidate, bids.find(b => b.id === btn.dataset.invalidate)));
 }
 
 // Removes a bogus/joke bid entirely and recalculates the lot's leading
 // bid from whatever remains (or resets to the starting bid if nothing
 // does). Clears the marked winner too, if the invalidated bid held it.
-async function invalidateBid(itemId, bidId) {
-  if (!confirm('Delete this bid? It is permanently removed and the leading bid is recalculated.')) return;
+async function invalidateBid(itemId, bidId, bid) {
+  const who = bid ? `${bid.name} (${money(bid.amount)}${bid.phone ? ', ' + bid.phone : ''})` : 'this bid';
+  if (!confirm(`Revoke ${who}? It is permanently removed and the leading bid is recalculated.`)) return;
   const itemRef = db.collection('items').doc(itemId);
   const bidsRef = itemRef.collection('bids');
   try {
@@ -918,7 +988,7 @@ async function invalidateBid(itemId, bidId) {
     }
     await itemRef.update(patch);
   } catch (err) {
-    alert('Could not invalidate bid: ' + err.message);
+    alert('Could not revoke bid: ' + err.message);
   }
 }
 
@@ -929,41 +999,47 @@ function renderUsersPanel() {
   const map = new Map();
   allBids.forEach(b => {
     const key = b.uid || ('n:' + (b.name || '').toLowerCase().trim());
-    if (!map.has(key)) map.set(key, { name: b.name, isGoogle: !!b.isGoogle, count: 0, total: 0 });
+    if (!map.has(key)) map.set(key, { name: b.name, phone: b.phone || '', isGoogle: !!b.isGoogle, count: 0, total: 0 });
     const rec = map.get(key);
+    if (b.phone) rec.phone = b.phone; // most recent bid's phone wins if it ever changes
     rec.count++;
     rec.total += b.amount || 0;
   });
   const rows = [...map.values()].sort((a, b) => b.total - a.total);
   document.getElementById('users-body').innerHTML = rows.length
-    ? rows.map(r => `<tr><td>${escapeHtml(r.name)}</td><td>${r.isGoogle ? 'Yes' : 'No'}</td>
+    ? rows.map(r => `<tr><td>${escapeHtml(r.name)}</td><td>${escapeHtml(r.phone || '—')}</td><td>${r.isGoogle ? 'Yes' : 'No'}</td>
         <td>${r.count}</td><td style="text-align:right;">${money(r.total)}</td></tr>`).join('')
-    : '<tr><td colspan="4" style="color:var(--muted);">No bidders yet.</td></tr>';
+    : '<tr><td colspan="5" style="color:var(--muted);">No bidders yet.</td></tr>';
 }
 
 // -----------------------------------------------------------------
 // Payments panel — CSV export
 // -----------------------------------------------------------------
-document.getElementById('exportCsv').onclick = async () => {
-  const btn = document.getElementById('exportCsv');
-  btn.disabled = true;
-  btn.textContent = 'Building…';
-  const rows = [['Lot', 'Title', 'Rank', 'Bidder', 'Amount', 'Google verified', 'Marked winner']];
+function buildBidsCsv() {
+  const rows = [['Lot', 'Title', 'Rank', 'Bidder', 'Phone', 'Amount', 'Google verified', 'Marked winner']];
   for (const it of lots) {
     const lotLabel = 'LOT ' + String(it.lotNumber).padStart(3, '0');
     const bids = allBids.filter(b => b.itemId === it.id).sort((a, b) => b.amount - a.amount);
-    if (!bids.length) { rows.push([lotLabel, it.title, '', '(no bids)', '', '', '']); continue; }
-    bids.forEach((b, i) => rows.push([lotLabel, it.title, i + 1, b.name, b.amount, b.isGoogle ? 'Yes' : 'No', it.winnerBidId === b.id ? 'WINNER' : '']));
+    if (!bids.length) { rows.push([lotLabel, it.title, '', '(no bids)', '', '', '', '']); continue; }
+    bids.forEach((b, i) => rows.push([lotLabel, it.title, i + 1, b.name, b.phone || '', b.amount, b.isGoogle ? 'Yes' : 'No', it.winnerBidId === b.id ? 'WINNER' : '']));
   }
-  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  return rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+}
+function downloadBidsCsv(btn) {
+  const prevLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Building…';
+  const csv = buildBidsCsv();
   const blob = new Blob([csv], { type: 'text/csv' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = 'auction-results.csv';
   a.click();
   btn.disabled = false;
-  btn.textContent = 'Export as CSV';
-};
+  btn.textContent = prevLabel;
+}
+document.getElementById('exportCsv').onclick = (e) => downloadBidsCsv(e.currentTarget);
+document.getElementById('exportCsvBids').onclick = (e) => downloadBidsCsv(e.currentTarget);
 </script>
 </body>
 </html>

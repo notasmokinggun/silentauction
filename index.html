@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Silent Auction</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔨</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -437,6 +438,16 @@ let googleUser = null;
 let itemCountdownTimer = null;
 let gridCountdownTimer = null;
 let mybidsTab = 'active';
+// Declared up here (not down near the reading-mode code that uses it)
+// deliberately: showView() -> closeReadingMode() -> reads readingOpen, and
+// showView() gets called during the very first synchronous run of this
+// script (see the splash-screen auto-navigation below) — if readingOpen
+// were declared later in the file, that first call would throw
+// "Cannot access 'readingOpen' before initialization" (a temporal-dead-zone
+// error), which aborts the ENTIRE rest of this script, including the code
+// that loads the items. That one ordering bug was the real cause of the
+// home screen going permanently blank — not bidding, not Firestore.
+let readingOpen = false;
 
 setIcon('search-toggle', 'search');
 setIcon('item-back', 'back');
@@ -695,8 +706,9 @@ function renderItemView(it) {
 // Reading mode — tapping the photo swaps to a distraction-free view of
 // just the write-up, with the bid action (and a "Detailed" photo
 // pop-up) directly below it, instead of the image itself.
+// (readingOpen itself is declared up near the top of the script — see
+// the comment there for why.)
 // -----------------------------------------------------------------
-let readingOpen = false;
 function populateReadingOverlay(it) {
   const closed = it.active === false;
   document.getElementById('reading-lotnum').textContent = 'LOT ' + String(it.lotNumber).padStart(3, '0');

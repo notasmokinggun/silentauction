@@ -224,6 +224,12 @@
   .profile-row .k{color:var(--muted);font-size:12px;}
   .profile-input{width:100%;padding:11px;border-radius:10px;border:1px solid var(--border);
     background:var(--surface2);color:var(--text);font-size:14px;margin-top:6px;}
+  .input-with-confirm{display:flex;gap:8px;align-items:center;}
+  .input-with-confirm input{flex:1;}
+  .confirm-btn{flex:none;width:40px;height:40px;border-radius:10px;border:1px solid var(--gold);
+    background:var(--gold);color:#1B140A;font-size:18px;font-weight:700;display:flex;
+    align-items:center;justify-content:center;}
+  .confirm-btn.saved{background:var(--green);border-color:var(--green);}
   .adminlink{display:block;text-align:center;margin-top:30px;font-size:12px;color:var(--muted);}
 
   /* ---------- Bottom nav ---------- */
@@ -344,7 +350,10 @@
   <div class="top"><h1 class="serif">Profile</h1></div>
   <div class="profile-card">
     <label class="k" style="font-size:12px;color:var(--muted);">Your name (used on bids)</label>
-    <input class="profile-input" id="profile-name">
+    <div class="input-with-confirm" style="margin-top:6px;">
+      <input class="profile-input" id="profile-name" style="margin-top:0;">
+      <button type="button" class="confirm-btn" id="profile-name-save" aria-label="Save name">✓</button>
+    </div>
   </div>
   <div class="profile-card" id="profile-google"></div>
   <a class="adminlink" href="admin.html">Auction organizer? Open admin</a>
@@ -381,7 +390,12 @@
       <span>Bidding as <strong id="sheet-name-display"></strong></span>
       <button id="sheet-name-change">Change</button>
     </div>
-    <div class="name-edit" id="sheet-name-edit"><input id="sheet-name-input" placeholder="Full name" maxlength="79"></div>
+    <div class="name-edit" id="sheet-name-edit">
+      <div class="input-with-confirm">
+        <input id="sheet-name-input" placeholder="Full name" maxlength="79">
+        <button type="button" class="confirm-btn" id="sheet-name-save" aria-label="Save name">✓</button>
+      </div>
+    </div>
     <div class="contact-block">
       <div class="contact-row"><span class="k">Email</span><span class="v" id="sheet-email-display"></span></div>
       <label for="sheet-phone-input">Phone number <span class="req">*</span></label>
@@ -880,9 +894,30 @@ function setSheetBlockedUI(until) {
 
 document.getElementById('sheet-name-change').onclick = () => {
   document.getElementById('sheet-name-edit').classList.add('open');
+  document.getElementById('sheet-name-input').focus();
 };
 document.getElementById('sheet-name-input').addEventListener('input', (e) => {
   document.getElementById('sheet-name-display').textContent = e.target.value.trim() || 'someone new';
+});
+function saveSheetName() {
+  const input = document.getElementById('sheet-name-input');
+  const btn = document.getElementById('sheet-name-save');
+  const val = input.value.trim();
+  document.getElementById('sheet-name-display').textContent = val || 'someone new';
+  input.blur();
+  // A quick visual "saved" pulse before collapsing, so tapping Confirm
+  // (or hitting Enter) actually feels like it did something, instead of
+  // the box just vanishing.
+  btn.classList.add('saved');
+  btn.textContent = '✓';
+  setTimeout(() => {
+    document.getElementById('sheet-name-edit').classList.remove('open');
+    btn.classList.remove('saved');
+  }, 220);
+}
+document.getElementById('sheet-name-save').onclick = saveSheetName;
+document.getElementById('sheet-name-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); saveSheetName(); }
 });
 
 document.getElementById('sheet-confirm').onclick = async () => {
@@ -1038,6 +1073,18 @@ function renderProfile() {
 }
 document.getElementById('profile-name').addEventListener('change', (e) => {
   localStorage.setItem('auction_name', e.target.value.trim());
+});
+function saveProfileName() {
+  const input = document.getElementById('profile-name');
+  const btn = document.getElementById('profile-name-save');
+  localStorage.setItem('auction_name', input.value.trim());
+  input.blur();
+  btn.classList.add('saved');
+  setTimeout(() => btn.classList.remove('saved'), 700);
+}
+document.getElementById('profile-name-save').onclick = saveProfileName;
+document.getElementById('profile-name').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); saveProfileName(); }
 });
 </script>
 </body>

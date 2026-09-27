@@ -65,35 +65,41 @@ Alternatively open `owner-setup.html` in the same folder as `admin.html`.
 
 1. Type the email you want as owner and choose a password.
 2. Click **Create my account**. If you already have that account, use **I already
-   have an account**. For a Google-only account, use **Create Password** on
-   admin.html first to set a password.
-3. Open the verification email in your inbox and click its link.
-4. Return to the setup page and click **I've verified my email**.
-5. Paste the setup code from step 5 above.
-6. Click **Make this my owner account**.
+   have an account** instead.
+3. Paste the setup code from step 5 above.
+4. Click **Make this my owner account**.
 
-Wait for “Owner saved”. Your email/account is now stored in Firebase, the setup
-code is disabled, and owner setup is locked. You do not manually copy a UID.
+No email is sent at any point in this flow. Wait for "Owner saved". Your
+email/account is now stored in Firebase, the setup code is disabled, and
+owner setup is locked. You do not manually copy a UID.
 
 ## 7. Add other admins when you want
 
 Open **Admin → Settings → Manage admin access**, enter their email and click
-**Add admin**. They go to the admin login page, enter that email, and tap
-**Create Password** — this emails them a one-click setup link that creates and
-verifies the account, then asks them to choose a password. If already
-registered, they just sign in normally.
+**Add admin**. This only adds the email to the allowlist — nothing is
+emailed to them. They then go to the admin login page, enter that exact
+email, choose their own password, and tap **Create Password**. The app
+checks the allowlist first: if the email hasn't been approved, no account
+is created at all. If they already have an account, they just sign in
+normally with their email and password.
 
 Only your owner account can approve or remove admins. Other admins can manage
-the auction, but cannot approve anybody else. No invitation is sent automatically.
-Guests continue using Google, with no new password or OTP required by this site.
+the auction, but cannot approve anybody else. There is no self-service
+"forgot password" — since no email is ever sent, a locked-out admin needs
+the owner (or you) to delete their account in the Firebase console
+(Authentication tab), after which they can run **Create Password** again
+with the same email. Guests continue using Google, with no new password or
+OTP required by this site.
 
 ## If something fails
 
 - Google says origin not allowed: recheck both domain settings in step 3 and the
   configured OAuth client ID.
-- Permission denied: ensure you published the latest rules, verified your email,
-  and selected the correct Firebase project.
+- Permission denied: ensure you published the latest rules and selected the
+  correct Firebase project. Email verification is never required by this app.
 - Setup cannot finish: check the setup ID is exact and `enabled` is a boolean
   true. If an owner was already saved, setup is intentionally locked; use that
   owner's account instead.
-- Setup link missing: the live site is probably still using an older branch/build.
+- "This email hasn't been approved": the owner needs to add the exact email
+  first on the Admin Access page before an account can be created for it.
+- Setup page missing: the live site is probably still using an older branch/build.

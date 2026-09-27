@@ -22,22 +22,32 @@ Bids / Profile), full sidebar dashboard for admin.
 - **`item.html`** — a one-line redirect to `index.html?id=...`, kept only
   so QR codes printed before this version still work.
 
-## Adding more admins — no email verification, no password
+## Adding more admins — allowlist first, no email ever sent
 
-The first admin (you) gets in via a small hardcoded list in
-`firebase-init.js` / `firestore.rules` — that's the only manual step,
+The first admin (you, the owner) gets in via a small hardcoded list in
+`firebase-init.js` / `firestore.rules`, or by claiming ownership through
+`owner-setup.html` with a one-time setup code — that's the only manual step,
 ever. Every admin after that is added through the app itself, by email:
 
-1. You (already an admin) go to **Settings → Manage admins**, type the
-   new person's email (the one their Google account uses) and an
-   optional name, click **Add admin**.
-2. They open `admin.html` and **Sign in with Google** using that same
-   email — they're in immediately. No prior sign-in step needed, no
-   password, no verification email.
+1. You (the owner) go to **Admin Access** (`admin-access.html`, or Settings →
+   Manage admin access), type the new person's email, and click **Add
+   admin**. This only writes their email to an allowlist (`adminEmails` in
+   Firestore) — nothing is sent to them.
+2. They open `admin.html`, enter that exact email, choose their own
+   password, and tap **Create Password**. The app checks the allowlist
+   first: if the email isn't approved, no account is created at all — they
+   simply can't sign up. If it is approved, their account is created
+   immediately and they're in — no verification link, no password emailed,
+   no waiting.
 
-Admins can also be removed from that same page (except the bootstrap
-admin, which is still edited by hand in the two files above, as the
-one fallback that can never lock you out).
+There is no email-based password reset either, for the same reason: nothing
+is ever emailed. If an admin forgets their password, the owner deletes
+their account in the Firebase console (Authentication tab) and they run
+**Create Password** again.
+
+Admins can also be removed from the Admin Access page (except the bootstrap
+admin, which is still edited by hand in the two files above, as the one
+fallback that can never lock you out).
 
 ## Bid rate limiting
 

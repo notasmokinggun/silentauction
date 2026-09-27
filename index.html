@@ -343,9 +343,6 @@
     <input class="profile-input" id="profile-name">
   </div>
   <div class="profile-card" id="profile-google"></div>
-  <div class="profile-card">
-    <button class="cta cta-outline" id="clear-bids-btn">Clear my bid history on this device</button>
-  </div>
   <a class="adminlink" href="admin.html">Auction organizer? Open admin</a>
 </section>
 
@@ -1008,12 +1005,6 @@ function renderProfile() {
 document.getElementById('profile-name').addEventListener('change', (e) => {
   localStorage.setItem('auction_name', e.target.value.trim());
 });
-document.getElementById('clear-bids-btn').onclick = () => {
-  if (confirm('Clear your local bid history on this device? This only affects what "My Bids" shows you — it does not withdraw any bids.')) {
-    localStorage.removeItem('my_bids');
-    renderMyBids();
-  }
-};
 </script>
 </body>
 </html>

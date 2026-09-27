@@ -241,12 +241,16 @@
 
   /* ---------- Laptop/desktop: this is a phone-shaped app, so on a wide
      screen show it as a centered, contained "phone frame" instead of
-     stretching cards and the bottom nav edge-to-edge across the window. ---------- */
+     stretching cards and the bottom nav edge-to-edge across the window.
+     Outer background is a flat neutral, clearly darker/cooler than the
+     app's own warm dark tones, with a visible hairline + real shadow, so
+     the frame reads as a deliberate card and not a stray line. ---------- */
   @media (min-width:640px){
-    html,body{background:var(--bg2);}
-    .view{max-width:480px;margin:0 auto;box-shadow:0 0 0 1px var(--border),0 30px 70px rgba(0,0,0,.5);}
+    html,body{background:#08090a;}
+    .view{max-width:480px;margin:0 auto;box-shadow:0 0 0 1px rgba(255,255,255,.12),0 40px 100px rgba(0,0,0,.75);}
     .bottomnav,.sheet,.reading-overlay,.lightbox-overlay,.success-overlay{
       max-width:480px;width:100%;left:50%;right:auto;transform:translateX(-50%);
+      box-shadow:0 0 0 1px rgba(255,255,255,.12);
     }
   }
 </style>

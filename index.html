@@ -501,39 +501,67 @@ auth.onAuthStateChanged(u => {
 let gisReady = false;
 function initGis() {
   if (gisReady || !window.google || !google.accounts) return;
+  try {
+    google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: async (resp) => {
+        const errEl = document.getElementById('sheet-err');
+        try {
+          const credential = firebase.auth.GoogleAuthProvider.credential(resp.credential);
+          await auth.signInWithCredential(credential);
+          if (errEl) errEl.textContent = '';
+        } catch (err) {
+          if (errEl) errEl.textContent = 'Sign-in failed: ' + (err.message || err);
+        }
+      },
+      ux_mode: 'popup',
+      auto_select: false,
+    });
+  } catch (initErr) {
+    // A bad/misconfigured GOOGLE_CLIENT_ID throws here synchronously — without
+    // this, that exception was uncaught, gisReady never got set, and every
+    // slot stayed blank forever with nothing but a console error nobody but a
+    // developer would ever see.
+    showGisLoadError('Google Sign-In is misconfigured: ' + (initErr.message || initErr));
+    return;
+  }
   gisReady = true;
-  google.accounts.id.initialize({
-    client_id: GOOGLE_CLIENT_ID,
-    callback: async (resp) => {
-      const errEl = document.getElementById('sheet-err');
-      try {
-        const credential = firebase.auth.GoogleAuthProvider.credential(resp.credential);
-        await auth.signInWithCredential(credential);
-        if (errEl) errEl.textContent = '';
-      } catch (err) {
-        if (errEl) errEl.textContent = 'Sign-in failed: ' + (err.message || err);
-      }
-    },
-    ux_mode: 'popup',
-    auto_select: false,
-  });
   renderGoogleButton();
 }
 function renderGoogleButton() {
-  if (!gisReady) return;
   // Render into every GIS button slot currently in the DOM (bid sheet AND
-  // profile tab share this), so both use the same working sign-in flow.
+  // profile tab share this) — whichever state we're in (loaded, still
+  // loading, or failed), so a slot never sits blank with no explanation.
   document.querySelectorAll('.google-btn-slot').forEach(el => {
-    el.innerHTML = '';
-    google.accounts.id.renderButton(el, { type: 'standard', theme: 'outline', size: 'large', text: 'continue_with', shape: 'pill' });
+    if (gisReady) {
+      el.innerHTML = '';
+      google.accounts.id.renderButton(el, { type: 'standard', theme: 'outline', size: 'large', text: 'continue_with', shape: 'pill' });
+    } else if (gisLoadError) {
+      el.innerHTML = `<p style="font-size:13px;color:var(--red);margin:0;">${gisLoadError}</p>`;
+    }
+    // Still loading and no error yet: leave the slot as-is: renderGoogleButton()
+    // gets called again the moment either state resolves (see loadGis below).
   });
+}
+let gisLoadError = null;
+function showGisLoadError(msg) {
+  if (gisReady || gisLoadError) return; // don't override a success or an earlier message
+  gisLoadError = msg;
+  renderGoogleButton();
 }
 (function loadGis() {
   const s = document.createElement('script');
   s.src = 'https://accounts.google.com/gsi/client';
   s.async = true;
   s.onload = initGis;
+  // Previously there was no failure path at all: if this script got blocked
+  // (network hiccup, an ad/tracker blocker, a restrictive network) the sign-in
+  // slot just stayed permanently blank with zero indication why — which looks
+  // exactly like "Google sign-in isn't working," with no error anywhere to
+  // go on. Both a load failure and a load that never completes are now surfaced.
+  s.onerror = () => showGisLoadError('Google Sign-In couldn\'t load — check your connection, or try disabling an ad/tracker blocker for this site, then reload.');
   document.head.appendChild(s);
+  setTimeout(() => showGisLoadError('Google Sign-In is taking unusually long to load. Try reloading the page.'), 6000);
 })();
 function updateSheetAuthGate() {
   const signedIn = !!googleUser;

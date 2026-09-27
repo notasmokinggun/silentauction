@@ -393,6 +393,10 @@ const gate = document.getElementById('gate');
 const unverified = document.getElementById('unverified');
 const denied = document.getElementById('denied');
 const shell = document.getElementById('shell');
+// Set right before a sendEmailVerification() failure that happens after the
+// screen has already navigated away from #gate (see createpw-btn below) —
+// refreshGate() surfaces it on the visible #unverified screen, then clears it.
+let pendingVerifyError = null;
 
 document.getElementById('signin-form').onsubmit = async (e) => {
   e.preventDefault();
@@ -419,7 +423,19 @@ document.getElementById('createpw-btn').onclick = async () => {
   try {
     await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
     const result = await auth.createUserWithEmailAndPassword(email, password);
-    await result.user.sendEmailVerification();
+    // Account creation signs the user in immediately, which flips the whole
+    // screen from #gate to #unverified (via onAuthStateChanged -> refreshGate)
+    // before we even get here. That screen's copy always claims a link was
+    // sent — so if sendEmailVerification below actually fails, the real error
+    // must be shown on #unverified-err (the screen the person can see), not
+    // #signin-err (now hidden inside the gate div they've been navigated away
+    // from), or the failure is invisible.
+    try {
+      await result.user.sendEmailVerification();
+    } catch (sendErr) {
+      pendingVerifyError = 'Account created, but the verification email failed to send: '
+        + sendErr.message + '. Tap "Resend email" below to try again.';
+    }
   } catch (e2) { err.textContent = e2.message; }
   finally { btn.disabled = false; }
 };
@@ -454,6 +470,8 @@ async function refreshGate(u) {
   if (!u.emailVerified) {
     unverified.style.display = 'flex';
     document.getElementById('unverified-email').textContent = u.email || '';
+    document.getElementById('unverified-err').textContent = pendingVerifyError || '';
+    pendingVerifyError = null;
     return;
   }
   const admin = await checkIsAdmin(u);

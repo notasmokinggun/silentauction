@@ -111,8 +111,8 @@ not bytes.
 ## Bidder phone numbers
 
 Every bid requires a phone number alongside the bidder's (Google-verified)
-email — no OTP, just a basic format check enforced both in the browser and
-in `firestore.rules`: 10 digits, starting with 7, 8, or 9. It's shown next
+email, no OTP, just a basic format check enforced both in the browser and
+in `firestore.rules`: 10 digits, starting with 6, 7, 8, or 9. It's shown next
 to each bid in the admin **Bids** panel and in the **Users** panel, so you
 can actually reach a bidder to confirm a high bid is real before relying on
 it.

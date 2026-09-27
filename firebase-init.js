@@ -113,12 +113,12 @@ function countdownText(untilDate) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Phone number — mandatory alongside every bidder's email, checked once
-// with a simple, deliberately basic rule: 10 digits, starting with 7, 8
-// or 9 (standard Indian mobile numbers). No OTP/SMS verification — this
-// project is trusting people to enter a real number, not proving it.
+// Phone number. Mandatory alongside every bidder's email, checked once
+// with a simple, deliberately basic rule: 10 digits, starting with 6,
+// 7, 8 or 9. No OTP/SMS verification. This project is trusting people
+// to enter a real number, not proving it.
 // ─────────────────────────────────────────────────────────────
-const PHONE_REGEX = /^[789]\d{9}$/;
+const PHONE_REGEX = /^[6789]\d{9}$/;
 function isValidPhone(raw) {
   return PHONE_REGEX.test(String(raw || "").trim());
 }

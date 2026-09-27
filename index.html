@@ -889,7 +889,7 @@ document.getElementById('sheet-confirm').onclick = async () => {
   const amount = Number(document.getElementById('sheet-amount').value);
   if (!googleUser) { errEl.textContent = 'Sign in with Google to bid.'; return; }
   if (!name) { errEl.textContent = 'Enter your name to bid.'; return; }
-  if (!isValidPhone(phone)) { errEl.textContent = 'Enter a valid 10-digit phone number starting with 7, 8, or 9.'; return; }
+  if (!isValidPhone(phone)) { errEl.textContent = 'Enter a valid 10-digit phone number starting with 6, 7, 8, or 9.'; return; }
   if (!Number.isFinite(amount) || amount <= 0) { errEl.textContent = 'Enter a bid amount — it can\'t be zero or negative.'; return; }
 
   // Already blocked from an earlier absurd bid? Don't even try.

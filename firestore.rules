@@ -208,18 +208,18 @@ service cloud.firestore {
         allow read: if true;
         allow update, delete: if isAdmin();
         // A bid document is only ever valid if its uid is the account that
-        // is actually signed in right now — a guest can't write someone
+        // is actually signed in right now: a guest can't write someone
         // else's uid, and can't write a bid with no uid at all.
-        // Phone is mandatory alongside the name on every bid (no OTP — this
+        // Phone is mandatory alongside the name on every bid (no OTP, this
         // is a single basic format check, not a verification step): 10
-        // digits, starting with 7, 8 or 9. See PHONE_REGEX in
+        // digits, starting with 6, 7, 8 or 9. See PHONE_REGEX in
         // firebase-init.js for the identical client-side check.
         allow create: if isVerifiedBidder() &&
           request.resource.data.name is string &&
           request.resource.data.name.size() > 0 &&
           request.resource.data.name.size() < 80 &&
           request.resource.data.phone is string &&
-          request.resource.data.phone.matches('^[789][0-9]{9}$') &&
+          request.resource.data.phone.matches('^[6789][0-9]{9}$') &&
           request.resource.data.amount is number &&
           underMaxBid(request.resource.data.amount) &&
           request.resource.data.uid == request.auth.uid &&

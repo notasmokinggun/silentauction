@@ -36,8 +36,16 @@ The origin includes `https://` here but never a path such as `/silentauction`.
 ## 4. Publish the database rules
 
 In Firebase choose **Build → Firestore Database → Rules**. Open `firestore.rules`
-from this GitHub branch, click Raw, and copy all its contents. Replace the text
-in the Firebase rules editor with it, then click **Publish**.
+from your repo's `main` branch on GitHub, click Raw, and copy all its contents.
+Replace the text in the Firebase rules editor with it, then click **Publish**.
+
+**Do this again every time `firestore.rules` changes**, including after
+merging any future fix. Pushing or merging on GitHub only updates the
+website files (via GitHub Pages or whatever hosts it) — it never touches
+the rules actually enforced by Firestore. If the rules editor's contents
+don't match the file on `main`, the live site is running stale rules, and
+symptoms can look like "an approved email isn't recognized" even though
+the code and the allowlist data are both correct.
 
 If Firestore has not been created, click Create database, choose the no-cost
 Standard database option, select a location, start in production mode, then

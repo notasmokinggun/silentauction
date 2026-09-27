@@ -170,6 +170,33 @@ async function isApprovedAdminEmail(email) {
   }
 }
 
+// Same check as isApprovedAdminEmail, but for the ONE call site — the
+// pre-signup gate in admin.html — where silently returning "false" on
+// error is actively misleading: a genuinely-approved email would look
+// identical to an unapproved one if the read itself fails (e.g. the
+// project's live Firestore rules are an older version that still
+// restricts reading adminEmails/{email}, which only takes effect once
+// someone manually re-publishes firestore.rules in the Firebase console
+// — a git push/merge does NOT do this). Returns { approved, error }:
+// error is null on a normal read, or a message to show the person when
+// the read itself couldn't be completed, so "not approved" and
+// "couldn't check" are never confused with each other.
+async function checkAdminApprovalStatus(email) {
+  if (!email) return { approved: false, error: null };
+  if (isAdminEmail(email)) return { approved: true, error: null };
+  try {
+    const doc = await db.collection("adminEmails").doc(email).get();
+    return { approved: doc.exists && doc.data().approved === true, error: null };
+  } catch (err) {
+    return {
+      approved: false,
+      error: err.code === "permission-denied"
+        ? "Couldn't check approval status (permission denied). The live Firestore rules on this project may be out of date — re-publish the current firestore.rules in the Firebase console, then try again."
+        : "Couldn't check approval status: " + err.message,
+    };
+  }
+}
+
 // Authoritative check: bootstrap list OR a live adminEmails/{email} doc
 // with approved === true. Always use this before showing the admin
 // panel — isAdminEmail() alone would miss anyone added through Admin

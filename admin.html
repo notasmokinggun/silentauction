@@ -412,7 +412,8 @@ document.getElementById('createpw-btn').onclick = async () => {
     // No email sending anywhere in this flow — trust comes entirely from
     // the owner's allowlist (adminEmails), checked BEFORE the Firebase Auth
     // account is even created. An unapproved email never gets an account.
-    const approved = await isApprovedAdminEmail(email);
+    const { approved, error } = await checkAdminApprovalStatus(email);
+    if (error) { err.textContent = error; return; }
     if (!approved) {
       err.textContent = "This email hasn't been approved by the owner yet. Ask them to add it on the Admin Access page first.";
       return;

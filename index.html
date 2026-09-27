@@ -494,14 +494,11 @@ function showView(name) {
 }
 document.querySelectorAll('.navbtn').forEach(b => b.onclick = () => showView(b.dataset.view));
 
-// Splash / Welcome — shown once per device, like a first-run intro.
-// A returning guest who already tapped through goes straight to the catalog.
+// Splash / Welcome — shown on every load, every time, regardless of
+// sign-in state or whether they've seen it before. Tapping through just
+// takes them to the catalog; it doesn't set anything to remember that.
 document.getElementById('splash-wordmark').textContent = EVENT_NAME;
-document.getElementById('splash-explore').onclick = () => {
-  localStorage.setItem('auction_seen_splash', '1');
-  showView('home');
-};
-if (localStorage.getItem('auction_seen_splash')) showView('home');
+document.getElementById('splash-explore').onclick = () => showView('home');
 
 // -----------------------------------------------------------------
 // Auth

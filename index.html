@@ -76,6 +76,10 @@
   .card .price{font-size:14px;font-weight:600;margin:0 0 2px;}
   .card .left{font-size:11px;color:var(--muted);}
   .empty-state{padding:60px 24px;text-align:center;color:var(--muted);}
+  .load-error{padding:40px 24px;text-align:center;}
+  .load-error p{color:var(--muted);font-size:14px;margin-bottom:14px;}
+  .load-error button{padding:10px 22px;border-radius:999px;border:1px solid var(--border);
+    background:var(--surface);color:var(--text);font-size:13px;font-weight:600;}
 
   /* ---------- Item detail ---------- */
   #view-item .hero-wrap{position:relative;background:var(--surface2);}
@@ -270,6 +274,10 @@
   <div class="pills" id="pills"></div>
   <div class="grid" id="grid"></div>
   <div class="empty-state" id="empty-state" style="display:none;">No lots yet — check back shortly.</div>
+  <div class="load-error" id="load-error" style="display:none;">
+    <p id="load-error-msg">Couldn't load the items — check your connection.</p>
+    <button id="load-retry">Try again</button>
+  </div>
 </section>
 
 <!-- ============ ITEM DETAIL ============ -->
@@ -532,21 +540,50 @@ const params = new URLSearchParams(location.search);
 const directId = params.get('id');
 let openedDirect = false;
 
-db.collection('items').orderBy('lotNumber').onSnapshot(snap => {
-  lots = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  renderPills();
-  renderGrid();
-  if (document.getElementById('view-item').classList.contains('active') && currentItemId) {
-    const it = lots.find(l => l.id === currentItemId);
-    if (it) renderItemView(it);
-  }
-  if (document.getElementById('view-mybids').classList.contains('active')) renderMyBids();
+// A single failed read here used to mean a permanently blank home screen
+// with zero feedback (no error, no "empty" message, nothing — see
+// load-error markup above and README for the incident that prompted this).
+// Now any failure is visible and recoverable: it shows a real message and
+// a retry button instead of silently doing nothing forever.
+let itemsUnsub = null;
+function attachItemsListener() {
+  if (itemsUnsub) itemsUnsub();
+  document.getElementById('load-error').style.display = 'none';
+  itemsUnsub = db.collection('items').orderBy('lotNumber').onSnapshot(snap => {
+    try {
+      lots = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      document.getElementById('load-error').style.display = 'none';
+      renderPills();
+      renderGrid();
+      if (document.getElementById('view-item').classList.contains('active') && currentItemId) {
+        const it = lots.find(l => l.id === currentItemId);
+        if (it) renderItemView(it);
+      }
+      if (document.getElementById('view-mybids').classList.contains('active')) renderMyBids();
 
-  if (directId && !openedDirect) {
-    const it = lots.find(l => l.id === directId);
-    if (it) { openedDirect = true; openItem(it.id); }
-  }
-});
+      if (directId && !openedDirect) {
+        const it = lots.find(l => l.id === directId);
+        if (it) { openedDirect = true; openItem(it.id); }
+      }
+    } catch (err) {
+      console.error('Failed to render items', err);
+      showLoadError("Something went wrong showing the items. Tap 'Try again', and if it keeps happening let the organizers know.");
+    }
+  }, err => {
+    console.error('Failed to load items', err);
+    showLoadError(err.code === 'permission-denied'
+      ? "Couldn't load the items (access was denied) — try again, or let the organizers know if this keeps happening."
+      : "Couldn't load the items — check your connection and try again.");
+  });
+}
+function showLoadError(msg) {
+  document.getElementById('grid').innerHTML = '';
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('load-error-msg').textContent = msg;
+  document.getElementById('load-error').style.display = 'block';
+}
+document.getElementById('load-retry').onclick = attachItemsListener;
+attachItemsListener();
 
 function renderPills() {
   const cats = ['All', ...new Set(lots.map(l => l.category).filter(Boolean))];

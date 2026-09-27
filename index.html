@@ -118,7 +118,7 @@
     background:var(--surface);border:1px solid var(--border);border-radius:12px;}
   .signin-gate{text-align:center;padding:6px 0 4px;}
   .signin-note{font-size:13px;color:var(--muted);margin:0 0 14px;}
-  #sheet-google-btn{display:flex;justify-content:center;}
+  .google-btn-slot{display:flex;justify-content:center;}
 
   /* ---------- Reading mode (tap the photo → just the write-up) ---------- */
   .reading-overlay{position:fixed;inset:0;background:var(--bg);z-index:15;display:none;
@@ -368,7 +368,7 @@
   </div>
   <div class="signin-gate" id="sheet-signin-gate">
     <p class="signin-note">Sign in with Google to bid — every bid is tied to a real account.</p>
-    <div id="sheet-google-btn"></div>
+    <div id="sheet-google-btn" class="google-btn-slot"></div>
   </div>
   <div id="sheet-bidform">
     <div class="amount-field"><span>₹</span><input id="sheet-amount" type="number" inputmode="numeric" min="1" max="100000000"></div>
@@ -521,10 +521,12 @@ function initGis() {
 }
 function renderGoogleButton() {
   if (!gisReady) return;
-  const el = document.getElementById('sheet-google-btn');
-  if (!el) return;
-  el.innerHTML = '';
-  google.accounts.id.renderButton(el, { type: 'standard', theme: 'outline', size: 'large', text: 'continue_with', shape: 'pill' });
+  // Render into every GIS button slot currently in the DOM (bid sheet AND
+  // profile tab share this), so both use the same working sign-in flow.
+  document.querySelectorAll('.google-btn-slot').forEach(el => {
+    el.innerHTML = '';
+    google.accounts.id.renderButton(el, { type: 'standard', theme: 'outline', size: 'large', text: 'continue_with', shape: 'pill' });
+  });
 }
 (function loadGis() {
   const s = document.createElement('script');
@@ -998,8 +1000,8 @@ function renderProfile() {
   } else {
     gwrap.innerHTML = `
       <p style="font-size:13px;color:var(--muted);margin:0 0 12px;">Optional — ties your name to a real Google account for high-value lots.</p>
-      <button class="cta cta-outline" id="signin-btn">Sign in with Google</button>`;
-    document.getElementById('signin-btn').onclick = () => auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());
+      <div id="profile-google-btn" class="google-btn-slot"></div>`;
+    renderGoogleButton();
   }
 }
 document.getElementById('profile-name').addEventListener('change', (e) => {

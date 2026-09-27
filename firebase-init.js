@@ -154,12 +154,13 @@ function adminApprovalRef(user) {
 }
 
 // Authoritative check: bootstrap list OR a live adminEmails/{email} doc
-// with approved === true. Always use this before showing the admin
-// panel — isAdminEmail() alone would miss anyone added through Admin
-// Access. Takes a Firebase Auth user object (needs .email).
-async function checkIsAdmin(user) {
-  if (!user || !user.email) return false;
-  const email = adminEmail(user);
+// with approved === true. Takes a plain lowercase email string, so it
+// works BEFORE any Firebase Auth account/user object exists — this is
+// what gates account creation itself in admin.html's "Create Password"
+// flow, since there's no server-side function to block Auth signup
+// directly and this is the one source of truth the client can check.
+async function isApprovedAdminEmail(email) {
+  if (!email) return false;
   if (isAdminEmail(email)) return true;
   try {
     const doc = await db.collection("adminEmails").doc(email).get();
@@ -167,6 +168,15 @@ async function checkIsAdmin(user) {
   } catch {
     return false; // Firestore rules will also block a non-admin regardless.
   }
+}
+
+// Authoritative check: bootstrap list OR a live adminEmails/{email} doc
+// with approved === true. Always use this before showing the admin
+// panel — isAdminEmail() alone would miss anyone added through Admin
+// Access. Takes a Firebase Auth user object (needs .email).
+async function checkIsAdmin(user) {
+  if (!user || !user.email) return false;
+  return isApprovedAdminEmail(adminEmail(user));
 }
 
 function escapeHtml(s) {

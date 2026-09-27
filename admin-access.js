@@ -46,8 +46,8 @@ auth.onAuthStateChanged(user => {
   manager.hidden = true;
   document.getElementById('admins').replaceChildren();
   document.getElementById('signout').hidden = !user;
-  document.getElementById('login').hidden = !!user && user.emailVerified;
-  if (!user || !user.emailVerified) { accessStatus.textContent = 'Sign in with a verified, approved admin email to continue.'; return; }
+  document.getElementById('login').hidden = !!user;
+  if (!user) { accessStatus.textContent = 'Sign in with an approved admin email to continue.'; return; }
   stopAccess = adminApprovalRef(user).onSnapshot(doc => {
     accessVersion++;
     manager.hidden = true;

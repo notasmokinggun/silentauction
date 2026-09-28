@@ -124,6 +124,12 @@
   .bidrow .who .g{font-size:11px;color:var(--muted);}
   .bidrow .who .c{font-size:11px;color:var(--muted);display:block;}
   .bidrow .amt{font-weight:600;width:80px;text-align:right;flex:none;}
+  .hold-badge{background:var(--red);color:#fff;border-radius:999px;font-size:11px;font-weight:700;padding:1px 7px;margin-left:6px;}
+  .hold-banner{background:#2A1A18;border:1px solid var(--red);color:var(--text);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:13px;}
+  .bidrow.onhold{background:#2A1A18;margin:0 -6px;padding:6px;border-radius:8px;}
+  .bidrow.revoked{opacity:.55;}
+  .tag-hold{color:var(--red);font-weight:600;font-size:11px;}
+  #admin-banner{display:none;background:#2A1A18;border:1px solid var(--red);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:13px;}
   .bidrow.iswinner{background:#2A2416;margin:0 -6px;padding:6px;border-radius:8px;}
   .bidrow button{flex:none;padding:5px 9px;font-size:11px;border:1px solid var(--border);
     background:var(--surface2);color:var(--text);border-radius:6px;}
@@ -180,7 +186,7 @@
     <div class="wordmark serif" id="side-wordmark">JASHN</div>
     <div class="navitem on" data-panel="dashboard"><span class="ic"></span>Dashboard</div>
     <div class="navitem" data-panel="items"><span class="ic"></span>Items</div>
-    <div class="navitem" data-panel="bids"><span class="ic"></span>Bids</div>
+    <div class="navitem" data-panel="bids"><span class="ic"></span>Bids <span id="hold-badge" class="hold-badge" style="display:none;"></span></div>
     <div class="navitem" data-panel="users"><span class="ic"></span>Users</div>
     <div class="navitem" data-panel="payments"><span class="ic"></span>Payments</div>
     <div class="navitem" data-panel="settings"><span class="ic"></span>Settings</div>
@@ -196,6 +202,7 @@
     </div>
 
     <!-- ===================== DASHBOARD ===================== -->
+    <div id="admin-banner" role="alert"></div>
     <div class="panel active" id="panel-dashboard">
       <h1>Dashboard</h1>
       <p class="sub">Overview of your silent auction event</p>
@@ -391,9 +398,10 @@ document.getElementById('settings-signout').onclick = () => auth.signOut();
 
 async function refreshGate(u) {
   gate.style.display = denied.style.display = shell.style.display = 'none';
-  if (!u) { gate.style.display = 'flex'; return; }
+  if (!u) { teardownAdmin(); gate.style.display = 'flex'; return; }
   const admin = await checkIsAdmin(u);
   if (!admin) {
+    teardownAdmin();
     denied.style.display = 'flex';
     document.getElementById('denied-email').textContent = u.email || '(no email on this account)';
     document.getElementById('myuid').textContent = u.email || '(no email on this account)';
@@ -438,15 +446,39 @@ document.getElementById('global-search').addEventListener('input', (e) => {
 // -----------------------------------------------------------------
 let lots = [];
 let currentAdminEmail = null;
+let itemsUnsub = null;
+function showAdminError(msg) {
+  const b = document.getElementById('admin-banner');
+  b.textContent = msg;
+  b.style.display = msg ? 'block' : 'none';
+}
 function loadLots() {
-  db.collection('items').orderBy('lotNumber').onSnapshot(snap => {
+  if (itemsUnsub) itemsUnsub();
+  itemsUnsub = db.collection('items').orderBy('lotNumber').onSnapshot(snap => {
+    showAdminError('');
     lots = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     renderLots();
     renderDashboardStats();
     if (document.getElementById('panel-bids').classList.contains('active')) renderBidsPanel();
     resyncEditFormDeadline();
     syncBidListeners();
+  }, err => {
+    console.error('Could not load lots', err);
+    showAdminError('Could not load lots: ' + (err.code === 'permission-denied'
+      ? 'access was denied. Check that the latest firestore.rules are published and that you signed in with an approved Google account.'
+      : err.message));
   });
+}
+// Stops every listener and wipes admin data from memory and the page, so
+// bidder phone numbers don't linger after sign-out or a failed admin check.
+function teardownAdmin() {
+  if (itemsUnsub) { itemsUnsub(); itemsUnsub = null; }
+  Object.keys(bidListeners).forEach(id => { bidListeners[id](); delete bidListeners[id]; });
+  lots = []; allBids = [];
+  ['lots', 'bids-lots', 'recent-bids-body', 'users-body'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.innerHTML = '';
+  });
+  showAdminError('');
 }
 
 // All bids across every lot. Instead of one collection-group query (which
@@ -478,13 +510,33 @@ function syncBidListeners() {
   });
 }
 function bidMillis(b) { return b.timestamp && b.timestamp.toDate ? b.timestamp.toDate().getTime() : 0; }
+// A bid counts toward prices, ranks and totals only if it is live: a normal
+// bid, or a held bid an admin has confirmed. Pending holds and revoked holds
+// are shown separately and never counted.
+function isLiveBid(b) { return !b.status || b.status === 'confirmed'; }
+function pendingHoldCount() { return allBids.filter(b => b.status === 'pending').length; }
+function updateHoldBadge() {
+  const n = pendingHoldCount();
+  const badge = document.getElementById('hold-badge');
+  badge.textContent = n;
+  badge.style.display = n ? 'inline-block' : 'none';
+}
+// Each per-lot listener fires an initial snapshot, so on first load this ran
+// once per lot and re-rendered everything each time. Coalesce into one frame.
+let rafPending = false;
 function onBidsChanged() {
-  allBids.sort((a, b) => bidMillis(b) - bidMillis(a));
-  renderDashboardStats();
-  renderRecentBids();
-  renderChart();
-  if (document.getElementById('panel-users').classList.contains('active')) renderUsersPanel();
-  if (document.getElementById('panel-bids').classList.contains('active')) renderBidsPanel();
+  if (rafPending) return;
+  rafPending = true;
+  requestAnimationFrame(() => {
+    rafPending = false;
+    allBids.sort((a, b) => bidMillis(b) - bidMillis(a));
+    updateHoldBadge();
+    renderDashboardStats();
+    renderRecentBids();
+    renderChart();
+    if (document.getElementById('panel-users').classList.contains('active')) renderUsersPanel();
+    if (document.getElementById('panel-bids').classList.contains('active')) renderBidsPanel();
+  });
 }
 
 // -----------------------------------------------------------------
@@ -492,15 +544,15 @@ function onBidsChanged() {
 // -----------------------------------------------------------------
 function renderDashboardStats() {
   document.getElementById('stat-items').textContent = lots.length;
-  document.getElementById('stat-bids').textContent = allBids.length;
+  document.getElementById('stat-bids').textContent = allBids.filter(isLiveBid).length;
   const raised = lots.reduce((sum, it) => sum + (it.winnerAmount || (it.active === false ? it.currentBid : 0)), 0);
   document.getElementById('stat-raised').textContent = money(raised);
-  const distinctBidders = new Set(allBids.map(b => b.uid || (b.name || '').toLowerCase().trim()));
+  const distinctBidders = new Set(allBids.filter(isLiveBid).map(b => b.uid || (b.name || '').toLowerCase().trim()));
   document.getElementById('stat-users').textContent = distinctBidders.size;
 }
 
 function renderRecentBids() {
-  const rows = allBids.slice(0, 10).map(b => {
+  const rows = allBids.filter(isLiveBid).slice(0, 10).map(b => {
     const it = lots.find(l => l.id === b.itemId);
     const t = b.timestamp && b.timestamp.toDate ? timeAgo(b.timestamp.toDate()) : '—';
     return `<tr><td>${t}</td><td>${escapeHtml(b.name)}</td><td>${escapeHtml(it ? it.title : '—')}</td>
@@ -525,7 +577,7 @@ function renderChart() {
   if (range === 'today') {
     buckets = new Array(24).fill(0);
     labels = buckets.map((_, h) => h % 3 === 0 ? (h % 12 || 12) + (h < 12 ? 'AM' : 'PM') : '');
-    allBids.forEach(b => {
+    allBids.filter(isLiveBid).forEach(b => {
       if (!b.timestamp || !b.timestamp.toDate) return;
       const d = b.timestamp.toDate();
       if (d.toDateString() === now.toDateString()) buckets[d.getHours()]++;
@@ -534,7 +586,7 @@ function renderChart() {
     const days = 14;
     buckets = new Array(days).fill(0);
     labels = buckets.map((_, i) => i % 2 === 0 ? (days - 1 - i) + 'd' : '');
-    allBids.forEach(b => {
+    allBids.filter(isLiveBid).forEach(b => {
       if (!b.timestamp || !b.timestamp.toDate) return;
       const d = b.timestamp.toDate();
       const diffDays = Math.floor((now - d) / 86400000);
@@ -584,7 +636,7 @@ function renderLots() {
         <div class="title">LOT ${String(it.lotNumber).padStart(3,'0')} — ${escapeHtml(it.title)}</div>
         <div class="meta">${money(it.currentBid)} · ${it.bidCount || 0} bid(s)${it.category ? ' · ' + escapeHtml(it.category) : ''}
           ${it.winnerName ? ' · <span class="winner-tag">Winner: ' + escapeHtml(it.winnerName) + '</span>' : ''}
-          ${it.active === false ? ' · <span class="closed-tag">CLOSED</span>' : ''}</div>
+          ${isClosed(it) ? ' · <span class="closed-tag">CLOSED</span>' : ''}</div>
         <div class="actions">
           <a class="btn-ghost" style="text-decoration:none;" href="index.html?id=${it.id}" target="_blank">View</a>
           <button class="btn-ghost" data-act="edit" data-id="${it.id}">Edit</button>
@@ -602,15 +654,36 @@ function renderLots() {
   el.querySelectorAll('[data-act="edit"]').forEach(b => b.onclick = () => startEdit(b.dataset.id));
   el.querySelectorAll('[data-act="toggle"]').forEach(b => b.onclick = () => {
     const it = lots.find(l => l.id === b.dataset.id);
-    db.collection('items').doc(b.dataset.id).update({ active: it.active === false });
+    if (!it) return;
+    const closing = it.active !== false;
+    if (!confirm(closing ? `Close LOT ${String(it.lotNumber).padStart(3, '0')}? Bidding stops immediately.` : `Reopen LOT ${String(it.lotNumber).padStart(3, '0')} for bidding?`)) return;
+    db.collection('items').doc(b.dataset.id).update({ active: !closing })
+      .catch(err => alert('Could not update lot: ' + err.message));
   });
-  el.querySelectorAll('[data-act="delete"]').forEach(b => b.onclick = () => {
-    if (confirm('Delete this lot and all its bids? This cannot be undone.')) {
-      db.collection('items').doc(b.dataset.id).delete();
+  el.querySelectorAll('[data-act="delete"]').forEach(b => b.onclick = async () => {
+    if (!confirm('Delete this lot and all its bids? This cannot be undone.')) return;
+    try {
+      await deleteLotWithBids(b.dataset.id);
       if (editingId === b.dataset.id) resetForm();
+    } catch (err) {
+      alert('Could not delete lot: ' + err.message);
     }
   });
   el.querySelectorAll('[data-extend]').forEach(b => b.onclick = () => extendLotDeadline(b.dataset.extend, Number(b.dataset.secs)));
+}
+
+// Firestore doesn't cascade deletes to subcollections, so delete the lot's
+// bids (and its full-size photo doc) first, in batches, then the lot itself.
+async function deleteLotWithBids(id) {
+  const ref = db.collection('items').doc(id);
+  const snap = await ref.collection('bids').get();
+  for (let i = 0; i < snap.docs.length; i += 450) {
+    const batch = db.batch();
+    snap.docs.slice(i, i + 450).forEach(d => batch.delete(d.ref));
+    await batch.commit();
+  }
+  await db.collection('itemImages').doc(id).delete().catch(() => {});
+  await ref.delete();
 }
 
 // Bumps a lot's closing time by a fixed amount without ever opening the
@@ -730,7 +803,7 @@ function resetForm() {
 }
 cancelEditBtn.onclick = resetForm;
 
-function compressImageToDataUrl(file, maxDim = 900, startQuality = 0.72) {
+function compressImageToDataUrl(file, maxDim = 900, startQuality = 0.72, maxLen = 700000) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error('Could not read that file.'));
@@ -748,17 +821,26 @@ function compressImageToDataUrl(file, maxDim = 900, startQuality = 0.72) {
         canvas.getContext('2d').drawImage(img, 0, 0, width, height);
         let quality = startQuality;
         let dataUrl = canvas.toDataURL('image/jpeg', quality);
-        while (dataUrl.length > 700000 && quality > 0.3) {
+        while (dataUrl.length > maxLen && quality > 0.3) {
           quality -= 0.1;
           dataUrl = canvas.toDataURL('image/jpeg', quality);
         }
-        if (dataUrl.length > 700000) { reject(new Error('This photo is too large even compressed — try a smaller image.')); return; }
+        if (dataUrl.length > maxLen) { reject(new Error('This photo is too large even compressed — try a smaller image.')); return; }
         resolve(dataUrl);
       };
       img.src = reader.result;
     };
     reader.readAsDataURL(file);
   });
+}
+
+// A small preview (about 30 KB at most) that lives on the item doc, so the grid
+// and every live update stay light. The full photo goes in itemImages/{id}.
+async function makeThumb(file) {
+  for (const dim of [320, 240, 180]) {
+    try { return await compressImageToDataUrl(file, dim, 0.6, 30000); } catch (_) { /* try smaller */ }
+  }
+  throw new Error('Could not make a small preview of this photo. Try a different image.');
 }
 
 document.getElementById('lotForm').addEventListener('submit', async (e) => {
@@ -769,7 +851,7 @@ document.getElementById('lotForm').addEventListener('submit', async (e) => {
   const description = fDesc.value.trim();
   const start = Number(fStart.value);
   const inc = Number(fInc.value);
-  if (!title || !start || !inc) { addErr.textContent = 'Title, starting bid and increment are required.'; return; }
+  if (!title || fStart.value === '' || !inc) { addErr.textContent = 'Title, starting bid and increment are required.'; return; }
   if (start < 0 || inc <= 0) { addErr.textContent = "Starting bid can't be negative, and increment must be positive."; return; }
   if (start > 100000000 || inc > 100000000) { addErr.textContent = 'Starting bid and increment must each be ₹10,00,00,000 or less.'; return; }
 
@@ -779,12 +861,16 @@ document.getElementById('lotForm').addEventListener('submit', async (e) => {
 
   try {
     let imageUrl = editingId ? (lots.find(l => l.id === editingId)?.imageUrl || '') : '';
+    let fullUrl = null;        // new full-size photo to store in itemImages
+    let clearFull = false;     // an external URL replaces a stored full photo
     if (pendingFile) {
       document.getElementById('upload-status').textContent = 'Compressing photo…';
-      imageUrl = await compressImageToDataUrl(pendingFile);
+      fullUrl = await compressImageToDataUrl(pendingFile);
+      imageUrl = await makeThumb(pendingFile);
       document.getElementById('upload-status').textContent = '';
     } else if (fImg.value.trim()) {
       imageUrl = fImg.value.trim();
+      clearFull = true;
     }
     const endsDate = readEndsFields();
     const endsAt = endsDate ? firebase.firestore.Timestamp.fromDate(endsDate) : null;
@@ -793,16 +879,27 @@ document.getElementById('lotForm').addEventListener('submit', async (e) => {
       const it = lots.find(l => l.id === editingId);
       const patch = { title, category, description, imageUrl, startingBid: start, increment: inc, endsAt };
       if (!it || (it.bidCount || 0) === 0) patch.currentBid = start;
-      await db.collection('items').doc(editingId).update(patch);
+      if (fullUrl) patch.hasFullImage = true;
+      else if (clearFull) patch.hasFullImage = false;
+      const batch = db.batch();
+      batch.update(db.collection('items').doc(editingId), patch);
+      if (fullUrl) batch.set(db.collection('itemImages').doc(editingId), { url: fullUrl });
+      else if (clearFull) batch.delete(db.collection('itemImages').doc(editingId));
+      await batch.commit();
       editingEndsAtMillis = endsDate ? endsDate.getTime() : null;
     } else {
       const nextLotNumber = lots.reduce((m, l) => Math.max(m, l.lotNumber || 0), 0) + 1;
-      await db.collection('items').add({
+      const newRef = db.collection('items').doc();
+      const batch = db.batch();
+      batch.set(newRef, {
         lotNumber: nextLotNumber, title, category, description, imageUrl,
+        hasFullImage: !!fullUrl,
         startingBid: start, increment: inc, currentBid: start, endsAt,
         currentBidderName: '', currentBidderUid: null, bidCount: 0, active: true,
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       });
+      if (fullUrl) batch.set(db.collection('itemImages').doc(newRef.id), { url: fullUrl });
+      await batch.commit();
     }
     resetForm();
   } catch (err) {
@@ -836,12 +933,17 @@ const openBidLists = new Set();
 function renderBidsPanel() {
   const el = document.getElementById('bids-lots');
   if (!lots.length) { el.innerHTML = '<p class="empty-lots">No lots yet.</p>'; return; }
-  el.innerHTML = lots.map(it => `
+  const holds = pendingHoldCount();
+  const banner = holds
+    ? `<div class="hold-banner"><strong>${holds} bid${holds === 1 ? '' : 's'} on hold.</strong> Each is 5x or more above the price. Call the bidder on the number shown, confirm they meant it, then tap Confirm or Revoke. Held bids don't count until confirmed.</div>`
+    : '';
+  el.innerHTML = banner + lots.map(it => `
     <div class="lotcard" style="display:block;">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
         <div>
           <div class="title">LOT ${String(it.lotNumber).padStart(3,'0')} — ${escapeHtml(it.title)}</div>
           <div class="meta">${it.bidCount || 0} bid(s)
+            ${allBids.some(b => b.itemId === it.id && b.status === 'pending') ? ' · <span class="tag-hold">ON HOLD</span>' : ''}
             ${it.winnerName ? ' · <span class="winner-tag">Winner: ' + escapeHtml(it.winnerName) + ' (' + money(it.winnerAmount) + ')</span>' : ''}
             ${it.active === false ? ' · <span class="closed-tag">CLOSED</span>' : ''}</div>
         </div>
@@ -861,30 +963,96 @@ function renderBidRows(itemId) {
   const container = document.getElementById('bidlist-' + itemId);
   if (!container) return;
   const it = lots.find(l => l.id === itemId);
-  const bids = allBids.filter(b => b.itemId === itemId).sort((a, b) => b.amount - a.amount);
-  if (!bids.length) { container.innerHTML = '<p class="empty">No bids on this lot yet.</p>'; return; }
-  container.innerHTML = bids.map((b, i) => {
+  const all = allBids.filter(b => b.itemId === itemId);
+  const bids = all.filter(isLiveBid).sort((a, b) => b.amount - a.amount);
+  const holds = all.filter(b => b.status === 'pending').sort((a, b) => bidMillis(a) - bidMillis(b));
+  const revoked = all.filter(b => b.status === 'revoked');
+  if (!all.length) { container.innerHTML = '<p class="empty">No bids on this lot yet.</p>'; return; }
+  const contactOf = b => [b.phone ? '📞 ' + escapeHtml(b.phone) : '', b.email ? escapeHtml(b.email) : '']
+    .filter(Boolean).join(' · ');
+  const holdRows = holds.map(b => `<div class="bidrow onhold">
+      <span class="rank tag-hold">HOLD</span>
+      <span class="who">${escapeHtml(b.name)} <span class="g">· call to confirm</span>
+        <span class="c">${contactOf(b)}</span></span>
+      <span class="amt">${money(b.amount)}</span>
+      <button class="set" data-confirmhold="${b.id}">Confirm</button>
+      <button class="btn-danger" data-revokehold="${b.id}">Revoke</button>
+    </div>`).join('');
+  const liveRows = bids.map((b, i) => {
     const isWinner = it && it.winnerBidId === b.id;
-    const contact = [b.phone ? '📞 ' + escapeHtml(b.phone) : '', b.email ? escapeHtml(b.email) : '']
-      .filter(Boolean).join(' · ');
+    const contact = contactOf(b);
     return `<div class="bidrow ${isWinner ? 'iswinner' : ''}">
       <span class="rank">#${i + 1}</span>
-      <span class="who">${escapeHtml(b.name)}${b.isGoogle ? ' <span class="g">· Google verified</span>' : ''}
+      <span class="who">${escapeHtml(b.name)}${b.isGoogle ? ' <span class="g">· Google verified</span>' : ''}${b.status === 'confirmed' ? ' <span class="g">· confirmed by call</span>' : ''}
         ${contact ? '<span class="c">' + contact + '</span>' : ''}</span>
       <span class="amt">${money(b.amount)}</span>
       <button class="${isWinner ? '' : 'set'}" data-set="${b.id}" ${isWinner ? 'disabled' : ''}>${isWinner ? 'Winner ✓' : 'Set winner'}</button>
       <button class="btn-danger" data-invalidate="${b.id}">Revoke bid</button>
     </div>`;
   }).join('');
+  const revokedRows = revoked.map(b => `<div class="bidrow revoked">
+      <span class="rank">✕</span>
+      <span class="who">${escapeHtml(b.name)} <span class="g">· hold revoked</span></span>
+      <span class="amt">${money(b.amount)}</span>
+    </div>`).join('');
+  container.innerHTML = holdRows + liveRows + revokedRows;
   container.querySelectorAll('[data-set]').forEach(btn => btn.onclick = () => {
     const bid = bids.find(b => b.id === btn.dataset.set);
+    if (!bid) return;
     db.collection('items').doc(itemId).update({
       winnerBidId: bid.id, winnerName: bid.name, winnerAmount: bid.amount,
       winnerUid: bid.uid || null, winnerIsGoogle: !!bid.isGoogle,
       winnerSetAt: firebase.firestore.FieldValue.serverTimestamp(),
-    });
+    }).catch(err => alert('Could not set the winner: ' + err.message));
   });
   container.querySelectorAll('[data-invalidate]').forEach(btn => btn.onclick = () => invalidateBid(itemId, btn.dataset.invalidate, bids.find(b => b.id === btn.dataset.invalidate)));
+  container.querySelectorAll('[data-confirmhold]').forEach(btn => btn.onclick = () => confirmHold(itemId, holds.find(b => b.id === btn.dataset.confirmhold)));
+  container.querySelectorAll('[data-revokehold]').forEach(btn => btn.onclick = () => revokeHold(itemId, holds.find(b => b.id === btn.dataset.revokehold)));
+}
+
+// A reviewer has called the bidder. Confirm makes the held bid a real bid:
+// if it still beats the lot's current bid it becomes the leader, otherwise it
+// is kept as a confirmed bid below the leader. One transaction, so a bid that
+// arrives meanwhile can't be overwritten.
+async function confirmHold(itemId, bid) {
+  if (!bid) return;
+  if (!confirm(`Confirm ${bid.name}'s bid of ${money(bid.amount)}${bid.phone ? ' (' + bid.phone + ')' : ''}? Only do this after they confirmed on the call.`)) return;
+  const itemRef = db.collection('items').doc(itemId);
+  const bidRef = itemRef.collection('bids').doc(bid.id);
+  try {
+    await db.runTransaction(async (tx) => {
+      const [itemDoc, bidDoc] = await Promise.all([tx.get(itemRef), tx.get(bidRef)]);
+      if (!itemDoc.exists) throw new Error('This lot no longer exists.');
+      if (!bidDoc.exists || bidDoc.data().status !== 'pending') throw new Error('This hold was already handled or withdrawn.');
+      const it = itemDoc.data();
+      const b = bidDoc.data();
+      const patch = { bidCount: (it.bidCount || 0) + 1 };
+      if (b.amount >= it.currentBid + it.increment) {
+        patch.currentBid = b.amount;
+        patch.currentBidderName = b.name;
+        patch.currentBidderUid = b.uid || null;
+      }
+      tx.update(itemRef, patch);
+      tx.update(bidRef, { status: 'confirmed', reviewedBy: currentAdminEmail || null,
+        reviewedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    });
+  } catch (err) {
+    alert('Could not confirm this bid: ' + err.message);
+  }
+}
+// The bidder said no (or couldn't be reached). The hold is kept as a
+// record, marked revoked, and never counts. The bidder can place a new bid.
+async function revokeHold(itemId, bid) {
+  if (!bid) return;
+  if (!confirm(`Revoke ${bid.name}'s held bid of ${money(bid.amount)}? It will never count.`)) return;
+  try {
+    await db.collection('items').doc(itemId).collection('bids').doc(bid.id).update({
+      status: 'revoked', reviewedBy: currentAdminEmail || null,
+      reviewedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+  } catch (err) {
+    alert('Could not revoke this hold: ' + err.message);
+  }
 }
 
 // Removes a bogus/joke bid entirely and recalculates the lot's leading
@@ -894,35 +1062,36 @@ async function invalidateBid(itemId, bidId, bid) {
   const who = bid ? `${bid.name} (${money(bid.amount)}${bid.phone ? ', ' + bid.phone : ''})` : 'this bid';
   if (!confirm(`Revoke ${who}? It is permanently removed and the leading bid is recalculated.`)) return;
   const itemRef = db.collection('items').doc(itemId);
-  const bidsRef = itemRef.collection('bids');
+  const bidRef = itemRef.collection('bids').doc(bidId);
+  // Work out the new leader and count from what this admin is looking at,
+  // then apply it in ONE transaction. If a bid landed since (the lot's
+  // bidCount no longer matches what we saw), abort instead of overwriting it.
+  const seenCount = (lots.find(l => l.id === itemId) || {}).bidCount || 0;
+  const remaining = allBids.filter(b => b.itemId === itemId && b.id !== bidId && isLiveBid(b));
+  const top = remaining.reduce((m, b) => (!m || b.amount > m.amount ? b : m), null);
   try {
-    await bidsRef.doc(bidId).delete();
-    const [itemDoc, remaining, countSnap] = await Promise.all([
-      itemRef.get(),
-      bidsRef.orderBy('amount', 'desc').limit(1).get(),
-      bidsRef.get(),
-    ]);
-    const it = itemDoc.data();
-    const patch = { bidCount: countSnap.size };
-    if (remaining.empty) {
-      patch.currentBid = it.startingBid;
-      patch.currentBidderName = '';
-      patch.currentBidderUid = null;
-    } else {
-      const top = remaining.docs[0].data();
-      patch.currentBid = top.amount;
-      patch.currentBidderName = top.name;
-      patch.currentBidderUid = top.uid || null;
-    }
-    if (it.winnerBidId === bidId) {
-      patch.winnerBidId = firebase.firestore.FieldValue.delete();
-      patch.winnerName = firebase.firestore.FieldValue.delete();
-      patch.winnerAmount = firebase.firestore.FieldValue.delete();
-      patch.winnerUid = firebase.firestore.FieldValue.delete();
-      patch.winnerIsGoogle = firebase.firestore.FieldValue.delete();
-      patch.winnerSetAt = firebase.firestore.FieldValue.delete();
-    }
-    await itemRef.update(patch);
+    await db.runTransaction(async (tx) => {
+      const itemDoc = await tx.get(itemRef);
+      if (!itemDoc.exists) throw new Error('This lot no longer exists.');
+      const it = itemDoc.data();
+      if ((it.bidCount || 0) !== seenCount) throw new Error('A new bid arrived. Please retry.');
+      const patch = { bidCount: remaining.length };
+      if (!top) {
+        patch.currentBid = it.startingBid ?? 0;
+        patch.currentBidderName = '';
+        patch.currentBidderUid = null;
+      } else {
+        patch.currentBid = top.amount;
+        patch.currentBidderName = top.name;
+        patch.currentBidderUid = top.uid || null;
+      }
+      if (it.winnerBidId === bidId) {
+        ['winnerBidId', 'winnerName', 'winnerAmount', 'winnerUid', 'winnerIsGoogle', 'winnerSetAt']
+          .forEach(k => { patch[k] = firebase.firestore.FieldValue.delete(); });
+      }
+      tx.delete(bidRef);
+      tx.update(itemRef, patch);
+    });
   } catch (err) {
     alert('Could not revoke bid: ' + err.message);
   }
@@ -933,7 +1102,7 @@ async function invalidateBid(itemId, bidId, bid) {
 // -----------------------------------------------------------------
 function renderUsersPanel() {
   const map = new Map();
-  allBids.forEach(b => {
+  allBids.filter(isLiveBid).forEach(b => {
     const key = b.uid || ('n:' + (b.name || '').toLowerCase().trim());
     if (!map.has(key)) map.set(key, { name: b.name, phone: b.phone || '', isGoogle: !!b.isGoogle, count: 0, total: 0 });
     const rec = map.get(key);
@@ -951,22 +1120,32 @@ function renderUsersPanel() {
 // -----------------------------------------------------------------
 // Payments panel — CSV export
 // -----------------------------------------------------------------
+// Guards against CSV formula injection: a cell that starts with = + - @ (or a
+// tab / carriage return) is prefixed with a quote so Excel shows it as text.
+const csvCell = c => {
+  let v = String(c ?? '');
+  if (typeof c === 'string' && /^[=+\-@\t\r]/.test(v)) v = "'" + v;
+  return `"${v.replace(/"/g, '""')}"`;
+};
 function buildBidsCsv() {
-  const rows = [['Lot', 'Title', 'Rank', 'Bidder', 'Phone', 'Amount', 'Google verified', 'Marked winner']];
+  const rows = [['Lot', 'Title', 'Rank', 'Bidder', 'Phone', 'Amount', 'Google verified', 'Status', 'Marked winner']];
   for (const it of lots) {
     const lotLabel = 'LOT ' + String(it.lotNumber).padStart(3, '0');
-    const bids = allBids.filter(b => b.itemId === it.id).sort((a, b) => b.amount - a.amount);
-    if (!bids.length) { rows.push([lotLabel, it.title, '', '(no bids)', '', '', '', '']); continue; }
-    bids.forEach((b, i) => rows.push([lotLabel, it.title, i + 1, b.name, b.phone || '', b.amount, b.isGoogle ? 'Yes' : 'No', it.winnerBidId === b.id ? 'WINNER' : '']));
+    const all = allBids.filter(b => b.itemId === it.id);
+    const bids = all.filter(isLiveBid).sort((a, b) => b.amount - a.amount);
+    const others = all.filter(b => !isLiveBid(b));
+    if (!all.length) { rows.push([lotLabel, it.title, '', '(no bids)', '', '', '', '', '']); continue; }
+    bids.forEach((b, i) => rows.push([lotLabel, it.title, i + 1, b.name, b.phone || '', b.amount, b.isGoogle ? 'Yes' : 'No', b.status === 'confirmed' ? 'Confirmed by call' : 'Live', it.winnerBidId === b.id ? 'WINNER' : '']));
+    others.forEach(b => rows.push([lotLabel, it.title, '', b.name, b.phone || '', b.amount, b.isGoogle ? 'Yes' : 'No', b.status === 'pending' ? 'ON HOLD (not counted)' : 'Hold revoked', '']));
   }
-  return rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  return rows.map(r => r.map(csvCell).join(',')).join('\n');
 }
 function downloadBidsCsv(btn) {
   const prevLabel = btn.textContent;
   btn.disabled = true;
   btn.textContent = 'Building…';
   const csv = buildBidsCsv();
-  const blob = new Blob([csv], { type: 'text/csv' });
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' }); // BOM so Indic names display correctly
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = 'auction-results.csv';

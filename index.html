@@ -681,6 +681,35 @@ function renderPills() {
   });
 }
 
+function createCard(it) {
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.dataset.id = it.id;
+  card.setAttribute('role', 'button');
+  card.tabIndex = 0;
+  card.innerHTML = `
+      <img class="img" alt="" onerror="this.style.visibility='hidden'">
+      <div class="body">
+        <p class="title"></p>
+        <p class="price"></p>
+        <p class="left" data-endsat></p>
+      </div>`;
+  card.onclick = () => openItem(card.dataset.id);
+  card.onkeydown = onActivateKey;
+  updateCard(card, it);
+  return card;
+}
+function updateCard(card, it) {
+  const img = card.querySelector('img.img');
+  const src = it.imageUrl || '';
+  if (img.getAttribute('src') !== src) { img.setAttribute('src', src); img.style.visibility = ''; }
+  img.alt = it.title || '';
+  card.setAttribute('aria-label', it.title || '');
+  const set = (sel, txt) => { const el = card.querySelector(sel); if (el.textContent !== txt) el.textContent = txt; };
+  set('.title', it.title || '');
+  set('.price', money(isClosed(it) && it.winnerAmount != null ? it.winnerAmount : it.currentBid));
+  set('[data-endsat]', gridTimeLabel(it));
+}
 function renderGrid() {
   let list = lots;
   if (activeCategory !== 'All') list = list.filter(l => (l.category || '') === activeCategory);
@@ -690,16 +719,18 @@ function renderGrid() {
   }
   const grid = document.getElementById('grid');
   document.getElementById('empty-state').style.display = list.length ? 'none' : 'block';
-  grid.innerHTML = list.map(it => `
-    <div class="card" data-id="${it.id}" role="button" tabindex="0" aria-label="${escapeHtml(it.title)}">
-      <img class="img" src="${it.imageUrl || ''}" alt="${escapeHtml(it.title)}" onerror="this.style.visibility='hidden'">
-      <div class="body">
-        <p class="title">${escapeHtml(it.title)}</p>
-        <p class="price">${money(it.currentBid)}</p>
-        <p class="left" data-endsat>${gridTimeLabel(it)}</p>
-      </div>
-    </div>`).join('');
-  grid.querySelectorAll('.card').forEach(c => { c.onclick = () => openItem(c.dataset.id); c.onkeydown = onActivateKey; });
+  // Reuse existing cards instead of rebuilding the whole grid on every bid:
+  // only changed text and photos are touched, so images don't flicker or
+  // re-decode.
+  const existing = new Map();
+  [...grid.children].forEach(c => { if (c.dataset && c.dataset.id) existing.set(c.dataset.id, c); });
+  list.forEach((it, idx) => {
+    let card = existing.get(it.id);
+    if (!card) card = createCard(it);
+    else { existing.delete(it.id); updateCard(card, it); }
+    if (grid.children[idx] !== card) grid.insertBefore(card, grid.children[idx] || null);
+  });
+  existing.forEach(card => card.remove());
 
   clearInterval(gridCountdownTimer);
   gridCountdownTimer = setInterval(() => {
@@ -745,13 +776,35 @@ document.getElementById('item-share').onclick = async () => {
   else { await navigator.clipboard.writeText(url); alert('Link copied.'); }
 };
 
+// The item doc carries only a small preview (imageUrl). The full photo lives
+// in itemImages/{id} and is fetched once, when a lot is opened.
+const fullImages = {};
+const fullImagePending = new Set();
+function bestImage(it) { return fullImages[it.id] || it.imageUrl; }
+async function loadFullImage(it) {
+  if (!it.hasFullImage || fullImages[it.id] || fullImagePending.has(it.id)) return;
+  fullImagePending.add(it.id);
+  try {
+    const d = await db.collection('itemImages').doc(it.id).get();
+    if (d.exists && d.data().url) {
+      fullImages[it.id] = d.data().url;
+      if (currentItemId === it.id) document.getElementById('item-img').src = fullImages[it.id];
+    }
+  } catch (err) {
+    console.warn('Could not load the full photo:', err.code || err.message);
+  } finally {
+    fullImagePending.delete(it.id);
+  }
+}
+
 function closedNoteHtml(it) {
   return `<div class="closed-note">Bidding closed — won by <strong>${escapeHtml(winnerNameOf(it) || '—')}</strong> at ${money(winnerAmountOf(it))}</div>`;
 }
 
 function renderItemView(it) {
   const closed = isClosed(it);
-  document.getElementById('item-img').src = it.imageUrl || '';
+  document.getElementById('item-img').src = bestImage(it) || '';
+  loadFullImage(it);
   document.getElementById('item-title').textContent = it.title;
   document.getElementById('item-lotnum').textContent = 'LOT ' + String(it.lotNumber).padStart(3, '0');
   document.getElementById('item-desc').textContent = it.description || '';
@@ -803,12 +856,12 @@ function populateReadingOverlay(it) {
   const bidBtn = document.getElementById('reading-bid-btn');
   if (bidBtn) bidBtn.onclick = () => openBidSheet(it);
   const detailedBtn = document.getElementById('reading-detailed-btn');
-  if (detailedBtn) detailedBtn.onclick = () => openLightbox(it.imageUrl);
+  if (detailedBtn) detailedBtn.onclick = () => openLightbox(bestImage(it));
   // Closed lots still get a way to see the full photo.
   if (closed) {
     actions.insertAdjacentHTML('beforeend',
       `<button class="detailed-btn" id="reading-detailed-btn-closed" style="width:100%;justify-content:center;margin-top:10px;">${ICONS.expand} View Detailed Photo</button>`);
-    document.getElementById('reading-detailed-btn-closed').onclick = () => openLightbox(it.imageUrl);
+    document.getElementById('reading-detailed-btn-closed').onclick = () => openLightbox(bestImage(it));
   }
 }
 function openReadingMode() {

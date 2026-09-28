@@ -42,6 +42,22 @@ Admins can also be removed from the Admin Access page (except the bootstrap
 admin, which is still edited by hand in the two files above, as the one
 fallback that can never lock you out).
 
+## Large bids need a confirmation call
+
+Any bid at or above **5x the current price** (or 5x the increment when the
+current bid is 0) is not placed on the lot. It is stored as a pending hold:
+
+1. The bidder sees "on hold, we'll call you" and the lot's price does not move.
+2. In **Admin → Bids**, a red banner and a badge show pending holds. A reviewer
+   calls the number on the bid and asks if they really meant that amount.
+3. The reviewer taps **Confirm** (the bid becomes real, and leads if it still
+   beats the current bid) or **Revoke** (it never counts). The bidder can also
+   withdraw a pending hold themselves.
+
+The 5x rule lives in `firestore.rules` and `HOLD_MULTIPLIER` in
+`firebase-init.js`. Change both together. Phone numbers are not OTP-verified;
+the call is the check.
+
 ## Bid rate limiting
 
 Every bid transaction also writes a small cooldown record

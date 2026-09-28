@@ -169,6 +169,15 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Full-size photo for a lot, stored apart from the item doc so the lot
+    // list (which every phone listens to) stays small. Fetched once with get
+    // when a lot is opened. Public read by exact id, admin write.
+    match /itemImages/{imageId} {
+      allow get: if true;
+      allow list: if false;
+      allow write: if isAdmin();
+    }
+
     match /items/{itemId} {
       allow read: if true;
       allow create, delete: if isAdmin();

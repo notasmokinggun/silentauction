@@ -101,3 +101,16 @@ the auction, but cannot approve anybody else. There are no admin passwords, so n
 - "This email hasn't been approved": the owner needs to add the exact email
   first on the Admin Access page before an account can be created for it.
 - Setup page missing: the live site is probably still using an older branch/build.
+
+## Extra one-time Firestore setup (My Bids on any device)
+
+My Bids reads the signed-in bidder's own bids with a collection-group query.
+Firestore needs a **single-field index exemption** for it, once:
+
+Firebase console → Firestore → **Indexes** → **Single field** → **Add exemption**
+→ Collection ID `bids`, Field path `uid`, enable **Ascending** for **Collection
+group**, save. (Or run `firebase deploy --only firestore:indexes` from a machine
+with the Firebase CLI; the config is in `firestore.indexes.json`.) Until this is
+done, My Bids simply falls back to what this browser remembers.
+
+Also remember to paste the updated `firestore.rules` after the new site is live.

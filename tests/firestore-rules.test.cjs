@@ -246,3 +246,14 @@ test('a bidder can list only their own bids across lots (My Bids)', async () => 
   await assertFails(getDocs(query(collectionGroup(a, 'bids'), where('uid', '==', 'someone-else'))));
   await assertFails(getDocs(collectionGroup(a, 'bids')));
 });
+
+// ── Full-size photos (itemImages) ──
+test('itemImages: anyone can get one by id, nobody can list, only admins write', async () => {
+  const admin = account('admin', 'admin@example.com');
+  await assertSucceeds(setDoc(doc(admin, 'itemImages/p1'), { url: 'data:image/jpeg;base64,AAAA' }));
+  const anon = env.unauthenticatedContext().firestore();
+  await assertSucceeds(getDoc(doc(anon, 'itemImages/p1')));
+  await assertFails(getDocs(collection(anon, 'itemImages')));
+  await assertFails(setDoc(doc(bidder('pg', 'pg@example.com'), 'itemImages/p1'), { url: 'x' }));
+  await assertSucceeds(deleteDoc(doc(admin, 'itemImages/p1')));
+});

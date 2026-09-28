@@ -519,6 +519,7 @@ auth.onAuthStateChanged(u => {
   googleUser = u || null;
   renderProfile();
   if (sheet && sheet.classList.contains('open')) updateSheetAuthGate();
+  if (document.getElementById('view-mybids').classList.contains('active')) renderMyBids();
 });
 
 // Bidding requires a real signed-in Google account (mandatory, not optional) —
@@ -690,7 +691,7 @@ function renderGrid() {
   }, 30000);
 }
 function gridTimeLabel(it) {
-  if (it.active === false) return 'Closed';
+  if (isClosed(it)) return 'Closed';
   return timeLeftText(it.endsAt) || 'Open';
 }
 
@@ -722,18 +723,18 @@ document.getElementById('item-share').onclick = async () => {
 };
 
 function closedNoteHtml(it) {
-  return `<div class="closed-note">Bidding closed — won by <strong>${escapeHtml(it.currentBidderName || '—')}</strong> at ${money(it.currentBid)}</div>`;
+  return `<div class="closed-note">Bidding closed — won by <strong>${escapeHtml(winnerNameOf(it) || '—')}</strong> at ${money(winnerAmountOf(it))}</div>`;
 }
 
 function renderItemView(it) {
-  const closed = it.active === false;
+  const closed = isClosed(it);
   document.getElementById('item-img').src = it.imageUrl || '';
   document.getElementById('item-title').textContent = it.title;
   document.getElementById('item-lotnum').textContent = 'LOT ' + String(it.lotNumber).padStart(3, '0');
   document.getElementById('item-desc').textContent = it.description || '';
   document.getElementById('item-badges').innerHTML = it.category ? `<span class="badge">${escapeHtml(it.category)}</span>` : '';
   document.getElementById('item-bid-label').textContent = closed ? 'Winning Bid' : 'Current Bid';
-  document.getElementById('item-bid-value').textContent = money(it.currentBid);
+  document.getElementById('item-bid-value').textContent = money(closed ? winnerAmountOf(it) : it.currentBid);
   document.getElementById('item-bidcount-value').textContent = it.bidCount || 0;
 
   const timeEl = document.getElementById('item-time-value');
@@ -763,7 +764,7 @@ function renderItemView(it) {
 // the comment there for why.)
 // -----------------------------------------------------------------
 function populateReadingOverlay(it) {
-  const closed = it.active === false;
+  const closed = isClosed(it);
   document.getElementById('reading-lotnum').textContent = 'LOT ' + String(it.lotNumber).padStart(3, '0');
   document.getElementById('reading-title').textContent = it.title;
   document.getElementById('reading-badges').innerHTML = it.category ? `<span class="badge">${escapeHtml(it.category)}</span>` : '';
@@ -848,8 +849,7 @@ function openBidSheet(it) {
   backdrop.classList.add('open');
   sheet.classList.add('open');
 
-  setSheetBlockedUI(null); // reset to enabled while we check, avoids a stale locked state
-  getActiveBidBlock().then(until => setSheetBlockedUI(until));
+  setSheetBlockedUI(null); // per-device block is retired (see firestore.rules); just reset the UI
 }
 document.getElementById('sheet-close').onclick = closeBidSheet;
 backdrop.onclick = closeBidSheet;
@@ -937,24 +937,13 @@ document.getElementById('sheet-confirm').onclick = async () => {
   if (!googleUser) { errEl.textContent = 'Sign in with Google to bid.'; return; }
   if (!name) { errEl.textContent = 'Enter your name to bid.'; return; }
   if (!isValidPhone(phone)) { errEl.textContent = 'Enter a valid 10-digit phone number starting with 6, 7, 8, or 9.'; return; }
-  if (!Number.isFinite(amount) || amount <= 0) { errEl.textContent = 'Enter a bid amount — it can\'t be zero or negative.'; return; }
+  if (!Number.isInteger(amount) || amount <= 0) { errEl.textContent = 'Enter a whole-rupee amount.'; return; }
 
-  // Already blocked from an earlier absurd bid? Don't even try.
-  const activeBlock = await getActiveBidBlock();
-  if (activeBlock) {
-    setSheetBlockedUI(activeBlock);
-    return;
-  }
-
-  // Anything above the sanity ceiling is auto-rejected, and the device
-  // is blocked from bidding for a few minutes rather than just re-shown
-  // an error (see firestore.rules for the server-side half of this).
+  // Sanity ceiling — firestore.rules (underMaxBid) rejects this server-side
+  // too. The old per-device block (bidBlocks) is retired: it could be abused
+  // to lock out other people and was trivially dodged.
   if (amount > MAX_BID_AMOUNT) {
-    await triggerBidBlock();
-    // Lock the UI immediately, client-side, rather than just showing an
-    // error the person could click past — matches the block firestore.rules
-    // will enforce for the same window regardless.
-    setSheetBlockedUI(new Date(Date.now() + BID_BLOCK_MINUTES * 60000));
+    errEl.textContent = `That bid is above the ${money(MAX_BID_AMOUNT)} limit.`;
     return;
   }
 
@@ -965,13 +954,13 @@ document.getElementById('sheet-confirm').onclick = async () => {
 
   const itemRef = db.collection('items').doc(sheetItem.id);
   const bidRef = itemRef.collection('bids').doc();
-  const limitRef = db.collection('bidLimits').doc(getDeviceId());
+  const limitRef = db.collection('bidLimits').doc(googleUser.uid);
   try {
     await db.runTransaction(async (tx) => {
       const doc = await tx.get(itemRef);
       if (!doc.exists) throw new Error('This lot no longer exists.');
       const it = doc.data();
-      if (it.active === false) throw new Error('Bidding on this lot has just closed.');
+      if (isClosed(it)) throw new Error('Bidding on this lot has just closed.');
       const minNext = it.currentBid + it.increment;
       if (amount < minNext) throw new Error(`Someone beat you to it — bid must now be at least ${money(minNext)}.`);
       tx.update(itemRef, {
@@ -996,7 +985,7 @@ document.getElementById('sheet-confirm').onclick = async () => {
     document.getElementById('success-overlay').classList.add('open');
   } catch (e) {
     if (e.code === 'permission-denied') {
-      errEl.textContent = "You're bidding too fast, or temporarily blocked — wait a few seconds and try again.";
+      errEl.textContent = "Couldn't place that bid — you may be bidding too fast, or the lot may have closed. Wait a moment and refresh.";
     } else {
       errEl.textContent = e.message || 'Could not place that bid — try again.';
     }
@@ -1028,16 +1017,23 @@ function renderMyBids() {
   const rows = mine.map(m => {
     const it = lots.find(l => l.id === m.itemId);
     if (!it) return null;
-    const closed = it.active === false;
-    let bucket = 'active', statusText = 'Current highest bid', statusClass = '';
+    const closed = isClosed(it);
+    let bucket = 'active', statusText = '', statusClass = '';
     if (closed) {
       if (it.winnerBidId) {
         if (it.winnerBidId === m.bidId) { bucket = 'won'; statusText = 'You won this item!'; statusClass = 'won'; }
-        else { bucket = 'lost'; statusText = `Won by ${it.currentBidderName || 'another bidder'}`; statusClass = 'lost'; }
+        else { bucket = 'lost'; statusText = `Won by ${escapeHtml(winnerNameOf(it) || 'another bidder')}`; statusClass = 'lost'; }
       } else {
         bucket = 'active'; statusText = 'Results pending';
       }
+    } else if (!googleUser) {
+      statusText = 'Sign in to see your status';
+    } else if (it.currentBidderUid === googleUser.uid) {
+      statusText = "You're the highest bidder"; statusClass = 'won';
+    } else {
+      statusText = 'Outbid'; statusClass = 'lost';
     }
+    if (m.amount != null) statusText += ` · your bid ${money(m.amount)}`;
     return { it, m, bucket, statusText, statusClass, closed };
   }).filter(Boolean).sort((a, b) => b.m.ts - a.m.ts);
 
@@ -1053,7 +1049,7 @@ function renderMyBids() {
       <img src="${r.it.imageUrl || ''}" onerror="this.style.visibility='hidden'">
       <div class="b">
         <p class="t">${escapeHtml(r.it.title)}</p>
-        <p class="p">${money(r.it.currentBid)}</p>
+        <p class="p">${money(r.closed && r.it.winnerBidId ? winnerAmountOf(r.it) : r.it.currentBid)}</p>
         <p class="s ${r.statusClass}">${r.statusText}${!r.closed ? ' · ' + gridTimeLabel(r.it) : ''}</p>
       </div>
       <span class="chev">${ICONS.chev}</span>

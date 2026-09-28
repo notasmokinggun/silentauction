@@ -51,6 +51,23 @@ function getDeviceId() {
   return id;
 }
 
+// A lot is closed if an admin closed it OR its deadline (endsAt) has passed.
+// Use this everywhere instead of checking `active === false` directly.
+// (firestore.rules also rejects bids after endsAt, so this is the friendly half.)
+function isClosed(it) {
+  if (!it) return false;
+  if (it.active === false) return true;
+  const e = it.endsAt;
+  if (!e) return false;
+  const t = e.toDate ? e.toDate().getTime() : new Date(e).getTime();
+  return Number.isFinite(t) && t <= Date.now();
+}
+
+// Who won / at what price. "Set winner" writes winnerName/winnerAmount and does
+// NOT touch currentBidderName/currentBid, so prefer the winner fields.
+function winnerNameOf(it) { return it.winnerName ?? it.currentBidderName; }
+function winnerAmountOf(it) { return it.winnerAmount ?? it.currentBid; }
+
 function money(n) {
   return "₹" + Number(n).toLocaleString("en-IN", { minimumFractionDigits: 0 });
 }

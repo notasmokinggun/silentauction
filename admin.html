@@ -154,26 +154,12 @@
 
 <div id="gate" class="gate">
   <div class="serif" style="font-size:20px;margin-bottom:22px;">JASHN ADMIN</div>
-  <form id="signin-form">
-    <label for="signin-email">Email</label>
-    <input id="signin-email" type="email" autocomplete="email" required style="margin-bottom:12px;">
-    <label for="signin-password">Password</label>
-    <input id="signin-password" type="password" autocomplete="current-password" minlength="6" required>
-    <div class="form-actions">
-      <button class="btn-primary" id="signin-btn" type="submit">Sign In</button>
-      <button class="btn-cancel" id="createpw-btn" type="button" style="display:inline-block;">Create Password</button>
-    </div>
-  </form>
-  <p class="gate-hint">New admin? Ask the owner to add your email on the
-    <a href="admin-access.html">Admin Access</a> page first — an account can
-    only be created for an approved email. Once approved, enter that same
-    email above, choose a password, and tap <strong>Create
-    Password</strong>. Setting this up for the very first time ever?
-    Go to <a href="owner-setup.html">Owner Setup</a> instead.</p>
-  <p class="gate-hint">Forgot your password? There's no email-based reset —
-    ask the owner to delete your account in the Firebase console
-    (Authentication tab), then use <strong>Create Password</strong> again
-    with the same email.</p>
+  <button class="btn-primary" id="google-signin" type="button">Sign in with Google</button>
+  <p class="gate-hint">Admins sign in with the Google account whose email the owner
+    approved on the <a href="admin-access.html">Admin Access</a> page. Google
+    verifies the email, so nobody can claim an approved address they don't own.
+    Setting this up for the very first time ever? Go to
+    <a href="owner-setup.html">Owner Setup</a> instead.</p>
   <p id="signin-err" class="gate-err"></p>
 </div>
 
@@ -386,42 +372,16 @@ const gate = document.getElementById('gate');
 const denied = document.getElementById('denied');
 const shell = document.getElementById('shell');
 
-document.getElementById('signin-form').onsubmit = async (e) => {
-  e.preventDefault();
+document.getElementById('google-signin').onclick = async () => {
   const err = document.getElementById('signin-err');
   err.textContent = '';
-  const email = document.getElementById('signin-email').value.trim().toLowerCase();
-  const password = document.getElementById('signin-password').value;
-  const btn = document.getElementById('signin-btn');
+  const btn = document.getElementById('google-signin');
   btn.disabled = true;
   try {
     await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-    await auth.signInWithEmailAndPassword(email, password);
-  } catch (e2) { err.textContent = e2.message; }
-  finally { btn.disabled = false; }
-};
-document.getElementById('createpw-btn').onclick = async () => {
-  const err = document.getElementById('signin-err');
-  err.textContent = '';
-  const email = document.getElementById('signin-email').value.trim().toLowerCase();
-  const password = document.getElementById('signin-password').value;
-  if (!email || password.length < 6) { err.textContent = 'Enter the approved email and a password (6+ characters) above first.'; return; }
-  const btn = document.getElementById('createpw-btn');
-  btn.disabled = true;
-  try {
-    // No email sending anywhere in this flow — trust comes entirely from
-    // the owner's allowlist (adminEmails), checked BEFORE the Firebase Auth
-    // account is even created. An unapproved email never gets an account.
-    const { approved, error } = await checkAdminApprovalStatus(email);
-    if (error) { err.textContent = error; return; }
-    if (!approved) {
-      err.textContent = "This email hasn't been approved by the owner yet. Ask them to add it on the Admin Access page first.";
-      return;
-    }
-    await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-    await auth.createUserWithEmailAndPassword(email, password);
-    // onAuthStateChanged -> refreshGate takes it from here: since the email
-    // is approved, checkIsAdmin() will pass and the shell opens right away.
+    // Admin identity is a Google-verified email (firestore.rules requires
+    // email_verified + the google.com provider), never a password account.
+    await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
   } catch (e2) { err.textContent = e2.message; }
   finally { btn.disabled = false; }
 };

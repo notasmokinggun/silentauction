@@ -4,7 +4,7 @@ const { initializeTestEnvironment, assertSucceeds, assertFails } = require('@fir
 const { doc, getDoc, getDocs, collection, setDoc, deleteDoc, serverTimestamp, writeBatch } = require('firebase/firestore');
 let env;
 const account = (uid, email, verified = true) => env.authenticatedContext(uid, {
-  email, email_verified: verified, firebase: { sign_in_provider: 'password' },
+  email, email_verified: verified, firebase: { sign_in_provider: 'google.com' },
 }).firestore();
 const approval = (email, uid, role = 'admin') => ({ email, approved: true, role, updatedBy: uid, updatedAt: serverTimestamp() });
 before(async () => {
@@ -26,12 +26,15 @@ test('anonymous and ordinary guests cannot read the list or approve themselves',
     await assertFails(setDoc(doc(db, 'adminEmails/guest@example.com'), approval('guest@example.com', 'guest')));
   }
 });
-test('email_verified no longer matters — no verification email is ever sent', async () => {
-  // Same approved owner email, but with email_verified: false on the token —
-  // this must still work, since nothing in this app can ever set it true.
-  const db = account('owner-unverified', 'owner@example.com', false);
-  await assertSucceeds(getDocs(collection(db, 'adminEmails')));
-  await assertSucceeds(getDoc(doc(db, 'users/guest')));
+test('unverified emails and non-Google providers are never admin', async () => {
+  const unverified = account('owner-unverified', 'owner@example.com', false);
+  await assertFails(getDocs(collection(unverified, 'adminEmails')));
+  await assertFails(getDoc(doc(unverified, 'users/guest')));
+  const pw = env.authenticatedContext('owner-pw', {
+    email: 'owner@example.com', email_verified: true, firebase: { sign_in_provider: 'password' },
+  }).firestore();
+  await assertFails(getDocs(collection(pw, 'adminEmails')));
+  await assertFails(setDoc(doc(pw, 'items/new'), { title: 'Nope' }));
 });
 test('an authenticated but unapproved email is still blocked from everything', async () => {
   const db = account('stranger', 'stranger@example.com');
@@ -39,14 +42,14 @@ test('an authenticated but unapproved email is still blocked from everything', a
   await assertFails(getDoc(doc(db, 'users/guest')));
   await assertFails(setDoc(doc(db, 'items/new'), { title: 'Unauthorized' }));
 });
-test('any exact adminEmails doc is publicly gettable (pre-signup allowlist check), but listing stays owner-only', async () => {
-  // admin.html must be able to check "is this email approved?" before an
-  // Auth account for it even exists — there is no signed-in user yet to
-  // compare against, so this single-doc get has to be open to anyone.
+test('adminEmails is not publicly gettable; a user may read only their own row', async () => {
   const anon = env.unauthenticatedContext().firestore();
-  await assertSucceeds(getDoc(doc(anon, 'adminEmails/admin@example.com')));
-  await assertSucceeds(getDoc(doc(anon, 'adminEmails/nobody@example.com'))); // not-found is fine, just not a permission error
+  await assertFails(getDoc(doc(anon, 'adminEmails/admin@example.com')));
   await assertFails(getDocs(collection(anon, 'adminEmails')));
+  const stranger = account('stranger', 'stranger@example.com');
+  await assertFails(getDoc(doc(stranger, 'adminEmails/admin@example.com')));
+  await assertSucceeds(getDoc(doc(stranger, 'adminEmails/stranger@example.com')));
+  await assertSucceeds(getDoc(doc(account('admin', 'admin@example.com'), 'adminEmails/owner@example.com')));
 });
 test('verified approved email permits management; mixed-case tokens normalize', async () => {
   const db = account('owner', 'Owner@Example.com');
@@ -113,9 +116,9 @@ test('first-owner setup requires the private code (not email verification), cons
   await assertFails(claim(db, 'first', 'first@example.com', 'WrongSetupCode1234567890'));
   await assertFails(claim(db, 'first', 'someoneelse@example.com', key));
   await assertFails(claim(db, 'first', 'first@example.com', key, false));
-  // email_verified: false on the claiming account's token must NOT block
-  // this — nothing in the app can ever set that flag true.
-  await assertSucceeds(claim(account('first', 'first@example.com', false), 'first', 'first@example.com', key));
+  // Claiming ownership needs a verified Google email.
+  await assertFails(claim(account('first', 'first@example.com', false), 'first', 'first@example.com', key));
+  await assertSucceeds(claim(db, 'first', 'first@example.com', key));
   await assertSucceeds(setDoc(doc(db, 'adminEmails/helper@example.com'), approval('helper@example.com', 'first')));
   await env.withSecurityRulesDisabled(async context => {
     const consumed = await getDoc(doc(context.firestore(), 'setupKeys/' + key));

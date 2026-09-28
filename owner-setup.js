@@ -7,7 +7,7 @@ function displaySetupUser(user) {
   document.getElementById('identity').textContent = user ? 'Owner email: ' + (user.email || '') : '';
   setupStatus.textContent = user && !user.isAnonymous
     ? 'Enter your one-time setup code below.'
-    : 'Create your account, or sign in if you already have one.';
+    : 'Sign in with the Google account that should own this auction.';
   if (user && !user.isAnonymous) {
     db.collection('settings').doc('owner').get().then(doc => {
       if (!auth.currentUser || auth.currentUser.uid !== user.uid || !doc.exists || doc.data().uid !== user.uid) return;
@@ -22,21 +22,16 @@ function displaySetupUser(user) {
   }
 }
 auth.onAuthStateChanged(displaySetupUser);
-async function accountAction(create) {
+async function googleSignIn() {
   const form = document.getElementById('account');
-  if (!form.reportValidity()) return;
   form.querySelectorAll('button').forEach(button => { button.disabled = true; });
   try {
     await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-    const email = document.getElementById('email').value.trim().toLowerCase();
-    const password = document.getElementById('password').value;
-    create ? await auth.createUserWithEmailAndPassword(email, password) : await auth.signInWithEmailAndPassword(email, password);
-    document.getElementById('password').value = '';
+    await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
   } catch (err) { setupStatus.textContent = err.message; }
   finally { form.querySelectorAll('button').forEach(button => { button.disabled = false; }); }
 }
-document.getElementById('account').onsubmit = event => { event.preventDefault(); accountAction(true); };
-document.getElementById('signin').onclick = () => accountAction(false);
+document.getElementById('account').onsubmit = event => { event.preventDefault(); googleSignIn(); };
 document.getElementById('signout').onclick = () => auth.signOut().catch(err => { setupStatus.textContent = err.message; });
 document.getElementById('claim').onsubmit = async event => {
   event.preventDefault();

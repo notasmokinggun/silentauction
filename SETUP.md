@@ -16,9 +16,9 @@ include `owner-setup.html`, `owner-setup.js` and the other files in this branch.
 
 Open https://console.firebase.google.com and select **cas-silent-auction**.
 Choose **Build → Authentication → Sign-in method** (click Get started if shown).
-Enable **Email/Password** and save. Then enable **Google**, choose the support
-email if prompted, and save. You do not need phone authentication or email-link
-login. Email/password is for organizers; Google is for guests.
+Enable **Google**, choose the support email if prompted, and save. Guests and
+organizers both sign in with Google. You do not need Email/Password, phone
+authentication or email-link login.
 
 ## 3. Allow your website domain
 
@@ -71,11 +71,9 @@ lets its holder choose the first owner. It becomes unusable after successful set
 Open your published site's admin login page and click **First-time owner setup**.
 Alternatively open `owner-setup.html` in the same folder as `admin.html`.
 
-1. Type the email you want as owner and choose a password.
-2. Click **Create my account**. If you already have that account, use **I already
-   have an account** instead.
-3. Paste the setup code from step 5 above.
-4. Click **Make this my owner account**.
+1. Click **Sign in with Google** and pick the account that should own the auction.
+2. Paste the setup code from step 5 above.
+3. Click **Make this my owner account**.
 
 No email is sent at any point in this flow. Wait for "Owner saved". Your
 email/account is now stored in Firebase, the setup code is disabled, and
@@ -85,19 +83,11 @@ owner setup is locked. You do not manually copy a UID.
 
 Open **Admin → Settings → Manage admin access**, enter their email and click
 **Add admin**. This only adds the email to the allowlist — nothing is
-emailed to them. They then go to the admin login page, enter that exact
-email, choose their own password, and tap **Create Password**. The app
-checks the allowlist first: if the email hasn't been approved, no account
-is created at all. If they already have an account, they just sign in
-normally with their email and password.
+emailed to them. They then open the admin login page and tap **Sign in with
+Google** using the account with that exact email.
 
 Only your owner account can approve or remove admins. Other admins can manage
-the auction, but cannot approve anybody else. There is no self-service
-"forgot password" — since no email is ever sent, a locked-out admin needs
-the owner (or you) to delete their account in the Firebase console
-(Authentication tab), after which they can run **Create Password** again
-with the same email. Guests continue using Google, with no new password or
-OTP required by this site.
+the auction, but cannot approve anybody else. There are no admin passwords, so nothing to reset.
 
 ## If something fails
 

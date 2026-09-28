@@ -254,6 +254,21 @@
     .bottomnav,.sheet,.reading-overlay,.lightbox-overlay,.success-overlay{
       max-width:480px;width:100%;left:50%;right:auto;transform:translateX(-50%);
     }
+
+    /* Splash only: paint the glow across the WHOLE window instead of
+       inside the 480px column, so there's no box edge for it to be cut
+       off by. The column's own background/border/shadow are switched off
+       while the splash is showing; everything else keeps the framed look. */
+    html:has(#view-splash.active){
+      background:
+        radial-gradient(ellipse 900px 700px at calc(50% - 134px) 82%, rgba(227,183,92,.13) 0%, rgba(227,183,92,.05) 45%, transparent 80%),
+        radial-gradient(ellipse 1500px 1300px at calc(50% - 100px) 0%, #3a2a18 0%, #2c2116 16%, #21190f 32%, #17110b 50%, #100d09 70%, var(--bg) 100%)
+        fixed;
+    }
+    html:has(#view-splash.active) body{background:transparent;}
+    #view-splash.active{box-shadow:none;}
+    #view-splash.active .splash-photo{background:transparent;}
+    #view-splash.active .splash-photo::before{display:none;}
   }
 </style>
 </head>

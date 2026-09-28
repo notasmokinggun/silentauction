@@ -188,6 +188,10 @@ service cloud.firestore {
         underMaxBid(request.resource.data.currentBid) &&
         request.resource.data.currentBid >= resource.data.currentBid + resource.data.increment &&
         request.resource.data.bidCount == resource.data.get('bidCount', 0) + 1 &&
+        // Bids at or above 5x the current price must go through the review
+        // hold (see bids below), never straight onto the lot.
+        // Keep the 5 in sync with HOLD_MULTIPLIER in firebase-init.js.
+        request.resource.data.currentBid < 5 * (resource.data.currentBid > 0 ? resource.data.currentBid : resource.data.increment) &&
         request.resource.data.currentBidderName is string &&
         request.resource.data.currentBidderName.size() > 0 &&
         request.resource.data.currentBidderName.size() < 80 &&
@@ -195,41 +199,76 @@ service cloud.firestore {
       );
 
       match /bids/{bidId} {
-        // Bids hold phone numbers and emails. The public app only writes
-        // them; admins read them.
+        // Bids hold phone numbers and emails. Admins read them all; a bidder
+        // can read only their own (see the collection-group rule at the
+        // bottom of this file).
         allow read: if isAdmin();
-        allow update, delete: if isAdmin();
-        // A bid document is only ever valid if its uid is the account that
-        // is actually signed in right now: a guest can't write someone
-        // else's uid, and can't write a bid with no uid at all.
-        // Phone is mandatory alongside the name on every bid (no OTP, this
-        // is a single basic format check, not a verification step): 10
-        // digits, starting with 6, 7, 8 or 9. See PHONE_REGEX in
-        // firebase-init.js for the identical client-side check.
-        allow create: if isVerifiedBidder() &&
-          request.resource.data.name is string &&
-          request.resource.data.name.size() > 0 &&
-          request.resource.data.name.size() < 80 &&
-          request.resource.data.phone is string &&
-          request.resource.data.phone.matches('^[6789][0-9]{9}$') &&
-          request.resource.data.keys().hasOnly(
-            ['name', 'phone', 'email', 'amount', 'uid', 'isGoogle', 'deviceId', 'timestamp']) &&
-          request.resource.data.email == request.auth.token.email &&
-          request.resource.data.timestamp == request.time &&
-          request.resource.data.amount is int &&
-          underMaxBid(request.resource.data.amount) &&
-          request.resource.data.uid == request.auth.uid &&
-          request.resource.data.deviceId is string &&
-          !isBlacklisted(request.resource.data.deviceId) &&
-          // Tie the bid doc to the item update in the same transaction:
-          // same amount, same bidder, count goes up by exactly one, and the
-          // per-account cooldown doc is written at this same instant.
-          getAfter(/databases/$(database)/documents/items/$(itemId)).data.currentBid == request.resource.data.amount &&
-          getAfter(/databases/$(database)/documents/items/$(itemId)).data.currentBidderUid == request.auth.uid &&
-          getAfter(/databases/$(database)/documents/items/$(itemId)).data.bidCount ==
-            get(/databases/$(database)/documents/items/$(itemId)).data.get('bidCount', 0) + 1 &&
-          getAfter(/databases/$(database)/documents/bidLimits/$(request.auth.uid)).data.lastBidAt == request.time;
+        allow update: if isAdmin();
+        // Admins delete anything. A bidder may withdraw their own hold
+        // while it is pending or after it was revoked (so they can bid again).
+        allow delete: if isAdmin() || (request.auth != null &&
+          resource.data.uid == request.auth.uid &&
+          resource.data.get('status', '') in ['pending', 'revoked']);
+
+        // Price the 5x hold is measured against: the current bid, or the
+        // increment when the current bid is 0.
+        function holdBase() {
+          return get(/databases/$(database)/documents/items/$(itemId)).data.currentBid > 0
+            ? get(/databases/$(database)/documents/items/$(itemId)).data.currentBid
+            : get(/databases/$(database)/documents/items/$(itemId)).data.increment;
+        }
+        // Checks shared by normal bids and held bids. Phone is mandatory
+        // (10 digits starting 6-9, no OTP; see PHONE_REGEX in firebase-init.js).
+        // The per-account cooldown doc must be written at this same instant.
+        function commonBid() {
+          return request.resource.data.name is string &&
+            request.resource.data.name.size() > 0 &&
+            request.resource.data.name.size() < 80 &&
+            request.resource.data.phone is string &&
+            request.resource.data.phone.matches('^[6789][0-9]{9}$') &&
+            request.resource.data.email == request.auth.token.email &&
+            request.resource.data.timestamp == request.time &&
+            request.resource.data.amount is int &&
+            underMaxBid(request.resource.data.amount) &&
+            request.resource.data.uid == request.auth.uid &&
+            request.resource.data.deviceId is string &&
+            !isBlacklisted(request.resource.data.deviceId) &&
+            getAfter(/databases/$(database)/documents/bidLimits/$(request.auth.uid)).data.lastBidAt == request.time;
+        }
+        // A normal bid: below 5x, and tied to the item update in the same
+        // transaction (same amount, same bidder, bidCount + 1).
+        function normalBid() {
+          return request.resource.data.keys().hasOnly(
+              ['name', 'phone', 'email', 'amount', 'uid', 'isGoogle', 'deviceId', 'timestamp']) &&
+            request.resource.data.amount < 5 * holdBase() &&
+            getAfter(/databases/$(database)/documents/items/$(itemId)).data.currentBid == request.resource.data.amount &&
+            getAfter(/databases/$(database)/documents/items/$(itemId)).data.currentBidderUid == request.auth.uid &&
+            getAfter(/databases/$(database)/documents/items/$(itemId)).data.bidCount ==
+              get(/databases/$(database)/documents/items/$(itemId)).data.get('bidCount', 0) + 1;
+        }
+        // A held bid: 5x or more above the price. It never touches the lot.
+        // A reviewer calls the bidder; only an admin can confirm it. One
+        // hold per bidder per lot (fixed id).
+        function heldBid() {
+          return bidId == 'hold_' + request.auth.uid &&
+            request.resource.data.keys().hasOnly(
+              ['name', 'phone', 'email', 'amount', 'uid', 'isGoogle', 'deviceId', 'timestamp', 'status']) &&
+            request.resource.data.status == 'pending' &&
+            request.resource.data.amount >= 5 * holdBase() &&
+            get(/databases/$(database)/documents/items/$(itemId)).data.active == true &&
+            (get(/databases/$(database)/documents/items/$(itemId)).data.get('endsAt', null) == null ||
+             request.time < get(/databases/$(database)/documents/items/$(itemId)).data.endsAt);
+        }
+        allow create: if isVerifiedBidder() && commonBid() && (normalBid() || heldBid());
       }
+    }
+
+    // Lets a signed-in bidder list ONLY their own bids across all lots
+    // (collection-group query where('uid', '==', <their uid>)). Powers a
+    // My Bids that survives a new device. Needs a collection-group index
+    // exemption on bids.uid (see firestore.indexes.json).
+    match /{path=**}/bids/{bidId} {
+      allow read: if request.auth != null && resource.data.uid == request.auth.uid;
     }
   }
 }

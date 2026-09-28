@@ -80,7 +80,14 @@ function money(n) {
 // so a tampered client can't bypass either check.
 // ─────────────────────────────────────────────────────────────
 const MAX_BID_AMOUNT = 100000000; // ₹10,00,00,000 = 10 crore
-const BID_BLOCK_MINUTES = 10;
+const BID_BLOCK_MINUTES = 10; // legacy, the per-device block is retired
+
+// Review hold: a bid at or above HOLD_MULTIPLIER x the current price is not
+// applied to the lot. It is stored as a pending "hold" and a reviewer calls
+// the bidder to confirm it. Keep this 5 in sync with firestore.rules.
+const HOLD_MULTIPLIER = 5;
+function holdBase(it) { return it.currentBid > 0 ? it.currentBid : it.increment; }
+function isHoldAmount(it, amount) { return amount >= HOLD_MULTIPLIER * holdBase(it); }
 
 function bidBlockRef() {
   return db.collection("bidBlocks").doc(getDeviceId());
@@ -253,8 +260,35 @@ function getMyBids() {
   try { return JSON.parse(localStorage.getItem("my_bids") || "[]"); }
   catch { return []; }
 }
-function recordMyBid(itemId, bidId, amount) {
+function recordMyBid(itemId, bidId, amount, status) {
   const list = getMyBids().filter((b) => b.itemId !== itemId);
-  list.push({ itemId, bidId, amount, ts: Date.now() });
+  list.push({ itemId, bidId, amount, ts: Date.now(), status: status || null });
   localStorage.setItem("my_bids", JSON.stringify(list));
+}
+
+// Pulls this account's bids from the server (all lots, one query) so My Bids
+// survives a new device or cleared storage, and so a held bid shows its real
+// status (pending / confirmed / revoked). Needs the bids.uid collection-group
+// index exemption (firestore.indexes.json). If that query fails for any
+// reason, it quietly keeps whatever is in localStorage.
+async function syncMyBidsFromServer(uid) {
+  if (!uid) return false;
+  try {
+    const snap = await db.collectionGroup("bids").where("uid", "==", uid).get();
+    const latest = new Map();
+    snap.forEach((d) => {
+      const data = d.data();
+      const itemId = d.ref.parent.parent.id;
+      const ts = data.timestamp && data.timestamp.toDate ? data.timestamp.toDate().getTime() : 0;
+      const prev = latest.get(itemId);
+      if (!prev || ts >= prev.ts) {
+        latest.set(itemId, { itemId, bidId: d.id, amount: data.amount, ts, status: data.status || null });
+      }
+    });
+    localStorage.setItem("my_bids", JSON.stringify([...latest.values()]));
+    return true;
+  } catch (err) {
+    console.warn("Could not sync My Bids from the server:", err.code || err.message);
+    return false;
+  }
 }

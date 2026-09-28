@@ -397,6 +397,7 @@
   <div id="sheet-bidform">
     <div class="amount-field"><span>₹</span><input id="sheet-amount" type="number" inputmode="numeric" min="1" max="100000000"></div>
     <div class="quick-row" id="sheet-quick"></div>
+    <p class="sheet-hold-note" id="sheet-hold-note" style="display:none;font-size:12.5px;color:var(--muted);margin:8px 0 0;line-height:1.45;">This bid is much higher than the current price, so it needs a quick confirmation call from our team. It won't show as the highest bid until you confirm.</p>
     <div class="biddername">
       <span>Bidding as <strong id="sheet-name-display"></strong></span>
       <button id="sheet-name-change">Change</button>
@@ -499,7 +500,10 @@ function showView(name) {
   document.querySelectorAll('.navbtn').forEach(b => b.classList.toggle('on', b.dataset.view === name));
   if (name !== 'item' && itemCountdownTimer) { clearInterval(itemCountdownTimer); itemCountdownTimer = null; }
   if (name !== 'item') { closeReadingMode(); closeLightbox(); }
-  if (name === 'mybids') renderMyBids();
+  if (name === 'mybids') {
+    renderMyBids();
+    if (googleUser) syncMyBidsFromServer(googleUser.uid).then(ok => { if (ok) renderMyBids(); });
+  }
   if (name === 'profile') renderProfile();
   window.scrollTo(0, 0);
 }
@@ -520,6 +524,9 @@ auth.onAuthStateChanged(u => {
   renderProfile();
   if (sheet && sheet.classList.contains('open')) updateSheetAuthGate();
   if (document.getElementById('view-mybids').classList.contains('active')) renderMyBids();
+  if (googleUser) syncMyBidsFromServer(googleUser.uid).then(ok => {
+    if (ok && document.getElementById('view-mybids').classList.contains('active')) renderMyBids();
+  });
 });
 
 // Bidding requires a real signed-in Google account (mandatory, not optional) —
@@ -625,6 +632,18 @@ function attachItemsListener() {
         if (it) renderItemView(it);
       }
       if (document.getElementById('view-mybids').classList.contains('active')) renderMyBids();
+      if (sheet.classList.contains('open') && sheetItem) {
+        const fresh = lots.find(l => l.id === sheetItem.id);
+        if (fresh && isClosed(fresh)) {
+          closeBidSheet();
+        } else if (fresh) {
+          sheetItem = fresh;
+          document.getElementById('sheet-current-bid').textContent = money(fresh.currentBid);
+          document.getElementById('sheet-min-text').textContent =
+            `Your bid must be at least ${money(fresh.currentBid + fresh.increment)}`;
+          updateHoldNote();
+        }
+      }
 
       if (directId && !openedDirect) {
         const it = lots.find(l => l.id === directId);
@@ -672,15 +691,15 @@ function renderGrid() {
   const grid = document.getElementById('grid');
   document.getElementById('empty-state').style.display = list.length ? 'none' : 'block';
   grid.innerHTML = list.map(it => `
-    <div class="card" data-id="${it.id}">
-      <img class="img" src="${it.imageUrl || ''}" onerror="this.style.visibility='hidden'">
+    <div class="card" data-id="${it.id}" role="button" tabindex="0" aria-label="${escapeHtml(it.title)}">
+      <img class="img" src="${it.imageUrl || ''}" alt="${escapeHtml(it.title)}" onerror="this.style.visibility='hidden'">
       <div class="body">
         <p class="title">${escapeHtml(it.title)}</p>
         <p class="price">${money(it.currentBid)}</p>
         <p class="left" data-endsat>${gridTimeLabel(it)}</p>
       </div>
     </div>`).join('');
-  grid.querySelectorAll('.card').forEach(c => c.onclick = () => openItem(c.dataset.id));
+  grid.querySelectorAll('.card').forEach(c => { c.onclick = () => openItem(c.dataset.id); c.onkeydown = onActivateKey; });
 
   clearInterval(gridCountdownTimer);
   gridCountdownTimer = setInterval(() => {
@@ -689,6 +708,10 @@ function renderGrid() {
       if (it) c.querySelector('[data-endsat]').textContent = gridTimeLabel(it);
     });
   }, 30000);
+}
+// Enter / Space activates a role="button" card the same way a click does.
+function onActivateKey(e) {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); }
 }
 function gridTimeLabel(it) {
   if (isClosed(it)) return 'Closed';
@@ -822,6 +845,13 @@ let sheetItem = null;
 const backdrop = document.getElementById('sheet-backdrop');
 const sheet = document.getElementById('bidsheet');
 
+function updateHoldNote() {
+  const note = document.getElementById('sheet-hold-note');
+  if (!note || !sheetItem) return;
+  const amt = Number(document.getElementById('sheet-amount').value);
+  note.style.display = Number.isFinite(amt) && amt > 0 && isHoldAmount(sheetItem, amt) ? 'block' : 'none';
+}
+document.getElementById('sheet-amount').addEventListener('input', updateHoldNote);
 function openBidSheet(it) {
   sheetItem = it;
   document.getElementById('sheet-img').src = it.imageUrl || '';
@@ -836,7 +866,9 @@ function openBidSheet(it) {
   document.querySelectorAll('.quick-btn').forEach(b => b.onclick = () => {
     const inp = document.getElementById('sheet-amount');
     inp.value = Number(inp.value || 0) + Number(b.dataset.add);
+    updateHoldNote();
   });
+  updateHoldNote();
 
   const savedName = localStorage.getItem('auction_name') || (googleUser ? (googleUser.displayName || '') : '');
   document.getElementById('sheet-name-input').value = savedName;
@@ -953,9 +985,14 @@ document.getElementById('sheet-confirm').onclick = async () => {
   localStorage.setItem('auction_phone', phone);
 
   const itemRef = db.collection('items').doc(sheetItem.id);
-  const bidRef = itemRef.collection('bids').doc();
   const limitRef = db.collection('bidLimits').doc(googleUser.uid);
+  const holdRef = itemRef.collection('bids').doc('hold_' + googleUser.uid);
+  let bidRef = itemRef.collection('bids').doc();
+  let held = false;
   try {
+    // Replacing an earlier unconfirmed hold on this lot: clear it first (the
+    // rules only allow this for pending/revoked holds; anything else is ignored).
+    if (isHoldAmount(sheetItem, amount)) { try { await holdRef.delete(); } catch (_) {} }
     await db.runTransaction(async (tx) => {
       const doc = await tx.get(itemRef);
       if (!doc.exists) throw new Error('This lot no longer exists.');
@@ -963,25 +1000,35 @@ document.getElementById('sheet-confirm').onclick = async () => {
       if (isClosed(it)) throw new Error('Bidding on this lot has just closed.');
       const minNext = it.currentBid + it.increment;
       if (amount < minNext) throw new Error(`Someone beat you to it — bid must now be at least ${money(minNext)}.`);
-      tx.update(itemRef, {
-        currentBid: amount, currentBidderName: name,
-        currentBidderUid: googleUser.uid,
-        bidCount: (it.bidCount || 0) + 1,
-      });
-      tx.set(bidRef, {
+      held = isHoldAmount(it, amount);
+      const fields = {
         name, phone, email: googleUser.email || '', amount, uid: googleUser.uid,
         isGoogle: true, deviceId: getDeviceId(),
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-      });
-      // Server-enforced cooldown — see firestore.rules. If this device bid
+      };
+      if (held) {
+        // 5x or more above the price: stored as a pending hold. The lot is
+        // untouched until a reviewer calls and an admin confirms it.
+        bidRef = holdRef;
+        tx.set(holdRef, { ...fields, status: 'pending' });
+      } else {
+        tx.update(itemRef, {
+          currentBid: amount, currentBidderName: name,
+          currentBidderUid: googleUser.uid,
+          bidCount: (it.bidCount || 0) + 1,
+        });
+        tx.set(bidRef, fields);
+      }
+      // Server-enforced cooldown — see firestore.rules. If this account bid
       // within the last few seconds, this write (and so the whole
       // transaction) gets rejected atomically.
       tx.set(limitRef, { lastBidAt: firebase.firestore.FieldValue.serverTimestamp() });
     });
-    recordMyBid(sheetItem.id, bidRef.id, amount);
+    recordMyBid(sheetItem.id, bidRef.id, amount, held ? 'pending' : null);
     closeBidSheet();
-    document.getElementById('success-msg').textContent =
-      `Your bid of ${money(amount)} has been placed on ${sheetItem.title}.`;
+    document.getElementById('success-msg').textContent = held
+      ? `Your bid of ${money(amount)} on ${sheetItem.title} is on hold. Our team will call you on ${phone} to confirm it. It won't count as the highest bid until you do.`
+      : `Your bid of ${money(amount)} has been placed on ${sheetItem.title}.`;
     document.getElementById('success-overlay').classList.add('open');
   } catch (e) {
     if (e.code === 'permission-denied') {
@@ -1019,7 +1066,12 @@ function renderMyBids() {
     if (!it) return null;
     const closed = isClosed(it);
     let bucket = 'active', statusText = '', statusClass = '';
-    if (closed) {
+    if (m.status === 'revoked') {
+      bucket = 'lost'; statusText = 'Bid not confirmed'; statusClass = 'lost';
+    } else if (m.status === 'pending') {
+      if (closed) { bucket = 'lost'; statusText = 'Not confirmed before the lot closed'; statusClass = 'lost'; }
+      else { statusText = 'On hold: waiting for our confirmation call'; }
+    } else if (closed) {
       if (it.winnerBidId) {
         if (it.winnerBidId === m.bidId) { bucket = 'won'; statusText = 'You won this item!'; statusClass = 'won'; }
         else { bucket = 'lost'; statusText = `Won by ${escapeHtml(winnerNameOf(it) || 'another bidder')}`; statusClass = 'lost'; }
@@ -1045,8 +1097,8 @@ function renderMyBids() {
   const shown = rows.filter(r => r.bucket === mybidsTab);
   document.getElementById('mybids-empty').style.display = shown.length ? 'none' : 'block';
   document.getElementById('mybids-list').innerHTML = shown.map(r => `
-    <div class="biditem" data-id="${r.it.id}">
-      <img src="${r.it.imageUrl || ''}" onerror="this.style.visibility='hidden'">
+    <div class="biditem" data-id="${r.it.id}" role="button" tabindex="0" aria-label="${escapeHtml(r.it.title)}">
+      <img src="${r.it.imageUrl || ''}" alt="${escapeHtml(r.it.title)}" onerror="this.style.visibility='hidden'">
       <div class="b">
         <p class="t">${escapeHtml(r.it.title)}</p>
         <p class="p">${money(r.closed && r.it.winnerBidId ? winnerAmountOf(r.it) : r.it.currentBid)}</p>
@@ -1054,7 +1106,7 @@ function renderMyBids() {
       </div>
       <span class="chev">${ICONS.chev}</span>
     </div>`).join('');
-  document.querySelectorAll('#mybids-list .biditem').forEach(el => el.onclick = () => openItem(el.dataset.id));
+  document.querySelectorAll('#mybids-list .biditem').forEach(el => { el.onclick = () => openItem(el.dataset.id); el.onkeydown = onActivateKey; });
 }
 
 // -----------------------------------------------------------------
@@ -1070,7 +1122,7 @@ function renderProfile() {
     document.getElementById('signout-btn').onclick = () => auth.signOut();
   } else {
     gwrap.innerHTML = `
-      <p style="font-size:13px;color:var(--muted);margin:0 0 12px;">Optional — ties your name to a real Google account for high-value lots.</p>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 12px;">Required to place bids. It ties your bids to a real Google account.</p>
       <div id="profile-google-btn" class="google-btn-slot"></div>`;
     renderGoogleButton();
   }

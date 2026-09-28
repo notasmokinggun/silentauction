@@ -1,7 +1,7 @@
 const { before, after, test } = require('node:test');
 const fs = require('node:fs');
 const { initializeTestEnvironment, assertSucceeds, assertFails } = require('@firebase/rules-unit-testing');
-const { doc, getDoc, getDocs, collection, setDoc, deleteDoc, serverTimestamp, writeBatch } = require('firebase/firestore');
+const { doc, getDoc, getDocs, collection, collectionGroup, query, where, setDoc, deleteDoc, serverTimestamp, writeBatch } = require('firebase/firestore');
 let env;
 const account = (uid, email, verified = true) => env.authenticatedContext(uid, {
   email, email_verified: verified, firebase: { sign_in_provider: 'google.com' },
@@ -163,7 +163,7 @@ test('a bid doc without the matching item update is rejected', async () => {
   await seedLot('b1');
   const g = bidder('g2', 'g2@example.com');
   const b = writeBatch(g);
-  b.set(doc(collection(g, 'items/b1/bids')), { name: 'A', phone: '9876543210', email: 'g2@example.com', amount: 5000, uid: 'g2', isGoogle: true, deviceId: 'd', timestamp: serverTimestamp() });
+  b.set(doc(collection(g, 'items/b1/bids')), { name: 'A', phone: '9876543210', email: 'g2@example.com', amount: 120, uid: 'g2', isGoogle: true, deviceId: 'd', timestamp: serverTimestamp() });
   b.set(doc(g, 'bidLimits/g2'), { lastBidAt: serverTimestamp() });
   await assertFails(b.commit());
 });
@@ -190,4 +190,59 @@ test('nobody can write another uid\'s bidLimits, and bidBlocks are closed', asyn
   await assertFails(setDoc(doc(env.unauthenticatedContext().firestore(), 'bidLimits/g6'), { lastBidAt: serverTimestamp() }));
   await assertFails(setDoc(doc(g, 'bidLimits/g6'), { lastBidAt: new Date(Date.now() + 86400000) }));
   await assertFails(setDoc(doc(g, 'bidBlocks/dev_x'), { blockedUntil: new Date(Date.now() + 600000) }));
+});
+
+// ── 5x review hold ──
+const holdFields = (uid, email, amount, over = {}) => ({
+  name: 'A', phone: '9876543210', email, amount, uid, isGoogle: true, deviceId: 'dev_x',
+  timestamp: serverTimestamp(), status: 'pending', ...over,
+});
+const placeHold = (db, lotId, uid, email, amount, over = {}, id = 'hold_' + uid) => {
+  const b = writeBatch(db);
+  b.set(doc(db, 'items/' + lotId + '/bids/' + id), holdFields(uid, email, amount, over));
+  b.set(doc(db, 'bidLimits/' + uid), { lastBidAt: serverTimestamp() });
+  return b.commit();
+};
+test('a bid 5x or more above the price can only be placed as a pending hold', async () => {
+  await seedLot('h1'); // currentBid 100 -> threshold 500
+  const g = bidder('h1u', 'h1u@example.com');
+  await assertFails(placeBid(g, 'h1', 'h1u', 'h1u@example.com', 500)); // straight onto the lot
+  await assertSucceeds(placeHold(g, 'h1', 'h1u', 'h1u@example.com', 500));
+});
+test('a hold below 5x, a wrong id, a non-pending status or a hold on a closed lot is rejected', async () => {
+  await seedLot('h2');
+  await seedLot('h2c', { active: false });
+  const g = bidder('h2u', 'h2u@example.com');
+  await assertFails(placeHold(g, 'h2', 'h2u', 'h2u@example.com', 499));
+  await assertFails(placeHold(g, 'h2', 'h2u', 'h2u@example.com', 900, {}, 'hold_someoneelse'));
+  await assertFails(placeHold(g, 'h2', 'h2u', 'h2u@example.com', 900, { status: 'confirmed' }));
+  await assertFails(placeHold(g, 'h2c', 'h2u', 'h2u@example.com', 900));
+});
+test('a hold does not change the lot, and a bidder cannot confirm their own hold', async () => {
+  await seedLot('h3');
+  const g = bidder('h3u', 'h3u@example.com');
+  await assertSucceeds(placeHold(g, 'h3', 'h3u', 'h3u@example.com', 900));
+  await assertFails(setDoc(doc(g, 'items/h3/bids/hold_h3u'), holdFields('h3u', 'h3u@example.com', 900, { status: 'confirmed' })));
+  await assertFails(setDoc(doc(g, 'items/h3'), { currentBid: 900, currentBidderName: 'A', currentBidderUid: 'h3u', bidCount: 1 }, { merge: true }));
+  await assertSucceeds(setDoc(doc(account('admin', 'admin@example.com'), 'items/h3/bids/hold_h3u'), { status: 'confirmed' }, { merge: true }));
+});
+test('a bidder can withdraw a pending hold but not delete a confirmed one', async () => {
+  await seedLot('h4');
+  const g = bidder('h4u', 'h4u@example.com');
+  await assertSucceeds(placeHold(g, 'h4', 'h4u', 'h4u@example.com', 900));
+  await assertSucceeds(deleteDoc(doc(g, 'items/h4/bids/hold_h4u')));
+  await assertSucceeds(placeHold(g, 'h4', 'h4u', 'h4u@example.com', 900));
+  await env.withSecurityRulesDisabled(async ctx => {
+    await setDoc(doc(ctx.firestore(), 'items/h4/bids/hold_h4u'), { status: 'confirmed', uid: 'h4u' }, { merge: true });
+  });
+  await assertFails(deleteDoc(doc(g, 'items/h4/bids/hold_h4u')));
+  await assertFails(deleteDoc(doc(bidder('other', 'other@example.com'), 'items/h4/bids/hold_h4u')));
+});
+test('a bidder can list only their own bids across lots (My Bids)', async () => {
+  await seedLot('m1');
+  const a = bidder('ma', 'ma@example.com');
+  await assertSucceeds(placeBid(a, 'm1', 'ma', 'ma@example.com', 110));
+  await assertSucceeds(getDocs(query(collectionGroup(a, 'bids'), where('uid', '==', 'ma'))));
+  await assertFails(getDocs(query(collectionGroup(a, 'bids'), where('uid', '==', 'someone-else'))));
+  await assertFails(getDocs(collectionGroup(a, 'bids')));
 });

@@ -124,36 +124,27 @@ service cloud.firestore {
     // anyone who was only approved there through Admin Access instead.
     match /admins/{email} { allow read, write: if false; }
 
-    // A per-device cooldown, checked server-side. A bid transaction writes
-    // here alongside its real writes; if the gap since this device's last
-    // bid is under 3 seconds, the whole transaction is rejected atomically —
-    // no partial bid, no spam-clicking past it. serverTimestamp() sentinels
-    // are resolved by Firestore before rules run, so this can't be spoofed
-    // by sending a fake future/past client timestamp.
-    match /bidLimits/{deviceId} {
-      allow read: if true;
-      allow write: if request.resource.data.lastBidAt is timestamp &&
-        (!exists(/databases/$(database)/documents/bidLimits/$(deviceId)) ||
-         request.resource.data.lastBidAt.toMillis() - resource.data.lastBidAt.toMillis() >= 3000);
+    // Per-account bid cooldown. Keyed by the signed-in uid (NOT a device id,
+    // which anyone could read off a bid doc and abuse). Each write must set
+    // lastBidAt to the server's own request.time, and a later write must come
+    // at least 3 seconds after the previous one. The bid-create rule below
+    // requires this write in the same transaction, so it can't be skipped.
+    match /bidLimits/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create: if isVerifiedBidder() && request.auth.uid == uid &&
+        request.resource.data.keys().hasOnly(['lastBidAt']) &&
+        request.resource.data.lastBidAt == request.time;
+      allow update: if isVerifiedBidder() && request.auth.uid == uid &&
+        request.resource.data.keys().hasOnly(['lastBidAt']) &&
+        request.resource.data.lastBidAt == request.time &&
+        request.time >= resource.data.lastBidAt + duration.value(3, 's');
     }
 
-    // Absurd-bid cooldown. When a device tries to bid above MAX_BID (10
-    // crore — see the same constant in firebase-init.js), the client
-    // writes a short-lived block here instead of ever attempting the bid,
-    // and any bid create underneath /items/{itemId}/bids while this doc
-    // is still "in the future" is rejected server-side too (see below) —
-    // so this can't be bypassed by skipping the client-side check.
-    // The window must land 9–11 minutes out from the server's own clock
-    // (never exactly equal, to tolerate normal network/clock skew), which
-    // stops a client from writing a block that expires immediately or
-    // lasts far longer than intended. Matches BID_BLOCK_MINUTES = 10 in
-    // firebase-init.js — change both together.
+    // Retired: the per-device block could be used to lock other people out
+    // and was dodged by changing deviceId. underMaxBid() already rejects
+    // absurd amounts. Only admins may clear leftover docs.
     match /bidBlocks/{deviceId} {
-      allow read: if true;
-      allow create, update: if request.resource.data.keys().hasOnly(['blockedUntil']) &&
-        request.resource.data.blockedUntil is timestamp &&
-        request.resource.data.blockedUntil > request.time + duration.value(9, 'm') &&
-        request.resource.data.blockedUntil <= request.time + duration.value(11, 'm');
+      allow read, create, update: if false;
       allow delete: if isAdmin();
     }
     // Absolute ceiling on any bid amount — an obviously-absurd value (fat-
@@ -192,12 +183,14 @@ service cloud.firestore {
       // a typo in the description).
       allow update: if isAdmin() || (
         resource.data.active == true &&
+        (resource.data.get('endsAt', null) == null || request.time < resource.data.endsAt) &&
         isVerifiedBidder() &&
         request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(['currentBid', 'currentBidderName', 'currentBidderUid', 'bidCount']) &&
         request.resource.data.currentBid is number &&
         underMaxBid(request.resource.data.currentBid) &&
         request.resource.data.currentBid >= resource.data.currentBid + resource.data.increment &&
+        request.resource.data.bidCount == resource.data.get('bidCount', 0) + 1 &&
         request.resource.data.currentBidderName is string &&
         request.resource.data.currentBidderName.size() > 0 &&
         request.resource.data.currentBidderName.size() < 80 &&
@@ -205,7 +198,9 @@ service cloud.firestore {
       );
 
       match /bids/{bidId} {
-        allow read: if true;
+        // Bids hold phone numbers and emails. The public app only writes
+        // them; admins read them.
+        allow read: if isAdmin();
         allow update, delete: if isAdmin();
         // A bid document is only ever valid if its uid is the account that
         // is actually signed in right now: a guest can't write someone
@@ -220,11 +215,23 @@ service cloud.firestore {
           request.resource.data.name.size() < 80 &&
           request.resource.data.phone is string &&
           request.resource.data.phone.matches('^[6789][0-9]{9}$') &&
-          request.resource.data.amount is number &&
+          request.resource.data.keys().hasOnly(
+            ['name', 'phone', 'email', 'amount', 'uid', 'isGoogle', 'deviceId', 'timestamp']) &&
+          request.resource.data.email == request.auth.token.email &&
+          request.resource.data.timestamp == request.time &&
+          request.resource.data.amount is int &&
           underMaxBid(request.resource.data.amount) &&
           request.resource.data.uid == request.auth.uid &&
           request.resource.data.deviceId is string &&
-          !isBlacklisted(request.resource.data.deviceId);
+          !isBlacklisted(request.resource.data.deviceId) &&
+          // Tie the bid doc to the item update in the same transaction:
+          // same amount, same bidder, count goes up by exactly one, and the
+          // per-account cooldown doc is written at this same instant.
+          getAfter(/databases/$(database)/documents/items/$(itemId)).data.currentBid == request.resource.data.amount &&
+          getAfter(/databases/$(database)/documents/items/$(itemId)).data.currentBidderUid == request.auth.uid &&
+          getAfter(/databases/$(database)/documents/items/$(itemId)).data.bidCount ==
+            get(/databases/$(database)/documents/items/$(itemId)).data.get('bidCount', 0) + 1 &&
+          getAfter(/databases/$(database)/documents/bidLimits/$(request.auth.uid)).data.lastBidAt == request.time;
       }
     }
   }

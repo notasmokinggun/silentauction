@@ -126,3 +126,65 @@ test('first-owner setup requires the private code (not email verification), cons
   await assertFails(deleteDoc(doc(db, 'settings/owner')));
   await assertFails(deleteDoc(doc(db, 'adminEmails/first@example.com')));
 });
+
+// ── Bidding rules (S2–S5). Written without an emulator run available:
+// run `npm run test:rules` before publishing the rules. ──
+const bidder = (uid, email) => env.authenticatedContext(uid, {
+  email, email_verified: true, firebase: { sign_in_provider: 'google.com' },
+}).firestore();
+const seedLot = async (id, extra = {}) => env.withSecurityRulesDisabled(async ctx => {
+  await setDoc(doc(ctx.firestore(), 'items/' + id), {
+    title: 'Lot', active: true, currentBid: 100, increment: 10, bidCount: 0,
+    currentBidderName: '', currentBidderUid: '', ...extra,
+  });
+});
+const placeBid = (db, lotId, uid, email, amount, bidCount = 0, over = {}) => {
+  const b = writeBatch(db);
+  b.update(doc(db, 'items/' + lotId), { currentBid: amount, currentBidderName: 'A', currentBidderUid: uid, bidCount: bidCount + 1 });
+  b.set(doc(collection(db, 'items/' + lotId + '/bids')), {
+    name: 'A', phone: '9876543210', email, amount, uid, isGoogle: true, deviceId: 'dev_x',
+    timestamp: serverTimestamp(), ...over,
+  });
+  b.set(doc(db, 'bidLimits/' + uid), { lastBidAt: serverTimestamp() });
+  return b.commit();
+};
+test('bids are admin-read-only', async () => {
+  await seedLot('r1');
+  const g = bidder('g1', 'g1@example.com');
+  await assertSucceeds(placeBid(g, 'r1', 'g1', 'g1@example.com', 110));
+  await assertFails(getDocs(collection(g, 'items/r1/bids')));
+  await assertFails(getDocs(collection(env.unauthenticatedContext().firestore(), 'items/r1/bids')));
+  await assertSucceeds(getDocs(collection(account('admin', 'admin@example.com'), 'items/r1/bids')));
+});
+test('a bid doc without the matching item update is rejected', async () => {
+  await seedLot('b1');
+  const g = bidder('g2', 'g2@example.com');
+  const b = writeBatch(g);
+  b.set(doc(collection(g, 'items/b1/bids')), { name: 'A', phone: '9876543210', email: 'g2@example.com', amount: 5000, uid: 'g2', isGoogle: true, deviceId: 'd', timestamp: serverTimestamp() });
+  b.set(doc(g, 'bidLimits/g2'), { lastBidAt: serverTimestamp() });
+  await assertFails(b.commit());
+});
+test('forged email or extra fields on a bid are rejected', async () => {
+  await seedLot('f1');
+  const g = bidder('g3', 'g3@example.com');
+  await assertFails(placeBid(g, 'f1', 'g3', 'someone-else@example.com', 110));
+  await assertFails(placeBid(g, 'f1', 'g3', 'g3@example.com', 110, 0, { extra: 'x' }));
+  await assertFails(placeBid(g, 'f1', 'g3', 'g3@example.com', 110.5));
+});
+test('a second bid within 3 seconds is rejected', async () => {
+  await seedLot('c1');
+  const g = bidder('g4', 'g4@example.com');
+  await assertSucceeds(placeBid(g, 'c1', 'g4', 'g4@example.com', 110));
+  await assertFails(placeBid(g, 'c1', 'g4', 'g4@example.com', 120, 1));
+});
+test('bids after endsAt are rejected', async () => {
+  await seedLot('e1', { endsAt: new Date(Date.now() - 60000) });
+  await assertFails(placeBid(bidder('g5', 'g5@example.com'), 'e1', 'g5', 'g5@example.com', 110));
+});
+test('nobody can write another uid\'s bidLimits, and bidBlocks are closed', async () => {
+  const g = bidder('g6', 'g6@example.com');
+  await assertFails(setDoc(doc(g, 'bidLimits/victim'), { lastBidAt: serverTimestamp() }));
+  await assertFails(setDoc(doc(env.unauthenticatedContext().firestore(), 'bidLimits/g6'), { lastBidAt: serverTimestamp() }));
+  await assertFails(setDoc(doc(g, 'bidLimits/g6'), { lastBidAt: new Date(Date.now() + 86400000) }));
+  await assertFails(setDoc(doc(g, 'bidBlocks/dev_x'), { blockedUntil: new Date(Date.now() + 600000) }));
+});

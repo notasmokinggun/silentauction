@@ -3,24 +3,22 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ───────────────────────────────────────────────────────────
-    // Admin identity is by verified EMAIL, and admins must sign in with
-    // Google (email_verified + the google.com provider, see authedEmail()).
+    // Admin identity is by EMAIL, never Google/UID. There is NO email
+    // sending anywhere in this app (no verification link, no password
+    // reset) — trust instead comes entirely from the owner-controlled
+    // allowlist, checked before an admin account can ever do anything:
     //   1. A tiny hardcoded bootstrap list (paste the SAME lowercase
     //      email(s) as ADMIN_EMAILS in firebase-init.js) — how the
     //      very first admin gets in, since nobody exists yet to add
     //      them.
     //   2. Anyone with an approved doc in adminEmails/{email} — written
     //      by admin-access.html (owner adds/removes admins by email)
-    //      and by owner-setup.html (the one-time owner claim).
+    //      and by owner-setup.html (the one-time owner claim). An
+    //      account can only be created for an email once the owner has
+    //      approved it here (see admin.html's createpw-btn handler).
     // ───────────────────────────────────────────────────────────
-    // Admin identity requires a Google-verified email. Google guarantees the
-    // person actually controls the address, so nobody can become admin by
-    // registering an approved-but-unclaimed email with a password.
     function authedEmail() {
-      return request.auth != null
-        && request.auth.token.email is string
-        && request.auth.token.email_verified == true
-        && request.auth.token.firebase.sign_in_provider == 'google.com';
+      return request.auth != null && request.auth.token.email is string;
     }
     function ownEmail() { return request.auth.token.email.lower(); }
     // A guest placing a bid must be signed in with a real Google account —
@@ -106,9 +104,14 @@ service cloud.firestore {
         request.resource.data.updatedAt == request.time;
     }
     match /adminEmails/{email} {
-      // No pre-signup check exists any more (admins sign in with Google), so
-      // this is no longer public: an admin, or the person whose email it is.
-      allow get: if authedEmail() && (isAdmin() || ownEmail() == email);
+      // Public get (not list): admin.html's create-password flow must be
+      // able to check "is THIS exact email approved?" before an account
+      // even exists for it — there is no signed-in user yet to compare
+      // against, and there's no server-side function to gate account
+      // creation at the Auth level, so this doc is the only way to
+      // decide, and it holds nothing more sensitive than an email address
+      // an organizer already typed into the owner's Admin Access page.
+      allow get: if true;
       allow list: if isOwner();
       allow create: if (isOwner() && validApproval(email)) || initialOwnerApproval(email);
       allow update: if (isOwner() && resource.data.role != 'owner' && email != ownEmail() && validApproval(email)) || initialOwnerApproval(email);

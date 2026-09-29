@@ -35,11 +35,14 @@ button:disabled{opacity:.5;cursor:default;}
 <body><main>
 <a class="back" href="admin.html">&larr; Admin login</a>
 <h1>Set up your owner account</h1>
-<p>This is a one-time setup. No email is ever sent — your Google account becomes the owner as soon as you claim it below, and only your account can approve other admins.</p>
+<p>This is a one-time setup. No email is ever sent — your email/password account becomes the owner as soon as you claim it below, and only your account can approve other admins.</p>
 <p id="status" role="status"></p>
 
 <form id="account">
-  <button type="submit">Sign in with Google</button>
+  <label for="email">Your owner email</label><input id="email" type="email" required autocomplete="username">
+  <label for="password">Choose a password</label><input id="password" type="password" required minlength="6" autocomplete="new-password">
+  <button type="submit">Create my account</button>
+  <button type="button" class="secondary" id="signin">I already have an account</button>
 </form>
 
 <div class="panel" id="identity-panel" hidden>

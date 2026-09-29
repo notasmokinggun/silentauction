@@ -47,13 +47,13 @@ li:last-child{border-bottom:0;}
 <h1>Admin Access</h1>
 <p>Owner only: add an organizer by email, or remove their access.</p>
 <p id="status" role="status">Checking access&hellip;</p>
-<p id="login" hidden><a href="admin.html">Sign in with your approved Google account</a>, then return here.</p>
+<p id="login" hidden><a href="admin.html">Sign in with your admin email and password</a>, then return here.</p>
 <section id="manager" hidden>
   <form id="add-admin">
     <label for="email">New admin email</label>
     <input id="email" type="email" autocomplete="email" maxlength="254" required>
     <button id="add" type="submit">Add admin</button>
-    <p class="hint">They sign in on the admin login page with the Google account that uses this exact email. Nothing is emailed to them.</p>
+    <p class="hint">They'll enter this exact email on the admin login page and tap <strong>Create Password</strong> to set their own password &mdash; no account exists until they do, and nothing is emailed to them.</p>
   </form>
   <div class="panel">
     <div class="panel-head"><h2>Approved admins</h2><button class="secondary" id="refresh" type="button">Refresh</button></div>

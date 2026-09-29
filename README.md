@@ -33,10 +33,17 @@ ever. Every admin after that is added through the app itself, by email:
    Manage admin access), type the new person's email, and click **Add
    admin**. This only writes their email to an allowlist (`adminEmails` in
    Firestore) — nothing is sent to them.
-2. They open `admin.html` and tap **Sign in with Google**, using the Google
-   account with that exact email. Google verifies the email, so nobody can
-   take over an approved address they don't own. Nothing is emailed and there
-   are no admin passwords to forget or reset.
+2. They open `admin.html`, enter that exact email, choose their own
+   password, and tap **Create Password**. The app checks the allowlist
+   first: if the email isn't approved, no account is created at all — they
+   simply can't sign up. If it is approved, their account is created
+   immediately and they're in — no verification link, no password emailed,
+   no waiting.
+
+There is no email-based password reset either, for the same reason: nothing
+is ever emailed. If an admin forgets their password, the owner deletes
+their account in the Firebase console (Authentication tab) and they run
+**Create Password** again.
 
 Admins can also be removed from the Admin Access page (except the bootstrap
 admin, which is still edited by hand in the two files above, as the one

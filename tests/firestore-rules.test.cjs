@@ -143,7 +143,7 @@ const placeBid = (db, lotId, uid, email, amount, bidCount = 0, over = {}) => {
   b.update(doc(db, 'items/' + lotId), { currentBid: amount, currentBidderName: 'A', currentBidderUid: uid, bidCount: bidCount + 1 });
   b.set(doc(collection(db, 'items/' + lotId + '/bids')), {
     name: 'A', phone: '9876543210', email, amount, uid, isGoogle: true, deviceId: 'dev_x',
-    timestamp: serverTimestamp(), ...over,
+    childName: 'Kid', childGrade: '8', timestamp: serverTimestamp(), ...over,
   });
   b.set(doc(db, 'bidLimits/' + uid), { lastBidAt: serverTimestamp() });
   return b.commit();
@@ -160,7 +160,7 @@ test('a bid doc without the matching item update is rejected', async () => {
   await seedLot('b1');
   const g = bidder('g2', 'g2@example.com');
   const b = writeBatch(g);
-  b.set(doc(collection(g, 'items/b1/bids')), { name: 'A', phone: '9876543210', email: 'g2@example.com', amount: 120, uid: 'g2', isGoogle: true, deviceId: 'd', timestamp: serverTimestamp() });
+  b.set(doc(collection(g, 'items/b1/bids')), { name: 'A', phone: '9876543210', childName: 'Kid', childGrade: '8', email: 'g2@example.com', amount: 120, uid: 'g2', isGoogle: true, deviceId: 'd', timestamp: serverTimestamp() });
   b.set(doc(g, 'bidLimits/g2'), { lastBidAt: serverTimestamp() });
   await assertFails(b.commit());
 });
@@ -192,7 +192,7 @@ test('nobody can write another uid\'s bidLimits, and bidBlocks are closed', asyn
 // ── 5x review hold ──
 const holdFields = (uid, email, amount, over = {}) => ({
   name: 'A', phone: '9876543210', email, amount, uid, isGoogle: true, deviceId: 'dev_x',
-  timestamp: serverTimestamp(), status: 'pending', ...over,
+  childName: 'Kid', childGrade: '8', timestamp: serverTimestamp(), status: 'pending', ...over,
 });
 const placeHold = (db, lotId, uid, email, amount, over = {}, id = 'hold_' + uid) => {
   const b = writeBatch(db);
@@ -253,4 +253,14 @@ test('itemImages: anyone can get one by id, nobody can list, only admins write',
   await assertFails(getDocs(collection(anon, 'itemImages')));
   await assertFails(setDoc(doc(bidder('pg', 'pg@example.com'), 'itemImages/p1'), { url: 'x' }));
   await assertSucceeds(deleteDoc(doc(admin, 'itemImages/p1')));
+});
+
+// ── Child's name and grade ──
+test('a bid needs a child name and a grade from 6 to 12', async () => {
+  await seedLot('k1');
+  const g = bidder('k1u', 'k1u@example.com');
+  await assertFails(placeBid(g, 'k1', 'k1u', 'k1u@example.com', 110, 0, { childGrade: '5' }));
+  await assertFails(placeBid(g, 'k1', 'k1u', 'k1u@example.com', 110, 0, { childGrade: '13' }));
+  await assertFails(placeBid(g, 'k1', 'k1u', 'k1u@example.com', 110, 0, { childName: '' }));
+  await assertSucceeds(placeBid(g, 'k1', 'k1u', 'k1u@example.com', 110, 0, { childGrade: '12' }));
 });

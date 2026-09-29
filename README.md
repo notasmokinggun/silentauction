@@ -49,6 +49,19 @@ Admins can also be removed from the Admin Access page (except the bootstrap
 admin, which is still edited by hand in the two files above, as the one
 fallback that can never lock you out).
 
+## Welcome gallery, instructions and Results
+
+- **Welcome photos:** put numbered photos in `images/welcome/` (`1.jpg`, `2.jpg`, ...).
+  They crossfade behind the welcome card. With no `1.*` file the original dark
+  welcome shows. See `images/welcome/README.md`.
+- **Instructions:** shown once per device after "Explore All Items", and any
+  time from Profile → How bidding works. Edit the text in `index.html`
+  (`#view-guide`).
+- **Results tab:** live highest bid per lot, then the winners once you use
+  **Set winner** in the admin Bids panel.
+- **Child's name and grade:** every bid needs them (grade 6 to 12). Only admins
+  see them, in the Bids panel and the CSV export.
+
 ## Large bids need a confirmation call
 
 Any bid at or above **5x the current price** (or 5x the increment when the

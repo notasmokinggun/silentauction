@@ -55,6 +55,68 @@
   .splash-cta{display:inline-flex;align-items:center;gap:8px;padding:15px 24px;border:none;
     border-radius:12px;font-weight:600;font-size:15px;cursor:pointer;background:var(--cream);color:#1B140A;}
 
+  /* Rolling welcome gallery: images/welcome/1.jpg, 2.jpg ... If none exist,
+     .has-gallery is never added and the original dark welcome shows. */
+  .splash-gallery{position:absolute;inset:0;overflow:hidden;display:none;}
+  #view-splash.has-gallery .splash-gallery{display:block;}
+  .gal-slide{position:absolute;inset:0;background-size:cover;background-position:center;
+    opacity:0;transform:scale(1.04);transition:opacity 1.6s ease,transform 9s linear;}
+  .gal-slide.on{opacity:1;transform:scale(1.12);}
+  @media (prefers-reduced-motion:reduce){.gal-slide,.gal-slide.on{transform:none;transition:opacity 1.6s ease;}}
+  .splash-hello{font-size:12.5px;letter-spacing:.04em;color:var(--gold);margin:0 0 10px;font-weight:600;}
+  #view-splash.has-gallery .splash-photo{background:#FFE7D6;}
+  #view-splash.has-gallery .splash-photo::before{z-index:1;
+    background:linear-gradient(to top, rgba(255,236,222,.6) 0%, rgba(255,236,222,0) 55%);}
+  #view-splash.has-gallery .splash-wordmark{z-index:2;color:#fff;text-shadow:0 1px 10px rgba(60,30,40,.45);}
+  #view-splash.has-gallery .splash-content{z-index:2;margin:0 14px calc(16px + env(safe-area-inset-bottom,0px));
+    padding:22px 20px 22px;background:rgba(255,249,242,.86);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+    border-radius:26px;box-shadow:0 12px 40px rgba(120,70,60,.2);}
+  #view-splash.has-gallery .splash-hello{color:#E0685A;}
+  #view-splash.has-gallery .splash-title{color:#3B2A4A;font-size:38px;}
+  #view-splash.has-gallery .splash-desc{color:#6A566F;}
+  #view-splash.has-gallery .splash-cta{background:#FFB84D;color:#3B2A4A;box-shadow:0 6px 18px rgba(255,150,60,.35);}
+
+  /* ---------- Instructions (soft, bright) ---------- */
+  #view-guide{padding-bottom:0;color:#3B2A4A;
+    background:linear-gradient(170deg,#FFF3E4 0%,#FFE3EC 38%,#E6F0FF 72%,#E4F7EA 100%);}
+  .guide-wrap{padding:calc(30px + env(safe-area-inset-top,0px)) 20px calc(30px + env(safe-area-inset-bottom,0px));}
+  .guide-eyebrow{font-size:12px;letter-spacing:.08em;font-weight:600;color:#E0685A;margin:0;}
+  #view-guide h1{font-size:34px;line-height:1.1;margin:6px 0 10px;color:#3B2A4A;font-weight:500;}
+  .guide-lead{font-size:14.5px;line-height:1.6;color:#6A566F;margin:0 0 20px;}
+  .guide-h{font-size:12px;letter-spacing:.08em;font-weight:700;color:#8A7590;margin:22px 0 10px;}
+  .fact,.step{display:flex;gap:12px;align-items:flex-start;background:#fff;border-radius:18px;
+    padding:14px 16px;margin-bottom:10px;box-shadow:0 4px 16px rgba(120,80,110,.1);}
+  .fact .dot,.step .dot{width:34px;height:34px;border-radius:50%;flex:none;display:flex;
+    align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#3B2A4A;}
+  .fact b,.step b{display:block;font-size:14.5px;margin-bottom:2px;}
+  .fact span,.step span{font-size:13px;line-height:1.5;color:#6A566F;}
+  .guide-cta{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:22px;
+    padding:16px;border:none;border-radius:14px;font-weight:700;font-size:15px;cursor:pointer;
+    background:#FFB84D;color:#3B2A4A;box-shadow:0 8px 20px rgba(255,150,60,.3);}
+  #view-guide.active ~ .bottomnav{display:none;}
+
+  /* ---------- Results (leaderboard) ---------- */
+  #view-results .top{padding:calc(20px + env(safe-area-inset-top,0px)) 20px 4px;}
+  #view-results .top h1{font-size:28px;margin:0;font-weight:500;}
+  .results-note{padding:4px 20px 6px;font-size:13px;line-height:1.5;color:var(--muted);margin:0;}
+  .rsec{padding:14px 20px 8px;font-size:11px;letter-spacing:.08em;color:var(--muted);font-weight:600;}
+  .rrow{display:flex;gap:12px;align-items:center;margin:0 16px 10px;padding:12px;background:var(--surface);
+    border:1px solid var(--border);border-radius:14px;cursor:pointer;}
+  .rrow img{width:56px;height:56px;border-radius:10px;object-fit:cover;flex:none;background:var(--surface2);}
+  .rrow .mid{flex:1;min-width:0;}
+  .rrow .lot{font-size:10.5px;color:var(--muted);letter-spacing:.06em;}
+  .rrow .ttl{font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .rrow .who{font-size:12.5px;color:var(--muted);margin-top:2px;}
+  .rrow .amt{font-weight:700;color:var(--gold);font-size:16px;text-align:right;white-space:nowrap;}
+  .rrow .amt small{display:block;font-size:10.5px;color:var(--muted);font-weight:500;}
+  .rrow.winner{border-color:var(--gold);}
+  .wtag{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;
+    background:var(--gold);color:#1B140A;margin-left:6px;vertical-align:middle;}
+  .item-info{margin-top:14px;padding:12px 14px;background:var(--surface);border:1px solid var(--border);
+    border-radius:12px;font-size:13px;line-height:1.55;color:var(--muted);}
+  .item-info strong{color:var(--text);}
+  .item-info a{color:var(--gold);}
+
   /* ---------- Home ---------- */
   #view-home .top{padding:calc(20px + env(safe-area-inset-top,0px)) 20px 4px;
     display:flex;align-items:center;justify-content:space-between;}
@@ -177,7 +239,7 @@
   .contact-row .v{font-weight:500;}
   .contact-block label{display:block;font-size:12px;color:var(--muted);margin:10px 0 6px;}
   .contact-block label .req{color:var(--red);}
-  .contact-block input{width:100%;padding:11px 12px;border-radius:9px;border:1px solid var(--border);
+  .contact-block input,.contact-block select{width:100%;padding:11px 12px;border-radius:9px;border:1px solid var(--border);
     background:var(--surface2);color:var(--text);font-size:14px;}
   .contact-hint{font-size:11px;color:var(--muted);margin-top:6px;}
   .sheet-err{color:var(--red);font-size:13px;margin-top:10px;min-height:16px;}
@@ -269,6 +331,9 @@
     #view-splash.active{box-shadow:none;}
     #view-splash.active .splash-photo{background:transparent;}
     #view-splash.active .splash-photo::before{display:none;}
+    html:has(#view-splash.has-gallery.active){background:#FFF1E6;}
+    #view-splash.active.has-gallery .splash-photo{background:#FFE7D6;}
+    #view-splash.active.has-gallery .splash-photo::before{display:block;}
   }
 </style>
 </head>
@@ -277,12 +342,43 @@
 <!-- ============ SPLASH / WELCOME ============ -->
 <section class="view active" id="view-splash">
   <div class="splash-photo">
+    <div class="splash-gallery" id="splash-gallery" aria-hidden="true"></div>
     <div class="splash-wordmark serif" id="splash-wordmark">JASHN</div>
     <div class="splash-content">
+      <p class="splash-hello">Thank you for being here &#9829;</p>
       <h1 class="splash-title serif">Bid.<br>Support.<br>Create<br>Change.</h1>
       <p class="splash-desc">Exclusive items. Meaningful impact. All proceeds support a deserving cause.</p>
-      <button class="splash-cta" id="splash-explore">Explore Items <span>&#8594;</span></button>
+      <button class="splash-cta" id="splash-explore">Explore All Items <span>&#8594;</span></button>
     </div>
+  </div>
+</section>
+
+<!-- ============ INSTRUCTIONS (shown once, after the welcome) ============ -->
+<section class="view" id="view-guide">
+  <div class="guide-wrap">
+    <p class="guide-eyebrow">WELCOME</p>
+    <h1 class="serif">Here's how it works</h1>
+    <p class="guide-lead">Every bid supports a good cause. It takes a minute to learn, and you can come back to this any time from your Profile.</p>
+
+    <div class="guide-h">THE BASICS</div>
+    <div class="fact"><div class="dot" style="background:#FFD6A5;">&#8377;</div><div><b>Highest bid</b>
+      <span>The latest and highest verified bid is shared with you right here on every lot, live.</span></div></div>
+    <div class="fact"><div class="dot" style="background:#C9E4FF;">+</div><div><b>Minimum increment</b>
+      <span>Every lot shows its minimum increment. Your bid must beat the highest bid by at least that much.</span></div></div>
+    <div class="fact"><div class="dot" style="background:#D8F0D0;">&#9733;</div><div><b>Where results are announced</b>
+      <span>The final announcement for the lucky person for each object will be acknowledged on the <strong>Results</strong> tab of this site.</span></div></div>
+
+    <div class="guide-h">HOW TO BID</div>
+    <div class="step"><div class="dot" style="background:#FFC9DE;">1</div><div><b>Pick something you love</b>
+      <span>Tap a photo to read the story behind it.</span></div></div>
+    <div class="step"><div class="dot" style="background:#FFC9DE;">2</div><div><b>Sign in with Google</b>
+      <span>It keeps every bid honest and verified.</span></div></div>
+    <div class="step"><div class="dot" style="background:#FFC9DE;">3</div><div><b>Tell us who you are</b>
+      <span>Add your name, phone number, and your child's name and grade so we know which family placed the bid.</span></div></div>
+    <div class="step"><div class="dot" style="background:#FFC9DE;">4</div><div><b>Place your bid</b>
+      <span>A very large bid gets a quick confirmation call from our team before it counts.</span></div></div>
+
+    <button class="guide-cta" id="guide-start">Start exploring <span>&#8594;</span></button>
   </div>
 </section>
 
@@ -323,6 +419,7 @@
       <div class="stat"><p class="k">Time Left</p><p class="v" id="item-time-value">—</p></div>
       <div class="stat"><p class="k">Total Bids</p><p class="v" id="item-bidcount-value">0</p></div>
     </div>
+    <div class="item-info" id="item-info"></div>
   </div>
 </section>
 
@@ -343,6 +440,14 @@
   <button class="icon-btn lightbox-close" id="lightbox-close"></button>
   <img id="lightbox-img" alt="">
 </div>
+
+<!-- ============ RESULTS (leaderboard) ============ -->
+<section class="view" id="view-results">
+  <div class="top"><h1 class="serif">Results</h1></div>
+  <p class="results-note">The highest verified bid on every lot, live. Once a lot closes, its winner is announced here.</p>
+  <div id="results-list"></div>
+  <div class="empty-state" id="results-empty" style="display:none;">No lots yet. Check back shortly.</div>
+</section>
 
 <!-- ============ MY BIDS ============ -->
 <section class="view" id="view-mybids">
@@ -367,12 +472,14 @@
     </div>
   </div>
   <div class="profile-card" id="profile-google"></div>
-  <a class="adminlink" href="admin.html">Auction organizer? Open admin</a>
+  <a class="adminlink" href="#" id="open-guide" style="margin-top:22px;">How bidding works</a>
+  <a class="adminlink" href="admin.html" style="margin-top:12px;">Auction organizer? Open admin</a>
 </section>
 
 <!-- ============ Bottom nav ============ -->
 <nav class="bottomnav">
   <button class="navbtn on" data-view="home" id="nav-home"></button>
+  <button class="navbtn" data-view="results" id="nav-results"></button>
   <button class="navbtn" data-view="mybids" id="nav-mybids"></button>
   <button class="navbtn" data-view="profile" id="nav-profile"></button>
 </nav>
@@ -413,6 +520,14 @@
       <label for="sheet-phone-input">Phone number <span class="req">*</span></label>
       <input id="sheet-phone-input" type="tel" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number">
       <p class="contact-hint">Required so we can confirm your bid with you. No OTP — just double-check it's correct.</p>
+      <label for="sheet-child-input">Child's name <span class="req">*</span></label>
+      <input id="sheet-child-input" maxlength="79" placeholder="Your child's name" autocomplete="off">
+      <label for="sheet-grade-select">Child's grade <span class="req">*</span></label>
+      <select id="sheet-grade-select"><option value="">Select grade</option>
+        <option value="6">Grade 6</option><option value="7">Grade 7</option><option value="8">Grade 8</option>
+        <option value="9">Grade 9</option><option value="10">Grade 10</option><option value="11">Grade 11</option>
+        <option value="12">Grade 12</option></select>
+      <p class="contact-hint">Only our team sees this. It is never shown publicly.</p>
     </div>
     <button class="cta cta-cream" id="sheet-confirm">Confirm Bid</button>
   </div>
@@ -449,6 +564,7 @@ const ICONS = {
   tag: '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 12.6L12.6 20.6a2 2 0 01-2.8 0L3 13.8V4a1 1 0 011-1h9.8a2 2 0 011.4.6l5.4 5.4a2 2 0 010 2.8z"/><circle cx="8" cy="8" r="1.4" fill="currentColor" stroke="none"/></svg>',
   user: '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 5-6 8-6s6.5 2 8 6"/></svg>',
   spark: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/></svg>',
+  trophy: '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4z"/><path d="M17 5h3v2a3 3 0 01-3 3M7 5H4v2a3 3 0 003 3"/></svg>',
   expand: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>',
 };
 function setIcon(id, name) { document.getElementById(id).innerHTML = ICONS[name]; }
@@ -483,10 +599,12 @@ setIcon('sheet-close', 'close');
 setIcon('reading-close', 'close');
 setIcon('lightbox-close', 'close');
 setIcon('nav-home', 'home');
+setIcon('nav-results', 'trophy');
 setIcon('nav-mybids', 'tag');
 setIcon('nav-profile', 'user');
 setIcon('success-badge', 'check');
 document.getElementById('nav-home').insertAdjacentHTML('beforeend', '<span>Home</span>');
+document.getElementById('nav-results').insertAdjacentHTML('beforeend', '<span>Results</span>');
 document.getElementById('nav-mybids').insertAdjacentHTML('beforeend', '<span>My Bids</span>');
 document.getElementById('nav-profile').insertAdjacentHTML('beforeend', '<span>Profile</span>');
 // A few decorative sparkles around the success checkmark, like the reference.
@@ -505,6 +623,7 @@ function showView(name) {
     if (googleUser) syncMyBidsFromServer(googleUser.uid).then(ok => { if (ok) renderMyBids(); });
   }
   if (name === 'profile') renderProfile();
+  if (name === 'results') renderResults();
   window.scrollTo(0, 0);
 }
 document.querySelectorAll('.navbtn').forEach(b => b.onclick = () => showView(b.dataset.view));
@@ -513,7 +632,80 @@ document.querySelectorAll('.navbtn').forEach(b => b.onclick = () => showView(b.d
 // sign-in state or whether they've seen it before. Tapping through just
 // takes them to the catalog; it doesn't set anything to remember that.
 document.getElementById('splash-wordmark').textContent = EVENT_NAME;
-document.getElementById('splash-explore').onclick = () => showView('home');
+// First time: show the instructions once. After that, straight to the items.
+document.getElementById('splash-explore').onclick = () => {
+  let seen = false;
+  try { seen = !!localStorage.getItem('guide_seen'); } catch (_) {}
+  showView(seen ? 'home' : 'guide');
+};
+document.getElementById('guide-start').onclick = () => {
+  try { localStorage.setItem('guide_seen', '1'); } catch (_) {}
+  showView('home');
+};
+document.getElementById('open-guide').onclick = (e) => { e.preventDefault(); showView('guide'); };
+
+// Rolling welcome gallery. Drop numbered photos into images/welcome/
+// (1.jpg, 2.jpg, ... also .jpeg/.png/.webp). The site probes 1, 2, 3...
+// until one is missing. If there is no 1.*, nothing changes and the
+// original welcome background stays.
+(function welcomeGallery() {
+  const view = document.getElementById('view-splash');
+  const box = document.getElementById('splash-gallery');
+  const exts = ['jpg', 'jpeg', 'png', 'webp'];
+  const slides = [];
+  let idx = -1, timer = null;
+  const probe = src => new Promise(r => { const i = new Image(); i.onload = () => r(true); i.onerror = () => r(false); i.src = src; });
+  const show = n => { slides.forEach((el, i) => el.classList.toggle('on', i === n)); idx = n; };
+  const start = () => {
+    if (timer) return;
+    timer = setInterval(() => { if (!document.hidden && slides.length > 1) show((idx + 1) % slides.length); }, 5500);
+  };
+  const add = src => {
+    const d = document.createElement('div');
+    d.className = 'gal-slide';
+    d.style.backgroundImage = `url("${src}")`;
+    box.appendChild(d);
+    slides.push(d);
+    if (slides.length === 1) { view.classList.add('has-gallery'); show(0); start(); }
+  };
+  (async () => {
+    for (let n = 1; n <= 40; n++) {
+      let hit = null;
+      for (const e of exts) { const src = `images/welcome/${n}.${e}`; if (await probe(src)) { hit = src; break; } }
+      if (!hit) break;
+      add(hit);
+    }
+  })();
+})();
+
+// Results / leaderboard: highest verified bid per lot, and winners once set.
+function resultRow(it, kind) {
+  const lot = 'LOT ' + String(it.lotNumber).padStart(3, '0');
+  let who, amt, sub = '', cls = '';
+  if (kind === 'winner') {
+    who = `<span class="wtag">WINNER</span> ${escapeHtml(winnerNameOf(it) || '')}`; amt = money(winnerAmountOf(it)); sub = 'winning bid'; cls = ' winner';
+  } else if (kind === 'pending') {
+    who = it.bidCount ? `Highest: ${escapeHtml(it.currentBidderName || '')} · winner announced soon` : 'Closed · no bids'; amt = money(it.currentBid); sub = 'final highest bid';
+  } else {
+    who = it.bidCount ? `Highest: ${escapeHtml(it.currentBidderName || '')}` : 'No bids yet'; amt = money(it.currentBid); sub = `min. increase ${money(it.increment)}`;
+  }
+  return `<div class="rrow${cls}" data-id="${it.id}" role="button" tabindex="0" aria-label="${escapeHtml(it.title)}">
+    <img src="${it.imageUrl || ''}" alt="${escapeHtml(it.title)}" onerror="this.style.visibility='hidden'">
+    <div class="mid"><div class="lot">${lot}</div><div class="ttl">${escapeHtml(it.title)}</div><div class="who">${who}</div></div>
+    <div class="amt">${amt}<small>${sub}</small></div></div>`;
+}
+function renderResults() {
+  const list = document.getElementById('results-list');
+  if (!list) return;
+  const sorted = [...lots].sort((a, b) => a.lotNumber - b.lotNumber);
+  document.getElementById('results-empty').style.display = sorted.length ? 'none' : 'block';
+  const winners = sorted.filter(it => it.winnerBidId);
+  const pending = sorted.filter(it => !it.winnerBidId && isClosed(it));
+  const live = sorted.filter(it => !isClosed(it));
+  const sec = (title, arr, kind) => arr.length ? `<div class="rsec">${title}</div>` + arr.map(it => resultRow(it, kind)).join('') : '';
+  list.innerHTML = sec('WINNERS', winners, 'winner') + sec('LIVE HIGHEST BIDS', live, 'live') + sec('CLOSED, WINNER TO BE ANNOUNCED', pending, 'pending');
+  list.querySelectorAll('.rrow').forEach(el => { el.onclick = () => openItem(el.dataset.id); el.onkeydown = onActivateKey; });
+}
 
 // -----------------------------------------------------------------
 // Auth
@@ -632,6 +824,7 @@ function attachItemsListener() {
         if (it) renderItemView(it);
       }
       if (document.getElementById('view-mybids').classList.contains('active')) renderMyBids();
+      if (document.getElementById('view-results').classList.contains('active')) renderResults();
       if (sheet.classList.contains('open') && sheetItem) {
         const fresh = lots.find(l => l.id === sheetItem.id);
         if (fresh && isClosed(fresh)) {
@@ -640,7 +833,7 @@ function attachItemsListener() {
           sheetItem = fresh;
           document.getElementById('sheet-current-bid').textContent = money(fresh.currentBid);
           document.getElementById('sheet-min-text').textContent =
-            `Your bid must be at least ${money(fresh.currentBid + fresh.increment)}`;
+            `Your bid must be at least ${money(fresh.currentBid + fresh.increment)} (minimum increase ${money(fresh.increment)})`;
           updateHoldNote();
         }
       }
@@ -829,6 +1022,13 @@ function renderItemView(it) {
   const placeBtn = document.getElementById('place-bid-btn');
   if (placeBtn) placeBtn.onclick = () => openBidSheet(it);
 
+  const info = document.getElementById('item-info');
+  info.innerHTML = closed
+    ? 'Bidding has closed. The winner is announced on the <a href="#" data-go-results>Results</a> tab.'
+    : `Minimum increase per bid: <strong>${money(it.increment)}</strong>. Live highest bids and the final winner are announced on the <a href="#" data-go-results>Results</a> tab.`;
+  const goRes = info.querySelector('[data-go-results]');
+  if (goRes) goRes.onclick = (e) => { e.preventDefault(); showView('results'); };
+
   if (readingOpen) populateReadingOverlay(it);
 }
 
@@ -912,7 +1112,7 @@ function openBidSheet(it) {
   document.getElementById('sheet-lot').textContent = 'LOT ' + String(it.lotNumber).padStart(3, '0');
   document.getElementById('sheet-current-bid').textContent = money(it.currentBid);
   const minNext = it.currentBid + it.increment;
-  document.getElementById('sheet-min-text').textContent = `Your bid must be at least ${money(minNext)}`;
+  document.getElementById('sheet-min-text').textContent = `Your bid must be at least ${money(minNext)} (minimum increase ${money(it.increment)})`;
   document.getElementById('sheet-amount').value = minNext;
   document.getElementById('sheet-quick').innerHTML = [it.increment, it.increment * 2, it.increment * 5]
     .map(v => `<button class="quick-btn" data-add="${v}">+${money(v)}</button>`).join('');
@@ -928,6 +1128,8 @@ function openBidSheet(it) {
   document.getElementById('sheet-name-display').textContent = savedName || 'someone new';
   document.getElementById('sheet-name-edit').classList.toggle('open', !savedName);
   document.getElementById('sheet-phone-input').value = localStorage.getItem('auction_phone') || '';
+  document.getElementById('sheet-child-input').value = localStorage.getItem('auction_child_name') || '';
+  document.getElementById('sheet-grade-select').value = localStorage.getItem('auction_child_grade') || '';
   document.getElementById('sheet-err').textContent = '';
   updateSheetAuthGate();
 
@@ -1018,10 +1220,14 @@ document.getElementById('sheet-confirm').onclick = async () => {
   errEl.textContent = '';
   const name = document.getElementById('sheet-name-input').value.trim();
   const phone = normalizePhoneInput(document.getElementById('sheet-phone-input').value);
+  const childName = document.getElementById('sheet-child-input').value.trim();
+  const childGrade = document.getElementById('sheet-grade-select').value;
   const amount = Number(document.getElementById('sheet-amount').value);
   if (!googleUser) { errEl.textContent = 'Sign in with Google to bid.'; return; }
   if (!name) { errEl.textContent = 'Enter your name to bid.'; return; }
   if (!isValidPhone(phone)) { errEl.textContent = 'Enter a valid 10-digit phone number starting with 6, 7, 8, or 9.'; return; }
+  if (!childName) { errEl.textContent = "Enter your child's name."; return; }
+  if (!['6', '7', '8', '9', '10', '11', '12'].includes(childGrade)) { errEl.textContent = "Pick your child's grade (6 to 12)."; return; }
   if (!Number.isInteger(amount) || amount <= 0) { errEl.textContent = 'Enter a whole-rupee amount.'; return; }
 
   // Sanity ceiling — firestore.rules (underMaxBid) rejects this server-side
@@ -1036,6 +1242,8 @@ document.getElementById('sheet-confirm').onclick = async () => {
   btn.disabled = true;
   localStorage.setItem('auction_name', name);
   localStorage.setItem('auction_phone', phone);
+  localStorage.setItem('auction_child_name', childName);
+  localStorage.setItem('auction_child_grade', childGrade);
 
   const itemRef = db.collection('items').doc(sheetItem.id);
   const limitRef = db.collection('bidLimits').doc(googleUser.uid);
@@ -1055,7 +1263,7 @@ document.getElementById('sheet-confirm').onclick = async () => {
       if (amount < minNext) throw new Error(`Someone beat you to it — bid must now be at least ${money(minNext)}.`);
       held = isHoldAmount(it, amount);
       const fields = {
-        name, phone, email: googleUser.email || '', amount, uid: googleUser.uid,
+        name, phone, childName, childGrade, email: googleUser.email || '', amount, uid: googleUser.uid,
         isGoogle: true, deviceId: getDeviceId(),
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
       };

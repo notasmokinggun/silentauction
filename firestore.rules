@@ -238,6 +238,12 @@ service cloud.firestore {
             request.resource.data.name.size() < 80 &&
             request.resource.data.phone is string &&
             request.resource.data.phone.matches('^[6789][0-9]{9}$') &&
+            // The child the family is bidding for: name plus grade 6-12.
+            // Admin-only (bids are never public), used to identify the family.
+            request.resource.data.childName is string &&
+            request.resource.data.childName.size() > 0 &&
+            request.resource.data.childName.size() < 80 &&
+            request.resource.data.childGrade in ['6', '7', '8', '9', '10', '11', '12'] &&
             request.resource.data.email == request.auth.token.email &&
             request.resource.data.timestamp == request.time &&
             request.resource.data.amount is int &&
@@ -251,7 +257,7 @@ service cloud.firestore {
         // transaction (same amount, same bidder, bidCount + 1).
         function normalBid() {
           return request.resource.data.keys().hasOnly(
-              ['name', 'phone', 'email', 'amount', 'uid', 'isGoogle', 'deviceId', 'timestamp']) &&
+              ['name', 'phone', 'email', 'amount', 'uid', 'isGoogle', 'deviceId', 'timestamp', 'childName', 'childGrade']) &&
             request.resource.data.amount < 5 * holdBase() &&
             getAfter(/databases/$(database)/documents/items/$(itemId)).data.currentBid == request.resource.data.amount &&
             getAfter(/databases/$(database)/documents/items/$(itemId)).data.currentBidderUid == request.auth.uid &&
@@ -264,7 +270,7 @@ service cloud.firestore {
         function heldBid() {
           return bidId == 'hold_' + request.auth.uid &&
             request.resource.data.keys().hasOnly(
-              ['name', 'phone', 'email', 'amount', 'uid', 'isGoogle', 'deviceId', 'timestamp', 'status']) &&
+              ['name', 'phone', 'email', 'amount', 'uid', 'isGoogle', 'deviceId', 'timestamp', 'childName', 'childGrade', 'status']) &&
             request.resource.data.status == 'pending' &&
             request.resource.data.amount >= 5 * holdBase() &&
             get(/databases/$(database)/documents/items/$(itemId)).data.active == true &&

@@ -59,10 +59,19 @@
      .has-gallery is never added and the original dark welcome shows. */
   .splash-gallery{position:absolute;inset:0;overflow:hidden;display:none;}
   #view-splash.has-gallery .splash-gallery{display:block;}
-  .gal-slide{position:absolute;inset:0;background-size:cover;background-position:center;
-    opacity:0;transform:scale(1.04);transition:opacity 1.6s ease,transform 9s linear;}
-  .gal-slide.on{opacity:1;transform:scale(1.12);}
-  @media (prefers-reduced-motion:reduce){.gal-slide,.gal-slide.on{transform:none;transition:opacity 1.6s ease;}}
+  /* Each slide is two layers so a landscape photo never gets cropped into
+     a thin sliver on a tall phone: a blurred cover-fit backdrop fills the
+     screen with no dead space, and the real photo sits on top at its full,
+     uncropped shape (contain). Only the blurred backdrop slowly zooms. */
+  .gal-slide{position:absolute;inset:0;opacity:0;transition:opacity 1.6s ease;}
+  .gal-slide.on{opacity:1;}
+  .gal-bg{position:absolute;inset:0;background-size:cover;background-position:center;
+    filter:blur(32px) brightness(.55) saturate(1.15);transform:scale(1.18);
+    transition:transform 9s linear;}
+  .gal-slide.on .gal-bg{transform:scale(1.3);}
+  .gal-fg{position:absolute;inset:0;background-size:contain;background-position:center;
+    background-repeat:no-repeat;}
+  @media (prefers-reduced-motion:reduce){.gal-bg,.gal-slide.on .gal-bg{transform:none;transition:none;}}
   .splash-hello{font-size:12.5px;letter-spacing:.04em;color:var(--gold);margin:0 0 10px;font-weight:600;}
   #view-splash.has-gallery .splash-photo{background:#FFE7D6;}
   #view-splash.has-gallery .splash-photo::before{z-index:1;
@@ -663,7 +672,13 @@ document.getElementById('open-guide').onclick = (e) => { e.preventDefault(); sho
   const add = src => {
     const d = document.createElement('div');
     d.className = 'gal-slide';
-    d.style.backgroundImage = `url("${src}")`;
+    const bg = document.createElement('div');
+    bg.className = 'gal-bg';
+    bg.style.backgroundImage = `url("${src}")`;
+    const fg = document.createElement('div');
+    fg.className = 'gal-fg';
+    fg.style.backgroundImage = `url("${src}")`;
+    d.append(bg, fg);
     box.appendChild(d);
     slides.push(d);
     if (slides.length === 1) { view.classList.add('has-gallery'); show(0); start(); }

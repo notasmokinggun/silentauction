@@ -16,7 +16,7 @@
     padding-bottom: env(safe-area-inset-bottom,0px);
   }
   *{box-sizing:border-box;}
-  html,body{margin:0;background:var(--bg);color:var(--text);height:100%;
+  html,body{margin:0;background:var(--bg);color:var(--text);height:100%;overflow-x:hidden;
     font-family:'IBM Plex Sans',sans-serif;-webkit-tap-highlight-color:transparent;}
   .serif{font-family:'Newsreader',serif;}
   a{color:inherit;}
@@ -337,7 +337,7 @@
   /* ---------- Laptop/desktop: this is a phone-shaped app, so on a wide
      screen show it as a centered, contained "phone frame" instead of
      stretching cards and the bottom nav edge-to-edge across the window. ---------- */
-  @media (min-width:640px){
+  @media (min-width:860px){
     html,body{background:var(--bg2);}
     .view{max-width:480px;margin:0 auto;box-shadow:0 0 0 1px var(--border),0 30px 70px rgba(0,0,0,.5);}
     .bottomnav,.sheet,.reading-overlay,.lightbox-overlay,.success-overlay{

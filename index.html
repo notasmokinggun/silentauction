@@ -160,15 +160,21 @@
      just hugged the image's natural height, crowding the overlaid nav
      buttons and tap hint right up against the photo. A set height
      raises the photo to a consistent, generous size instead. */
-  #view-item .hero-wrap{position:relative;height:40vh;background:var(--surface2);}
-  /* Entire photo always visible — never force-cropped to a fixed ratio.
-     "contain" letterboxes whatever shape the photo actually is (portrait
-     or landscape) inside that fixed box, instead of cutting it to 1:1. */
-  .hero-img{width:100%;height:100%;object-fit:contain;background:var(--surface2);cursor:pointer;}
-  .hero-nav{position:absolute;top:calc(16px + env(safe-area-inset-top,0px));left:16px;right:16px;
+  #view-item .hero-wrap{position:relative;height:40vh;background:#000;overflow:hidden;}
+  /* Two layers, same photo. The real photo (fg) is always shown whole,
+     never cropped — bidders need to see the actual item. But "contain"
+     alone leaves flat dead bars above/below a landscape photo in this
+     box, which looks unfinished. So a blurred, filled copy of the same
+     photo (bg) sits underneath, edge-to-edge, so that gap reads as a
+     soft glow instead of empty space — nothing about the real photo is
+     ever hidden or cropped, only this decorative backdrop is. */
+  .hero-img-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;
+    filter:blur(30px) brightness(.55) saturate(1.15);transform:scale(1.15);}
+  .hero-img{position:relative;z-index:1;width:100%;height:100%;object-fit:contain;cursor:pointer;}
+  .hero-nav{position:absolute;z-index:2;top:calc(16px + env(safe-area-inset-top,0px));left:16px;right:16px;
     display:flex;justify-content:space-between;pointer-events:none;}
   .hero-nav .icon-btn{pointer-events:auto;}
-  .hero-tap-hint{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);
+  .hero-tap-hint{position:absolute;z-index:2;left:50%;bottom:12px;transform:translateX(-50%);
     font-size:11px;color:var(--cream);background:rgba(0,0,0,.45);padding:6px 12px;border-radius:20px;
     pointer-events:none;letter-spacing:.02em;}
   #view-item .body{padding:20px;}
@@ -416,6 +422,7 @@
 <!-- ============ ITEM DETAIL ============ -->
 <section class="view" id="view-item">
   <div class="hero-wrap">
+    <img class="hero-img-bg" id="item-img-bg" alt="" aria-hidden="true">
     <img class="hero-img" id="item-img">
     <div class="hero-nav">
       <button class="icon-btn" id="item-back"></button>
@@ -995,6 +1002,10 @@ document.getElementById('item-share').onclick = async () => {
 const fullImages = {};
 const fullImagePending = new Set();
 function bestImage(it) { return fullImages[it.id] || it.imageUrl; }
+function setHeroImage(url) {
+  document.getElementById('item-img').src = url || '';
+  document.getElementById('item-img-bg').src = url || '';
+}
 async function loadFullImage(it) {
   if (!it.hasFullImage || fullImages[it.id] || fullImagePending.has(it.id)) return;
   fullImagePending.add(it.id);
@@ -1002,7 +1013,7 @@ async function loadFullImage(it) {
     const d = await db.collection('itemImages').doc(it.id).get();
     if (d.exists && d.data().url) {
       fullImages[it.id] = d.data().url;
-      if (currentItemId === it.id) document.getElementById('item-img').src = fullImages[it.id];
+      if (currentItemId === it.id) setHeroImage(fullImages[it.id]);
     }
   } catch (err) {
     console.warn('Could not load the full photo:', err.code || err.message);
@@ -1017,7 +1028,7 @@ function closedNoteHtml(it) {
 
 function renderItemView(it) {
   const closed = isClosed(it);
-  document.getElementById('item-img').src = bestImage(it) || '';
+  setHeroImage(bestImage(it));
   loadFullImage(it);
   document.getElementById('item-title').textContent = it.title;
   document.getElementById('item-lotnum').textContent = 'LOT ' + String(it.lotNumber).padStart(3, '0');

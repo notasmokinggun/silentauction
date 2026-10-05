@@ -41,7 +41,13 @@
 
   /* ---------- Splash / Welcome ---------- */
   #view-splash{padding-bottom:0;}
-  #view-splash.active{display:flex;}
+  /* NOT display:flex here (every other .view just uses the inherited
+     display:block). #view-splash has a single child, .splash-photo,
+     with no width of its own -- as a flex item with no flex-direction
+     set, it was shrinking to fit its content instead of filling the
+     screen, leaving a growing black gap on the right on wider phones.
+     Plain block gives it the full width for free, same as every other
+     view. */
   .splash-photo{position:relative;min-height:100vh;min-height:100dvh;display:flex;
     flex-direction:column;justify-content:flex-end;
     background:radial-gradient(320% 200% at 28% 0%, #3a2a18 0%, #2c2116 16%, #21190f 32%, #17110b 50%, #100d09 70%, var(--bg) 100%);}

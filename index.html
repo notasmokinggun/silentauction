@@ -71,7 +71,12 @@
     filter:blur(36px) brightness(.5) saturate(1.2);transform:scale(1.22);
     transition:transform 9s linear;}
   .gal-slide.on .gal-bg{transform:scale(1.35);}
-  .gal-fg{position:absolute;inset:0;background-size:contain;background-position:center;
+  /* Anchored to the top, not centered -- the content card is pinned to
+     the bottom of the screen (see .splash-content), so a centered photo
+     meant the card sat right over the real photo's subject. Pushing the
+     photo up means the card instead overlaps only the blurred gal-bg
+     backdrop below it, never the sharp photo itself. */
+  .gal-fg{position:absolute;inset:0;background-size:contain;background-position:center top;
     background-repeat:no-repeat;}
   @media (prefers-reduced-motion:reduce){.gal-bg,.gal-slide.on .gal-bg{transform:none;transition:none;}}
   .splash-hello{font-size:12.5px;letter-spacing:.04em;color:var(--gold);margin:0 0 10px;font-weight:600;}

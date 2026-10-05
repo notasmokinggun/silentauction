@@ -59,18 +59,19 @@
      .has-gallery is never added and the original dark welcome shows. */
   .splash-gallery{position:absolute;inset:0;overflow:hidden;display:none;}
   #view-splash.has-gallery .splash-gallery{display:block;}
-  /* The photo fills the whole frame edge-to-edge (cover) -- no letterbox
-     gap, so nothing is ever showing blank/blurred dead space above or
-     below it. gal-bg stays as a slowly-zooming blurred base layer purely
-     for a bit of motion; gal-fg (the sharp photo, also cover-sized) sits
-     on top of it and fully covers it either way. */
+  /* A landscape photo filling this frame edge-to-edge (cover) on a tall
+     phone screen means zooming in so far that almost the whole photo is
+     cropped away -- a hand holding a hammer became an unrecognizable
+     close-up of an arm. So gal-fg shows the photo whole (contain) -- a
+     blurred, filled copy of the SAME photo sits underneath as gal-bg,
+     edge-to-edge, so there's still no flat dead space around it. */
   .gal-slide{position:absolute;inset:0;opacity:0;transition:opacity 1.6s ease;}
   .gal-slide.on{opacity:1;}
   .gal-bg{position:absolute;inset:0;background-size:cover;background-position:center;
-    filter:blur(32px) brightness(.55) saturate(1.15);transform:scale(1.18);
+    filter:blur(36px) brightness(.5) saturate(1.2);transform:scale(1.22);
     transition:transform 9s linear;}
-  .gal-slide.on .gal-bg{transform:scale(1.3);}
-  .gal-fg{position:absolute;inset:0;background-size:cover;background-position:center;
+  .gal-slide.on .gal-bg{transform:scale(1.35);}
+  .gal-fg{position:absolute;inset:0;background-size:contain;background-position:center;
     background-repeat:no-repeat;}
   @media (prefers-reduced-motion:reduce){.gal-bg,.gal-slide.on .gal-bg{transform:none;transition:none;}}
   .splash-hello{font-size:12.5px;letter-spacing:.04em;color:var(--gold);margin:0 0 10px;font-weight:600;}

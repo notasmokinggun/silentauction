@@ -70,7 +70,7 @@
      close-up of an arm. So gal-fg shows the photo whole (contain) -- a
      blurred, filled copy of the SAME photo sits underneath as gal-bg,
      edge-to-edge, so there's still no flat dead space around it. */
-  .gal-slide{position:absolute;inset:0;opacity:0;transition:opacity .6s ease-in-out;}
+  .gal-slide{position:absolute;inset:0;opacity:0;transition:opacity 1s ease-in-out;}
   .gal-slide.on{opacity:1;}
   .gal-bg{position:absolute;inset:0;background-size:cover;background-position:center;
     filter:blur(36px) brightness(.5) saturate(1.2);transform:scale(1.22);
@@ -717,9 +717,9 @@ document.getElementById('open-guide').onclick = (e) => { e.preventDefault(); sho
   const show = n => { slides.forEach((el, i) => el.classList.toggle('on', i === n)); idx = n; };
   const start = () => {
     if (timer) return;
-    // Each photo holds for 2.5s, then a smooth .6s crossfade to the next
+    // Each photo holds for 2.75s, then a smooth 1s crossfade to the next
     // one (see the opacity transition on .gal-slide above).
-    timer = setInterval(() => { if (!document.hidden && slides.length > 1) show((idx + 1) % slides.length); }, 2500);
+    timer = setInterval(() => { if (!document.hidden && slides.length > 1) show((idx + 1) % slides.length); }, 2750);
   };
   const add = src => {
     const d = document.createElement('div');

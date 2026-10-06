@@ -287,6 +287,10 @@ function getMyBids() {
   try { return JSON.parse(localStorage.getItem("my_bids") || "[]"); }
   catch { return []; }
 }
+function removeMyBid(itemId, bidId) {
+  const list = getMyBids().filter((b) => !(b.itemId === itemId && (!bidId || b.bidId === bidId)));
+  localStorage.setItem("my_bids", JSON.stringify(list));
+}
 function recordMyBid(itemId, bidId, amount, status) {
   const list = getMyBids().filter((b) => b.itemId !== itemId);
   list.push({ itemId, bidId, amount, ts: Date.now(), status: status || null });

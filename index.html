@@ -326,6 +326,8 @@
     background:var(--gold);color:#1B140A;font-size:18px;font-weight:700;display:flex;
     align-items:center;justify-content:center;}
   .confirm-btn.saved{background:var(--green);border-color:var(--green);}
+  .undo-btn{color:var(--red);}
+  .undo-item-btn{margin-top:10px;border-color:var(--red);color:var(--red);}
   .guest-email{margin-top:18px;padding-top:16px;border-top:1px solid var(--border);text-align:left;}
   .guest-email .gm-h{font-size:15px;color:var(--muted);margin:0 0 10px;text-align:center;}
   .guest-email .gm-row{display:flex;gap:8px;}
@@ -598,6 +600,7 @@
   <p id="success-msg"></p>
   <div class="success-actions">
     <button class="cta cta-cream" id="success-view">View Item</button>
+    <button class="link-btn undo-btn" id="success-undo" style="display:none;"></button>
     <button class="link-btn" id="success-browse">Keep Browsing</button>
   </div>
 </div>
@@ -648,6 +651,9 @@ let mybidsTab = 'active';
 // that loads the items. That one ordering bug was the real cause of the
 // home screen going permanently blank — not bidding, not Firestore.
 let readingOpen = false;
+const UNDO_SECONDS = 58; // a little under 60 so the server's clock never disagrees
+let undoInfo = null;
+let undoTimer = null;
 
 setIcon('search-toggle', 'search');
 setIcon('item-back', 'back');
@@ -1197,6 +1203,7 @@ function renderItemView(it) {
   ctaBar.innerHTML = closed
     ? closedNoteHtml(it)
     : `<button class="cta cta-cream" id="place-bid-btn">Place a Bid</button>`;
+  addItemUndoButton(it, ctaBar);
   const placeBtn = document.getElementById('place-bid-btn');
   if (placeBtn) placeBtn.onclick = () => openBidSheet(it);
 
@@ -1483,6 +1490,9 @@ document.getElementById('sheet-confirm').onclick = async () => {
           currentBid: amount, currentBidderName: name,
           currentBidderUid: googleUser.uid,
           bidCount: (it.bidCount || 0) + 1,
+          // Remember the previous leader so this bid can be undone for 1 minute.
+          prevBid: it.currentBid, prevBidderName: it.currentBidderName || '',
+          prevBidderUid: it.currentBidderUid || '', prevKnown: true, lastBidId: bidRef.id,
         });
         tx.set(bidRef, fields);
       }
@@ -1492,12 +1502,14 @@ document.getElementById('sheet-confirm').onclick = async () => {
       tx.set(limitRef, { lastBidAt: firebase.firestore.FieldValue.serverTimestamp() });
     });
     recordMyBid(sheetItem.id, bidRef.id, amount, held ? 'pending' : null);
+    undoInfo = held ? null : { itemId: sheetItem.id, bidId: bidRef.id, until: Date.now() + UNDO_SECONDS * 1000 };
     closeOverlaySilently(closeBidSheet);
     document.getElementById('success-msg').textContent = held
       ? `Your bid of ${money(amount)} on ${sheetItem.title} is on hold. Our team will call you on ${phone} to confirm it. It won't count as the highest bid until you do.`
       : `Your bid of ${money(amount)} has been placed on ${sheetItem.title}.`;
     document.getElementById('success-overlay').classList.add('open');
     openOverlay(closeSuccess);
+    refreshUndoUI();
   } catch (e) {
     if (e.code === 'permission-denied') {
       errEl.textContent = "Couldn't place that bid. You may be bidding too fast, or the lot may have closed. Wait a moment and refresh.";
@@ -1509,6 +1521,64 @@ document.getElementById('sheet-confirm').onclick = async () => {
   }
 };
 
+// ---- Undo a bid for 1 minute (only while it is still the highest bid) ----
+// Keep in sync with the 60 seconds in firestore.rules (bidderUndo).
+function undoActive() { return !!(undoInfo && Date.now() < undoInfo.until); }
+function undoLabel() {
+  const s = Math.max(0, Math.ceil((undoInfo.until - Date.now()) / 1000));
+  return `Undo this bid (0:${String(s).padStart(2, '0')})`;
+}
+function addItemUndoButton(it, ctaBar) {
+  if (!undoActive() || undoInfo.itemId !== it.id || it.lastBidId !== undoInfo.bidId) return;
+  ctaBar.insertAdjacentHTML('beforeend', '<button class="cta cta-outline undo-item-btn" id="item-undo-btn"></button>');
+  document.getElementById('item-undo-btn').onclick = undoMyBid;
+  refreshUndoUI();
+}
+function refreshUndoUI() {
+  const btns = [document.getElementById('success-undo'), document.getElementById('item-undo-btn')].filter(Boolean);
+  const live = undoActive();
+  btns.forEach(b => { b.style.display = live ? '' : 'none'; if (live) b.textContent = undoLabel(); });
+  if (live && !undoTimer) undoTimer = setInterval(refreshUndoUI, 500);
+  if (!live) {
+    if (undoTimer) { clearInterval(undoTimer); undoTimer = null; }
+    const ib = document.getElementById('item-undo-btn'); if (ib) ib.remove();
+  }
+}
+async function undoMyBid() {
+  if (!undoActive() || !googleUser) return;
+  const { itemId, bidId } = undoInfo;
+  const itemRef = db.collection('items').doc(itemId);
+  const bidRef = itemRef.collection('bids').doc(bidId);
+  document.querySelectorAll('#success-undo, #item-undo-btn').forEach(b => b.disabled = true);
+  try {
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(itemRef);
+      const it = snap.data();
+      if (!it || it.lastBidId !== bidId || it.currentBidderUid !== googleUser.uid || it.prevKnown !== true) {
+        throw new Error('Someone has already bid higher, so this bid can no longer be undone.');
+      }
+      tx.update(itemRef, {
+        currentBid: it.prevBid, currentBidderName: it.prevBidderName || '',
+        currentBidderUid: it.prevBidderUid || '', bidCount: Math.max(0, (it.bidCount || 1) - 1),
+        prevKnown: false,
+      });
+      tx.delete(bidRef);
+    });
+    removeMyBid(itemId, bidId);
+    undoInfo = null;
+    refreshUndoUI();
+    if (document.getElementById('success-overlay').classList.contains('open')) closeOverlay(closeSuccess);
+    renderMyBids();
+    alert('Your bid has been withdrawn.');
+  } catch (e) {
+    const msg = e && e.code === 'permission-denied'
+      ? "It's too late to undo this bid. The 1-minute window has ended, someone bid higher, or the lot is about to close."
+      : (e.message || "Couldn't undo that bid. Try again.");
+    alert(msg);
+  }
+  document.querySelectorAll('#success-undo, #item-undo-btn').forEach(b => b.disabled = false);
+}
+document.getElementById('success-undo').onclick = undoMyBid;
 function closeSuccess() { document.getElementById('success-overlay').classList.remove('open'); }
 document.getElementById('success-view').onclick = () => {
   document.getElementById('success-overlay').classList.remove('open');

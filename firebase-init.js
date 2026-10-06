@@ -73,32 +73,33 @@ function money(n) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Bid guardrails — no negative/zero bids, and anything above
-// MAX_BID_AMOUNT (10 crore) is rejected outright and the device is
-// temporarily blocked from bidding at all. Enforced here (for a fast,
-// friendly message) AND in firestore.rules (bidBlocks + underMaxBid),
+// Bid guardrails. Two flat, absolute thresholds (not relative to the
+// current price — easy for anyone to reason about):
+//   - Above HOLD_THRESHOLD (₹20,000): the bid is held, not applied to the
+//     lot, until our team calls to confirm it.
+//   - At or above BAN_THRESHOLD (₹1,00,000): rejected outright, and the
+//     bidder's account (uid, not device — can't be dodged by clearing
+//     local storage) is temporarily banned from bidding for BAN_MINUTES.
+// Enforced here (for a fast, friendly message) AND in firestore.rules,
 // so a tampered client can't bypass either check.
 // ─────────────────────────────────────────────────────────────
-const MAX_BID_AMOUNT = 100000000; // ₹10,00,00,000 = 10 crore
-const BID_BLOCK_MINUTES = 10; // legacy, the per-device block is retired
+const HOLD_THRESHOLD = 20000; // ₹20,000
+const BAN_THRESHOLD = 100000; // ₹1,00,000
+const BAN_MINUTES = 5;
+const MAX_BID_AMOUNT = 100000000; // ₹10,00,00,000 — absolute ceiling, same as firestore.rules
+function isHoldAmount(it, amount) { return amount > HOLD_THRESHOLD; }
+function isBanAmount(amount) { return amount >= BAN_THRESHOLD; }
 
-// Review hold: a bid at or above HOLD_MULTIPLIER x the current price is not
-// applied to the lot. It is stored as a pending "hold" and a reviewer calls
-// the bidder to confirm it. Keep this 5 in sync with firestore.rules.
-const HOLD_MULTIPLIER = 5;
-function holdBase(it) { return it.currentBid > 0 ? it.currentBid : it.increment; }
-function isHoldAmount(it, amount) { return amount >= HOLD_MULTIPLIER * holdBase(it); }
-
-function bidBlockRef() {
-  return db.collection("bidBlocks").doc(getDeviceId());
+function banRef(uid) {
+  return db.collection("bidLimits").doc(uid);
 }
 
-// Resolves to a Date the device is blocked until, or null if not blocked.
-async function getActiveBidBlock() {
+// Resolves to a Date this account is banned until, or null if not banned.
+async function getActiveBan(uid) {
   try {
-    const doc = await bidBlockRef().get();
+    const doc = await banRef(uid).get();
     if (!doc.exists) return null;
-    const until = doc.data().blockedUntil;
+    const until = doc.data().bannedUntil;
     const untilDate = until && until.toDate ? until.toDate() : null;
     return untilDate && untilDate.getTime() > Date.now() ? untilDate : null;
   } catch {
@@ -106,13 +107,13 @@ async function getActiveBidBlock() {
   }
 }
 
-// Blocks this device from bidding for BID_BLOCK_MINUTES. Called when a
-// bid above MAX_BID_AMOUNT is attempted.
-async function triggerBidBlock() {
+// Bans this account from bidding for BAN_MINUTES. Called when a bid of
+// BAN_THRESHOLD or more is attempted.
+async function triggerBan(uid) {
   try {
-    await bidBlockRef().set({
-      blockedUntil: firebase.firestore.Timestamp.fromDate(
-        new Date(Date.now() + BID_BLOCK_MINUTES * 60000)
+    await banRef(uid).set({
+      bannedUntil: firebase.firestore.Timestamp.fromDate(
+        new Date(Date.now() + BAN_MINUTES * 60000)
       ),
     });
   } catch {

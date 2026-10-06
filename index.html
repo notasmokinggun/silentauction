@@ -54,10 +54,9 @@
   .splash-photo::before{content:'';position:absolute;inset:0;
     background:radial-gradient(160% 130% at 22% 82%, rgba(227,183,92,.14) 0%, rgba(227,183,92,.05) 45%, transparent 80%);}
   .splash-content{position:relative;padding:0 24px calc(34px + env(safe-area-inset-bottom,0px));}
-  .splash-wordmark{position:absolute;top:calc(24px + env(safe-area-inset-top,0px));left:24px;
-    font-size:16px;letter-spacing:.08em;font-weight:600;color:var(--cream);}
-  .splash-title{font-size:44px;line-height:1.08;margin:0 0 16px;color:var(--cream);font-weight:500;}
-  .splash-desc{font-size:14px;line-height:1.6;color:#D9D0C0;max-width:340px;margin:0 0 26px;}
+  .splash-wordmark{position:absolute;top:calc(24px + env(safe-area-inset-top,0px));left:24px;right:24px;
+    font-size:17px;line-height:1.3;letter-spacing:.02em;font-weight:600;color:var(--cream);}
+  .splash-title{font-size:52px;line-height:1.1;margin:0 0 20px;color:var(--cream);font-weight:500;}
   .splash-cta{display:inline-flex;align-items:center;gap:8px;padding:15px 24px;border:none;
     border-radius:12px;font-weight:600;font-size:15px;cursor:pointer;background:var(--cream);color:#1B140A;}
 
@@ -85,30 +84,18 @@
   .gal-fg{position:absolute;inset:0;background-size:contain;background-position:center 24%;
     background-repeat:no-repeat;}
   @media (prefers-reduced-motion:reduce){.gal-bg,.gal-slide.on .gal-bg{transform:none;transition:none;}}
-  .splash-hello{font-size:12.5px;letter-spacing:.04em;color:var(--gold);margin:0 0 10px;font-weight:600;}
+  .splash-hello{font-size:15px;letter-spacing:.04em;color:var(--gold);margin:0 0 12px;font-weight:600;}
   #view-splash.has-gallery .splash-photo{background:#FFE7D6;}
   #view-splash.has-gallery .splash-photo::before{z-index:1;
     background:
       linear-gradient(to top, rgba(255,236,222,.6) 0%, rgba(255,236,222,0) 55%),
       linear-gradient(200deg, rgba(227,122,74,.4) 0%, rgba(227,183,92,.28) 28%, transparent 55%);}
   #view-splash.has-gallery .splash-wordmark{z-index:2;color:#fff;text-shadow:0 1px 10px rgba(60,30,40,.45);}
-  /* The space above the photo (where it's anchored to the upper-middle,
-     not the very top) used to just be a flat, dull patch of blurred
-     backdrop with nothing in it. A small vibrant tag gives that space a
-     reason to exist instead of reading as empty/dead. */
-  .gallery-caption{position:absolute;z-index:2;top:calc(64px + env(safe-area-inset-top,0px));
-    left:50%;transform:translateX(-50%);white-space:nowrap;
-    display:none;align-items:center;justify-content:center;gap:6px;padding:10px 22px;border-radius:24px;
-    font-size:20px;font-weight:700;letter-spacing:.03em;color:#fff;text-align:center;
-    background:linear-gradient(100deg,#E37A4A 0%,#E3B75C 100%);
-    box-shadow:0 6px 18px rgba(180,90,40,.35);}
-  #view-splash.has-gallery .gallery-caption{display:inline-flex;}
   #view-splash.has-gallery .splash-content{z-index:2;margin:0 14px calc(16px + env(safe-area-inset-bottom,0px));
     padding:22px 20px 22px;background:rgba(255,249,242,.86);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
     border-radius:26px;box-shadow:0 12px 40px rgba(120,70,60,.2);}
   #view-splash.has-gallery .splash-hello{color:#E0685A;}
-  #view-splash.has-gallery .splash-title{color:#3B2A4A;font-size:38px;}
-  #view-splash.has-gallery .splash-desc{color:#6A566F;}
+  #view-splash.has-gallery .splash-title{color:#3B2A4A;font-size:46px;}
   #view-splash.has-gallery .splash-cta{background:#FFB84D;color:#3B2A4A;box-shadow:0 6px 18px rgba(255,150,60,.35);}
 
   /* ---------- Instructions (soft, bright) ---------- */
@@ -395,12 +382,10 @@
 <section class="view active" id="view-splash">
   <div class="splash-photo">
     <div class="splash-gallery" id="splash-gallery" aria-hidden="true"></div>
-    <div class="splash-wordmark serif" id="splash-wordmark">JASHN</div>
-    <div class="gallery-caption"> Behind the scenes</div>
+    <div class="splash-wordmark serif" id="splash-wordmark">Welcome to Silent Auction</div>
     <div class="splash-content">
-      <p class="splash-hello">Thank you for being here &#9829;</p>
-      <h1 class="splash-title serif">Bid.<br>Support.<br>Create<br>Change.</h1>
-      <p class="splash-desc">Exclusive items. Meaningful impact. All proceeds support a deserving cause.</p>
+      <p class="splash-hello">Thank you for being there for us &#9829;</p>
+      <h1 class="splash-title serif">BID, SUPPORT,<br>MAKE A CHANGE</h1>
       <button class="splash-cta" id="splash-explore">Explore All Items <span>&#8594;</span></button>
     </div>
   </div>
@@ -558,7 +543,7 @@
   <div id="sheet-bidform">
     <div class="amount-field"><span>₹</span><input id="sheet-amount" type="number" inputmode="numeric" min="1" max="100000000"></div>
     <div class="quick-row" id="sheet-quick"></div>
-    <p class="sheet-hold-note" id="sheet-hold-note" style="display:none;font-size:12.5px;color:var(--muted);margin:8px 0 0;line-height:1.45;">This bid is much higher than the current price, so it needs a quick confirmation call from our team. It won't show as the highest bid until you confirm.</p>
+    <p class="sheet-hold-note" id="sheet-hold-note" style="display:none;font-size:12.5px;color:var(--muted);margin:8px 0 0;line-height:1.45;">Bids above ₹20,000 need a quick confirmation call from our team before they count. It won't show as the highest bid until you confirm.</p>
     <div class="biddername">
       <span>Bidding as <strong id="sheet-name-display"></strong></span>
       <button id="sheet-name-change">Change</button>
@@ -576,11 +561,8 @@
       <p class="contact-hint">Required so we can confirm your bid with you. No OTP — just double-check it's correct.</p>
       <label for="sheet-child-input">Child's name <span class="req">*</span></label>
       <input id="sheet-child-input" maxlength="79" placeholder="Your child's name" autocomplete="off">
-      <label for="sheet-grade-select">Child's grade <span class="req">*</span></label>
-      <select id="sheet-grade-select"><option value="">Select grade</option>
-        <option value="6">Grade 6</option><option value="7">Grade 7</option><option value="8">Grade 8</option>
-        <option value="9">Grade 9</option><option value="10">Grade 10</option><option value="11">Grade 11</option>
-        <option value="12">Grade 12</option></select>
+      <label for="sheet-grade-select">Admission number, or Class &amp; Section <span class="req">*</span></label>
+      <input id="sheet-grade-select" maxlength="39" placeholder="e.g. AD12345, or 10-B" autocomplete="off">
       <p class="contact-hint">Only our team sees this. It is never shown publicly.</p>
     </div>
     <button class="cta cta-cream" id="sheet-confirm">Confirm Bid</button>
@@ -667,7 +649,14 @@ document.getElementById('nav-profile').insertAdjacentHTML('beforeend', '<span>Pr
     `<span class="spark" style="${pos}">${ICONS.spark}</span>`);
 });
 
-function showView(name) {
+// Real browser history for every view change, so the phone's back-swipe
+// gesture (and the browser/hardware back button) moves BETWEEN VIEWS
+// inside the app -- splash -> guide -> home -> item, etc. -- instead of
+// immediately leaving the site on the very first back press, the way a
+// single static page normally would. fromPop=true means "this call came
+// from the user pressing back", so we don't push ANOTHER history entry
+// on top of itself.
+function showView(name, fromPop) {
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
   document.querySelectorAll('.navbtn').forEach(b => b.classList.toggle('on', b.dataset.view === name));
   if (name !== 'item' && itemCountdownTimer) { clearInterval(itemCountdownTimer); itemCountdownTimer = null; }
@@ -679,13 +668,27 @@ function showView(name) {
   if (name === 'profile') renderProfile();
   if (name === 'results') renderResults();
   window.scrollTo(0, 0);
+  if (!fromPop) {
+    const itemId = name === 'item' ? currentItemId : null;
+    const url = location.pathname + (itemId ? ('?id=' + itemId) : '');
+    history.pushState({ view: name, itemId }, '', url);
+  }
 }
 document.querySelectorAll('.navbtn').forEach(b => b.onclick = () => showView(b.dataset.view));
+history.replaceState({ view: 'splash', itemId: null }, '', location.pathname + location.search);
+window.addEventListener('popstate', (e) => {
+  const state = e.state || { view: 'home', itemId: null };
+  if (state.view === 'item' && state.itemId) {
+    const it = lots.find(l => l.id === state.itemId);
+    if (it) { currentItemId = state.itemId; renderItemView(it); showView('item', true); return; }
+  }
+  showView(state.view || 'home', true);
+});
 
 // Splash / Welcome — shown on every load, every time, regardless of
 // sign-in state or whether they've seen it before. Tapping through just
 // takes them to the catalog; it doesn't set anything to remember that.
-document.getElementById('splash-wordmark').textContent = EVENT_NAME;
+document.getElementById('splash-wordmark').textContent = 'Welcome to Silent Auction';
 // First time: show the instructions once. After that, straight to the items.
 document.getElementById('splash-explore').onclick = () => {
   let seen = false;
@@ -1200,7 +1203,8 @@ function openBidSheet(it) {
   backdrop.classList.add('open');
   sheet.classList.add('open');
 
-  setSheetBlockedUI(null); // per-device block is retired (see firestore.rules); just reset the UI
+  setSheetBlockedUI(null); // reset first; replaced below with the real state if banned
+  if (googleUser) getActiveBan(googleUser.uid).then(until => setSheetBlockedUI(until));
 }
 document.getElementById('sheet-close').onclick = closeBidSheet;
 backdrop.onclick = closeBidSheet;
@@ -1210,13 +1214,13 @@ function closeBidSheet() {
 }
 
 // -----------------------------------------------------------------
-// Bid-block UI — the 5-minute lockout after an absurd (>10 crore) bid
-// attempt is enforced server-side (firestore.rules) no matter what the
-// client does, but it also has to be genuinely enforced HERE: while a
-// block is active the amount field, quick-add buttons and Confirm
-// button are actually disabled (not just an error string the person
-// could ignore and keep clicking through), with a countdown that
-// re-enables everything itself the moment the block expires.
+// Bid-ban UI — the 5-minute ban after a bid of ₹1,00,000 or more is
+// enforced server-side (firestore.rules: commonBid() + isBanned()) no
+// matter what the client does, but it also has to be genuinely enforced
+// HERE: while a ban is active the amount field, quick-add buttons and
+// Confirm button are actually disabled (not just an error string the
+// person could ignore and keep clicking through), with a countdown that
+// re-enables everything itself the moment the ban expires.
 // -----------------------------------------------------------------
 let bidBlockInterval = null;
 function setSheetBlockedUI(until) {
@@ -1285,18 +1289,27 @@ document.getElementById('sheet-confirm').onclick = async () => {
   const name = document.getElementById('sheet-name-input').value.trim();
   const phone = normalizePhoneInput(document.getElementById('sheet-phone-input').value);
   const childName = document.getElementById('sheet-child-input').value.trim();
-  const childGrade = document.getElementById('sheet-grade-select').value;
+  const childGrade = document.getElementById('sheet-grade-select').value.trim();
   const amount = Number(document.getElementById('sheet-amount').value);
   if (!googleUser) { errEl.textContent = 'Sign in with Google to bid.'; return; }
   if (!name) { errEl.textContent = 'Enter your name to bid.'; return; }
   if (!isValidPhone(phone)) { errEl.textContent = 'Enter a valid 10-digit phone number starting with 6, 7, 8, or 9.'; return; }
   if (!childName) { errEl.textContent = "Enter your child's name."; return; }
-  if (!['6', '7', '8', '9', '10', '11', '12'].includes(childGrade)) { errEl.textContent = "Pick your child's grade (6 to 12)."; return; }
+  if (!childGrade) { errEl.textContent = "Enter your child's admission number, or class & section."; return; }
   if (!Number.isInteger(amount) || amount <= 0) { errEl.textContent = 'Enter a whole-rupee amount.'; return; }
 
-  // Sanity ceiling — firestore.rules (underMaxBid) rejects this server-side
-  // too. The old per-device block (bidBlocks) is retired: it could be abused
-  // to lock out other people and was trivially dodged.
+  // ₹1,00,000 or more: rejected outright (firestore.rules enforces this too,
+  // regardless of what the client does) and the account is banned from
+  // bidding at all for 5 minutes -- a real deterrent against fat-fingered
+  // or trolling mega-bids, tied to the account so it can't be dodged by
+  // clearing local storage.
+  if (isBanAmount(amount)) {
+    await triggerBan(googleUser.uid);
+    const until = await getActiveBan(googleUser.uid);
+    setSheetBlockedUI(until || new Date(Date.now() + BAN_MINUTES * 60000));
+    errEl.textContent = `Bids of ${money(BAN_THRESHOLD)} or more aren't accepted. You're temporarily blocked from bidding.`;
+    return;
+  }
   if (amount > MAX_BID_AMOUNT) {
     errEl.textContent = `That bid is above the ${money(MAX_BID_AMOUNT)} limit.`;
     return;

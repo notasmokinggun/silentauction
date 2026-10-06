@@ -154,6 +154,26 @@
     .sidebar.open{left:0;}
     .menu-toggle{display:flex !important;}
   }
+
+  /* ---------- Phone: the Bids panel (rank/name/amount/actions all on one
+     row) and the Users/Payments tables were designed for a desktop-width
+     row and just overflowed or crushed illegibly small on a phone, even
+     with the sidebar already collapsing at 760px above. ---------- */
+  @media (max-width:560px){
+    .topbar{padding:14px 16px;gap:10px;}
+    .topbar .searchwrap{max-width:none;}
+    .panel{padding:16px 16px 60px;}
+    .statgrid{grid-template-columns:1fr 1fr;gap:10px;}
+    .block{padding:14px;overflow-x:auto;}
+    .row2{grid-template-columns:1fr;}
+    .bidrow{flex-wrap:wrap;row-gap:8px;padding:10px 0;}
+    .bidrow .rank{order:1;}
+    .bidrow .who{order:2;flex:1 1 140px;min-width:0;}
+    .bidrow .amt{order:3;width:auto;margin-left:auto;}
+    .bidrow button{order:4;font-size:12px;padding:8px 12px;min-height:34px;}
+    .form-actions{flex-wrap:wrap;}
+    .form-actions button{min-width:120px;}
+  }
 </style>
 </head>
 <body>
@@ -1018,7 +1038,7 @@ function renderBidRows(itemId) {
   if (!all.length) { container.innerHTML = '<p class="empty">No bids on this lot yet.</p>'; return; }
   const contactOf = b => [b.phone ? '📞 ' + escapeHtml(b.phone) : '', b.email ? escapeHtml(b.email) : '']
     .filter(Boolean).join(' · ');
-  const childOf = b => b.childName ? `<span class="c">Child: ${escapeHtml(b.childName)}, Grade ${escapeHtml(String(b.childGrade || ''))}</span>` : '';
+  const childOf = b => b.childName ? `<span class="c">Child: ${escapeHtml(b.childName)}, ${escapeHtml(String(b.childGrade || ''))}</span>` : '';
   const timeOf = b => bidTimeText(b) ? `<span class="c">🕒 ${escapeHtml(bidTimeText(b))}</span>` : '';
   const holdRows = holds.map(b => `<div class="bidrow onhold">
       <span class="rank tag-hold">HOLD</span>
@@ -1178,7 +1198,7 @@ const csvCell = c => {
   return `"${v.replace(/"/g, '""')}"`;
 };
 function buildBidsCsv() {
-  const rows = [['Lot', 'Title', 'Rank', 'Bidder', 'Phone', 'Child name', 'Child grade', 'Amount', 'Bid time', 'Google verified', 'Status', 'Marked winner']];
+  const rows = [['Lot', 'Title', 'Rank', 'Bidder', 'Phone', 'Child name', 'Admission # / Class-Section', 'Amount', 'Bid time', 'Google verified', 'Status', 'Marked winner']];
   for (const it of lots) {
     const lotLabel = 'LOT ' + String(it.lotNumber).padStart(3, '0');
     const all = allBids.filter(b => b.itemId === it.id);

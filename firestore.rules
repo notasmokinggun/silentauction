@@ -129,31 +129,53 @@ service cloud.firestore {
     // lastBidAt to the server's own request.time, and a later write must come
     // at least 3 seconds after the previous one. The bid-create rule below
     // requires this write in the same transaction, so it can't be skipped.
+    // Also carries an optional bannedUntil: written (as its own, separate
+    // write — see triggerBan() in firebase-init.js) when an account
+    // attempts a bid at or above BAN_THRESHOLD (₹1,00,000). The real
+    // enforcement is amountUnderBan() below, rejecting the bid itself
+    // server-side regardless of whether this write succeeds; this ban
+    // doc on top of that stops the account from placing ANY further bid
+    // (even a small one) until it expires.
     match /bidLimits/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;
       allow create: if isVerifiedBidder() && request.auth.uid == uid &&
-        request.resource.data.keys().hasOnly(['lastBidAt']) &&
-        request.resource.data.lastBidAt == request.time;
+        (
+          (request.resource.data.keys().hasOnly(['lastBidAt']) &&
+           request.resource.data.lastBidAt == request.time) ||
+          (request.resource.data.keys().hasOnly(['bannedUntil']) &&
+           request.resource.data.bannedUntil is timestamp &&
+           request.resource.data.bannedUntil > request.time &&
+           request.resource.data.bannedUntil <= request.time + duration.value(6, 'm'))
+        );
       allow update: if isVerifiedBidder() && request.auth.uid == uid &&
-        request.resource.data.keys().hasOnly(['lastBidAt']) &&
-        request.resource.data.lastBidAt == request.time &&
-        request.time >= resource.data.lastBidAt + duration.value(3, 's');
+        (
+          (request.resource.data.keys().hasOnly(['lastBidAt']) &&
+           request.resource.data.lastBidAt == request.time &&
+           request.time >= resource.data.get('lastBidAt', timestamp.date(1970,1,1)) + duration.value(3, 's')) ||
+          (request.resource.data.keys().hasOnly(['bannedUntil']) &&
+           request.resource.data.bannedUntil is timestamp &&
+           request.resource.data.bannedUntil > request.time &&
+           request.resource.data.bannedUntil <= request.time + duration.value(6, 'm'))
+        );
+    }
+    function isBanned(uid) {
+      return exists(/databases/$(database)/documents/bidLimits/$(uid)) &&
+        get(/databases/$(database)/documents/bidLimits/$(uid)).data.get('bannedUntil', request.time) > request.time;
     }
 
-    // Retired: the per-device block could be used to lock other people out
-    // and was dodged by changing deviceId. underMaxBid() already rejects
-    // absurd amounts. Only admins may clear leftover docs.
+    // Retired: the per-device block (keyed by a value anyone could read off
+    // a bid doc and dodge by changing deviceId) has been replaced by the
+    // per-account ban in bidLimits/{uid} above, plus the BAN_THRESHOLD
+    // rejection in commonBid() below. Only admins may clear leftover docs.
     match /bidBlocks/{deviceId} {
       allow read, create, update: if false;
       allow delete: if isAdmin();
     }
     // Absolute ceiling on any bid amount — an obviously-absurd value (fat-
     // fingered or malicious) is rejected outright rather than accepted.
+    // (BAN_THRESHOLD in commonBid() below is a much lower, real-world
+    // ceiling; this is just the final backstop.)
     function underMaxBid(amount) { return amount > 0 && amount <= 100000000; }
-    function isBlacklisted(deviceId) {
-      return exists(/databases/$(database)/documents/bidBlocks/$(deviceId)) &&
-        get(/databases/$(database)/documents/bidBlocks/$(deviceId)).data.blockedUntil > request.time;
-    }
 
     // Guest profiles — unused by the current app (name/email/phone live on
     // each bid document instead) but kept available for anyone who wants
@@ -200,10 +222,10 @@ service cloud.firestore {
         underMaxBid(request.resource.data.currentBid) &&
         request.resource.data.currentBid >= resource.data.currentBid + resource.data.increment &&
         request.resource.data.bidCount == resource.data.get('bidCount', 0) + 1 &&
-        // Bids at or above 5x the current price must go through the review
-        // hold (see bids below), never straight onto the lot.
-        // Keep the 5 in sync with HOLD_MULTIPLIER in firebase-init.js.
-        request.resource.data.currentBid < 5 * (resource.data.currentBid > 0 ? resource.data.currentBid : resource.data.increment) &&
+        // Bids above HOLD_THRESHOLD (₹20,000) must go through the review
+        // hold (see bids below), never straight onto the lot. Keep this
+        // number in sync with HOLD_THRESHOLD in firebase-init.js.
+        request.resource.data.currentBid <= 20000 &&
         request.resource.data.currentBidderName is string &&
         request.resource.data.currentBidderName.size() > 0 &&
         request.resource.data.currentBidderName.size() < 80 &&
@@ -222,57 +244,61 @@ service cloud.firestore {
           resource.data.uid == request.auth.uid &&
           resource.data.get('status', '') in ['pending', 'revoked']);
 
-        // Price the 5x hold is measured against: the current bid, or the
-        // increment when the current bid is 0.
-        function holdBase() {
-          return get(/databases/$(database)/documents/items/$(itemId)).data.currentBid > 0
-            ? get(/databases/$(database)/documents/items/$(itemId)).data.currentBid
-            : get(/databases/$(database)/documents/items/$(itemId)).data.increment;
-        }
         // Checks shared by normal bids and held bids. Phone is mandatory
         // (10 digits starting 6-9, no OTP; see PHONE_REGEX in firebase-init.js).
         // The per-account cooldown doc must be written at this same instant.
+        // A bid at or above BAN_THRESHOLD (₹1,00,000) is rejected outright
+        // here (amount < 100000), and an account currently serving a ban
+        // (see bidLimits/{uid}.bannedUntil above) can't place ANY bid.
+        // Keep 100000 in sync with BAN_THRESHOLD in firebase-init.js.
         function commonBid() {
           return request.resource.data.name is string &&
             request.resource.data.name.size() > 0 &&
             request.resource.data.name.size() < 80 &&
             request.resource.data.phone is string &&
             request.resource.data.phone.matches('^[6789][0-9]{9}$') &&
-            // The child the family is bidding for: name plus grade 6-12.
+            // The child the family is bidding for: name plus admission
+            // number or class & section.
             // Admin-only (bids are never public), used to identify the family.
             request.resource.data.childName is string &&
             request.resource.data.childName.size() > 0 &&
             request.resource.data.childName.size() < 80 &&
-            request.resource.data.childGrade in ['6', '7', '8', '9', '10', '11', '12'] &&
+            // Admission number, or class & section — free text (format
+            // varies by family/school office), just non-empty and sane length.
+            request.resource.data.childGrade is string &&
+            request.resource.data.childGrade.size() > 0 &&
+            request.resource.data.childGrade.size() < 40 &&
             request.resource.data.email == request.auth.token.email &&
             request.resource.data.timestamp == request.time &&
             request.resource.data.amount is int &&
+            request.resource.data.amount < 100000 &&
             underMaxBid(request.resource.data.amount) &&
             request.resource.data.uid == request.auth.uid &&
             request.resource.data.deviceId is string &&
-            !isBlacklisted(request.resource.data.deviceId) &&
+            !isBanned(request.auth.uid) &&
             getAfter(/databases/$(database)/documents/bidLimits/$(request.auth.uid)).data.lastBidAt == request.time;
         }
-        // A normal bid: below 5x, and tied to the item update in the same
-        // transaction (same amount, same bidder, bidCount + 1).
+        // A normal bid: at or below HOLD_THRESHOLD (₹20,000), tied to the
+        // item update in the same transaction (same amount, same bidder,
+        // bidCount + 1).
         function normalBid() {
           return request.resource.data.keys().hasOnly(
               ['name', 'phone', 'email', 'amount', 'uid', 'isGoogle', 'deviceId', 'timestamp', 'childName', 'childGrade']) &&
-            request.resource.data.amount < 5 * holdBase() &&
+            request.resource.data.amount <= 20000 &&
             getAfter(/databases/$(database)/documents/items/$(itemId)).data.currentBid == request.resource.data.amount &&
             getAfter(/databases/$(database)/documents/items/$(itemId)).data.currentBidderUid == request.auth.uid &&
             getAfter(/databases/$(database)/documents/items/$(itemId)).data.bidCount ==
               get(/databases/$(database)/documents/items/$(itemId)).data.get('bidCount', 0) + 1;
         }
-        // A held bid: 5x or more above the price. It never touches the lot.
-        // A reviewer calls the bidder; only an admin can confirm it. One
-        // hold per bidder per lot (fixed id).
+        // A held bid: above HOLD_THRESHOLD (and below BAN_THRESHOLD, see
+        // commonBid). It never touches the lot. A reviewer calls the
+        // bidder; only an admin can confirm it. One hold per bidder per lot.
         function heldBid() {
           return bidId == 'hold_' + request.auth.uid &&
             request.resource.data.keys().hasOnly(
               ['name', 'phone', 'email', 'amount', 'uid', 'isGoogle', 'deviceId', 'timestamp', 'childName', 'childGrade', 'status']) &&
             request.resource.data.status == 'pending' &&
-            request.resource.data.amount >= 5 * holdBase() &&
+            request.resource.data.amount > 20000 &&
             get(/databases/$(database)/documents/items/$(itemId)).data.active == true &&
             (get(/databases/$(database)/documents/items/$(itemId)).data.get('endsAt', null) == null ||
              request.time < get(/databases/$(database)/documents/items/$(itemId)).data.endsAt);

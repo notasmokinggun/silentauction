@@ -677,7 +677,34 @@ document.getElementById('nav-profile').insertAdjacentHTML('beforeend', '<span>Pr
 // single static page normally would. fromPop=true means "this call came
 // from the user pressing back", so we don't push ANOTHER history entry
 // on top of itself.
+// Pop-ups (bid sheet, photo views, success screen) get their own history entry,
+// so the phone's back swipe closes the pop-up first instead of leaving the page.
+const overlayStack = [];
+let overlayClosing = false;
+function openOverlay(closeFn) {
+  overlayStack.push(closeFn);
+  history.pushState(Object.assign({}, history.state, { overlay: true }), '', location.href);
+}
+// Close from a button: go back in history, and the popstate handler closes it.
+function closeOverlay(closeFn) {
+  if (overlayStack[overlayStack.length - 1] === closeFn) {
+    if (overlayClosing) return;
+    overlayClosing = true;
+    history.back();
+  } else {
+    const i = overlayStack.lastIndexOf(closeFn);
+    if (i !== -1) overlayStack.splice(i, 1);
+    closeFn();
+  }
+}
+// Close without touching history (for code that closes a pop-up as part of a flow).
+function closeOverlaySilently(closeFn) {
+  const i = overlayStack.lastIndexOf(closeFn);
+  if (i !== -1) overlayStack.splice(i, 1);
+  closeFn();
+}
 function showView(name, fromPop) {
+  while (overlayStack.length) overlayStack.pop()();
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
   document.querySelectorAll('.navbtn').forEach(b => b.classList.toggle('on', b.dataset.view === name));
   if (name !== 'item' && itemCountdownTimer) { clearInterval(itemCountdownTimer); itemCountdownTimer = null; }
@@ -692,12 +719,15 @@ function showView(name, fromPop) {
   if (!fromPop) {
     const itemId = name === 'item' ? currentItemId : null;
     const url = location.pathname + (itemId ? ('?id=' + itemId) : '');
-    history.pushState({ view: name, itemId }, '', url);
+    history.pushState({ view: name, itemId, depth: ((history.state && history.state.depth) || 0) + 1 }, '', url);
   }
 }
 document.querySelectorAll('.navbtn').forEach(b => b.onclick = () => showView(b.dataset.view));
 history.replaceState({ view: 'splash', itemId: null }, '', location.pathname + location.search);
 window.addEventListener('popstate', (e) => {
+  overlayClosing = false;
+  if (overlayStack.length) { overlayStack.pop()(); return; } // back closes the top pop-up first
+  if (e.state && e.state.overlay) { history.back(); return; } // skip a leftover pop-up entry
   const state = e.state || { view: 'home', itemId: null };
   if (state.view === 'item' && state.itemId) {
     const it = lots.find(l => l.id === state.itemId);
@@ -970,7 +1000,7 @@ function attachItemsListener() {
       if (sheet.classList.contains('open') && sheetItem) {
         const fresh = lots.find(l => l.id === sheetItem.id);
         if (fresh && isClosed(fresh)) {
-          closeBidSheet();
+          closeOverlay(closeBidSheet);
         } else if (fresh) {
           sheetItem = fresh;
           document.getElementById('sheet-current-bid').textContent = money(fresh.currentBid);
@@ -1104,7 +1134,9 @@ function openItem(id) {
   renderItemView(it);
   showView('item');
 }
-document.getElementById('item-back').onclick = () => showView('home');
+document.getElementById('item-back').onclick = () => {
+  if (history.state && history.state.depth > 0) history.back(); else showView('home');
+};
 document.getElementById('item-share').onclick = async () => {
   const url = location.origin + location.pathname + '?id=' + currentItemId;
   if (navigator.share) { navigator.share({ title: 'Silent Auction', url }).catch(() => {}); }
@@ -1216,13 +1248,14 @@ function openReadingMode() {
   populateReadingOverlay(it);
   readingOpen = true;
   document.getElementById('reading-overlay').classList.add('open');
+  openOverlay(closeReadingMode);
 }
 function closeReadingMode() {
   readingOpen = false;
   document.getElementById('reading-overlay').classList.remove('open');
 }
 document.getElementById('item-img').onclick = openReadingMode;
-document.getElementById('reading-close').onclick = closeReadingMode;
+document.getElementById('reading-close').onclick = () => closeOverlay(closeReadingMode);
 
 // -----------------------------------------------------------------
 // Lightbox — "Detailed": the same photo, uncropped, as a pop-out preview.
@@ -1230,11 +1263,12 @@ document.getElementById('reading-close').onclick = closeReadingMode;
 function openLightbox(url) {
   document.getElementById('lightbox-img').src = url || '';
   document.getElementById('lightbox-overlay').classList.add('open');
+  openOverlay(closeLightbox);
 }
 function closeLightbox() { document.getElementById('lightbox-overlay').classList.remove('open'); }
-document.getElementById('lightbox-close').onclick = closeLightbox;
+document.getElementById('lightbox-close').onclick = () => closeOverlay(closeLightbox);
 document.getElementById('lightbox-overlay').addEventListener('click', (e) => {
-  if (e.target.id === 'lightbox-overlay') closeLightbox();
+  if (e.target.id === 'lightbox-overlay') closeOverlay(closeLightbox);
 });
 
 // -----------------------------------------------------------------
@@ -1279,12 +1313,13 @@ function openBidSheet(it) {
 
   backdrop.classList.add('open');
   sheet.classList.add('open');
+  openOverlay(closeBidSheet);
 
   setSheetBlockedUI(null); // reset first; replaced below with the real state if banned
   if (googleUser) getActiveBan(googleUser.uid).then(until => setSheetBlockedUI(until));
 }
-document.getElementById('sheet-close').onclick = closeBidSheet;
-backdrop.onclick = closeBidSheet;
+document.getElementById('sheet-close').onclick = () => closeOverlay(closeBidSheet);
+backdrop.onclick = () => closeOverlay(closeBidSheet);
 function closeBidSheet() {
   backdrop.classList.remove('open'); sheet.classList.remove('open');
   if (bidBlockInterval) { clearInterval(bidBlockInterval); bidBlockInterval = null; }
@@ -1457,11 +1492,12 @@ document.getElementById('sheet-confirm').onclick = async () => {
       tx.set(limitRef, { lastBidAt: firebase.firestore.FieldValue.serverTimestamp() });
     });
     recordMyBid(sheetItem.id, bidRef.id, amount, held ? 'pending' : null);
-    closeBidSheet();
+    closeOverlaySilently(closeBidSheet);
     document.getElementById('success-msg').textContent = held
       ? `Your bid of ${money(amount)} on ${sheetItem.title} is on hold. Our team will call you on ${phone} to confirm it. It won't count as the highest bid until you do.`
       : `Your bid of ${money(amount)} has been placed on ${sheetItem.title}.`;
     document.getElementById('success-overlay').classList.add('open');
+    openOverlay(closeSuccess);
   } catch (e) {
     if (e.code === 'permission-denied') {
       errEl.textContent = "Couldn't place that bid. You may be bidding too fast, or the lot may have closed. Wait a moment and refresh.";
@@ -1473,6 +1509,7 @@ document.getElementById('sheet-confirm').onclick = async () => {
   }
 };
 
+function closeSuccess() { document.getElementById('success-overlay').classList.remove('open'); }
 document.getElementById('success-view').onclick = () => {
   document.getElementById('success-overlay').classList.remove('open');
   openItem(currentItemId);

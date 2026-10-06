@@ -191,12 +191,12 @@
     </div>
   </form>
   <p class="gate-hint">New admin? Ask the owner to add your email on the
-    <a href="admin-access.html">Admin Access</a> page first — an account can
+    <a href="admin-access.html">Admin Access</a> page first. An account can
     only be created for an approved email. Once approved, enter that same
     email above, choose a password, and tap <strong>Create
     Password</strong>. Setting this up for the very first time ever?
     Go to <a href="owner-setup.html">Owner Setup</a> instead.</p>
-  <p class="gate-hint">Forgot your password? There's no email-based reset —
+  <p class="gate-hint">Forgot your password? There's no email-based reset.
     ask the owner to delete your account in the Firebase console
     (Authentication tab), then use <strong>Create Password</strong> again
     with the same email.</p>
@@ -241,10 +241,10 @@
       <h1>Dashboard</h1>
       <p class="sub">Overview of your silent auction event</p>
       <div class="statgrid">
-        <div class="statcard"><div class="lbl"><span class="ic"></span>Total Items</div><div class="val" id="stat-items">—</div></div>
-        <div class="statcard"><div class="lbl"><span class="ic"></span>Total Bids</div><div class="val" id="stat-bids">—</div></div>
-        <div class="statcard"><div class="lbl"><span class="ic"></span>Total Raised</div><div class="val" id="stat-raised">—</div></div>
-        <div class="statcard"><div class="lbl"><span class="ic"></span>Active Bidders</div><div class="val" id="stat-users">—</div></div>
+        <div class="statcard"><div class="lbl"><span class="ic"></span>Total Items</div><div class="val" id="stat-items">-</div></div>
+        <div class="statcard"><div class="lbl"><span class="ic"></span>Total Bids</div><div class="val" id="stat-bids">-</div></div>
+        <div class="statcard"><div class="lbl"><span class="ic"></span>Total Raised</div><div class="val" id="stat-raised">-</div></div>
+        <div class="statcard"><div class="lbl"><span class="ic"></span>Active Bidders</div><div class="val" id="stat-users">-</div></div>
       </div>
       <div class="panelgrid">
         <div class="block">
@@ -263,7 +263,7 @@
     <!-- ===================== ITEMS ===================== -->
     <div class="panel" id="panel-items">
       <h1>Items</h1>
-      <p class="sub">Add, edit, and remove lots — everything here is what guests see live.</p>
+      <p class="sub">Add, edit, and remove lots. Everything here is what guests see live.</p>
       <div class="panelgrid">
         <div>
           <form id="lotForm">
@@ -274,7 +274,7 @@
                 <input id="f-cat" list="cat-options" placeholder="Art, Experiences, Sports…" maxlength="40">
                 <datalist id="cat-options"><option value="Art"><option value="Experiences"><option value="Sports"></datalist>
               </div>
-              <div class="form-row"><label for="f-desc">Description <span style="font-weight:400;">— multiple paragraphs OK, leave a blank line between them</span></label>
+              <div class="form-row"><label for="f-desc">Description <span style="font-weight:400;">(multiple paragraphs OK, leave a blank line between them)</span></label>
                 <textarea id="f-desc" maxlength="4000" style="min-height:150px;"></textarea><div class="charcount" id="desc-count">0 / 4000</div></div>
               <label>Photo</label>
               <div class="photo-picker">
@@ -290,7 +290,7 @@
                 <div class="form-row"><label for="f-start">Starting bid (₹)</label><input id="f-start" type="number" min="0" max="100000000" required></div>
                 <div class="form-row"><label for="f-inc">Increment (₹)</label><input id="f-inc" type="number" min="1" max="100000000" value="500" required></div>
               </div>
-              <div class="form-row"><label>Bidding closes at <span style="font-weight:400;">(optional — leave blank for no deadline)</span></label>
+              <div class="form-row"><label>Bidding closes at <span style="font-weight:400;">(optional, leave blank for no deadline)</span></label>
                 <div class="row2">
                   <input id="f-ends-date" type="date" aria-label="Closing date">
                   <input id="f-ends-time" type="time" aria-label="Closing time">
@@ -318,7 +318,7 @@
     <!-- ===================== BIDS ===================== -->
     <div class="panel" id="panel-bids">
       <h1>Bids &amp; winners</h1>
-      <p class="sub">Rank bids per lot and mark the winner. See exactly who placed what, and revoke any bid you don't trust — it's removed for good and the leading bid recalculates automatically.</p>
+      <p class="sub">Rank bids per lot and mark the winner. See exactly who placed what, and revoke any bid you don't trust. It's removed for good and the leading bid recalculates automatically.</p>
       <div style="display:flex;justify-content:flex-end;margin-bottom:14px;">
         <button class="btn-ghost" id="exportCsvBids">Export bids as CSV</button>
       </div>
@@ -338,13 +338,13 @@
     <!-- ===================== PAYMENTS ===================== -->
     <div class="panel" id="panel-payments">
       <h1>Payments</h1>
-      <p class="sub">There's no payment processor wired into this app — collect payment at checkout however you normally would (card reader, cash, Venmo/UPI, etc.) using this as your reference list.</p>
+      <p class="sub">There's no payment processor wired into this app. Collect payment at checkout however you normally would (card reader, cash, Venmo/UPI, etc.) using this as your reference list.</p>
       <div class="block">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
           <h2 style="margin:0;">Ranked results, every lot</h2>
           <button class="btn-ghost" id="exportCsv">Export as CSV</button>
         </div>
-        <p style="font-size:13px;color:var(--muted);">The export lists every bid per lot, ranked highest to lowest, with the marked winner flagged — so if a winner doesn't pay, the next name is right there.</p>
+        <p style="font-size:13px;color:var(--muted);">The export lists every bid per lot, ranked highest to lowest, with the marked winner flagged, so if a winner doesn't pay, the next name is right there.</p>
       </div>
     </div>
 
@@ -355,7 +355,7 @@
       <div class="block" style="margin-bottom:16px;">
         <h2>Manage admins</h2>
         <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">
-          Add or remove organizers by email — restricted to the auction
+          Add or remove organizers by email, restricted to the auction
           owner. A new admin enters that same email on this page's sign-in
           screen and taps <strong>Create Password</strong> to get in; no
           separate invite step.
@@ -364,7 +364,7 @@
       </div>
       <div class="block" style="margin-bottom:16px;">
         <h2>Bootstrap admin</h2>
-        <p style="font-size:13px;color:var(--muted);">The one admin who can never be removed from here — set by editing <code>ADMIN_EMAILS</code> in <code>firebase-init.js</code> and <code>isAdmin()</code> in <code>firestore.rules</code> directly. That's you, presumably.</p>
+        <p style="font-size:13px;color:var(--muted);">The one admin who can never be removed from here, set by editing <code>ADMIN_EMAILS</code> in <code>firebase-init.js</code> and <code>isAdmin()</code> in <code>firestore.rules</code> directly. That's you, presumably.</p>
         <p style="font-size:12px;color:var(--muted);margin-top:10px;">Your email: <span id="settings-uid" style="font-family:monospace;"></span></p>
       </div>
       <div class="block">
@@ -622,8 +622,8 @@ function renderDashboardStats() {
 function renderRecentBids() {
   const rows = allBids.filter(isLiveBid).slice(0, 10).map(b => {
     const it = lots.find(l => l.id === b.itemId);
-    const t = b.timestamp && b.timestamp.toDate ? timeAgo(b.timestamp.toDate()) : '—';
-    return `<tr><td>${t}</td><td>${escapeHtml(b.name)}</td><td>${escapeHtml(it ? it.title : '—')}</td>
+    const t = b.timestamp && b.timestamp.toDate ? timeAgo(b.timestamp.toDate()) : '-';
+    return `<tr><td>${t}</td><td>${escapeHtml(b.name)}</td><td>${escapeHtml(it ? it.title : '-')}</td>
       <td style="text-align:right;">${money(b.amount)}</td></tr>`;
   }).join('');
   document.getElementById('recent-bids-body').innerHTML = rows || '<tr><td colspan="4" style="color:var(--muted);">No bids yet.</td></tr>';
@@ -695,13 +695,13 @@ function renderLots() {
     ? lots.filter(it => (it.title || '').toLowerCase().includes(itemsSearchTerm) || (it.category || '').toLowerCase().includes(itemsSearchTerm))
     : lots;
   document.getElementById('lots-heading').textContent = lots.length ? `Lots (${list.length}${itemsSearchTerm ? ' of ' + lots.length : ''})` : 'Lots';
-  if (!lots.length) { el.innerHTML = '<p class="empty-lots">No lots yet — add the first one on the left.</p>'; return; }
+  if (!lots.length) { el.innerHTML = '<p class="empty-lots">No lots yet. Add the first one on the left.</p>'; return; }
   if (!list.length) { el.innerHTML = '<p class="empty-lots">No lots match "' + escapeHtml(itemsSearchTerm) + '".</p>'; return; }
   el.innerHTML = list.map(it => `
     <div class="lotcard">
       <img src="${it.imageUrl || ''}" onerror="this.style.visibility='hidden'">
       <div class="body">
-        <div class="title">LOT ${String(it.lotNumber).padStart(3,'0')} — ${escapeHtml(it.title)}</div>
+        <div class="title">LOT ${String(it.lotNumber).padStart(3,'0')}: ${escapeHtml(it.title)}</div>
         <div class="meta">${money(it.currentBid)} · ${it.bidCount || 0} bid(s)${it.category ? ' · ' + escapeHtml(it.category) : ''}
           ${it.winnerName ? ' · <span class="winner-tag">Winner: ' + escapeHtml(it.winnerName) + '</span>' : ''}
           ${isClosed(it) ? ' · <span class="closed-tag">CLOSED</span>' : ''}</div>
@@ -893,7 +893,7 @@ function compressImageToDataUrl(file, maxDim = 900, startQuality = 0.72, maxLen 
           quality -= 0.1;
           dataUrl = canvas.toDataURL('image/jpeg', quality);
         }
-        if (dataUrl.length > maxLen) { reject(new Error('This photo is too large even compressed — try a smaller image.')); return; }
+        if (dataUrl.length > maxLen) { reject(new Error('This photo is too large even compressed. Try a smaller image.')); return; }
         resolve(dataUrl);
       };
       img.src = reader.result;
@@ -971,7 +971,7 @@ document.getElementById('lotForm').addEventListener('submit', async (e) => {
     }
     resetForm();
   } catch (err) {
-    addErr.textContent = err.message || 'Could not save this lot — try again.';
+    addErr.textContent = err.message || 'Could not save this lot. Try again.';
     submitBtn.textContent = prevLabel;
   } finally {
     submitBtn.disabled = false;
@@ -1009,7 +1009,7 @@ function renderBidsPanel() {
     <div class="lotcard" style="display:block;">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
         <div>
-          <div class="title">LOT ${String(it.lotNumber).padStart(3,'0')} — ${escapeHtml(it.title)}</div>
+          <div class="title">LOT ${String(it.lotNumber).padStart(3,'0')}: ${escapeHtml(it.title)}</div>
           <div class="meta">${it.bidCount || 0} bid(s)
             ${allBids.some(b => b.itemId === it.id && b.status === 'pending') ? ' · <span class="tag-hold">ON HOLD</span>' : ''}
             ${it.winnerName ? ' · <span class="winner-tag">Winner: ' + escapeHtml(it.winnerName) + ' (' + money(it.winnerAmount) + ')</span>' : ''}
@@ -1186,7 +1186,7 @@ function renderUsersPanel() {
   });
   const rows = [...map.values()].sort((a, b) => b.total - a.total);
   document.getElementById('users-body').innerHTML = rows.length
-    ? rows.map(r => `<tr><td>${escapeHtml(r.name)}</td><td>${escapeHtml(r.phone || '—')}</td><td>${r.isGoogle ? 'Yes' : 'No'}</td>
+    ? rows.map(r => `<tr><td>${escapeHtml(r.name)}</td><td>${escapeHtml(r.phone || '-')}</td><td>${r.isGoogle ? 'Yes' : 'No'}</td>
         <td>${r.count}</td><td style="text-align:right;">${money(r.total)}</td></tr>`).join('')
     : '<tr><td colspan="5" style="color:var(--muted);">No bidders yet.</td></tr>';
 }

@@ -437,9 +437,9 @@
   <div class="searchbar" id="searchbar"><input id="search-input" placeholder="Search items…"></div>
   <div class="pills" id="pills"></div>
   <div class="grid" id="grid"></div>
-  <div class="empty-state" id="empty-state" style="display:none;">No lots yet — check back shortly.</div>
+  <div class="empty-state" id="empty-state" style="display:none;">No lots yet. Check back shortly.</div>
   <div class="load-error" id="load-error" style="display:none;">
-    <p id="load-error-msg">Couldn't load the items — check your connection.</p>
+    <p id="load-error-msg">Couldn't load the items. Check your connection.</p>
     <button id="load-retry">Try again</button>
   </div>
 </section>
@@ -463,7 +463,7 @@
     <div class="item-cta-bar" id="item-cta-bar"></div>
     <div class="stat-row">
       <div class="stat"><p class="k" id="item-bid-label">Current Bid</p><p class="v gold" id="item-bid-value"></p></div>
-      <div class="stat"><p class="k">Time Left</p><p class="v" id="item-time-value">—</p></div>
+      <div class="stat"><p class="k">Time Left</p><p class="v" id="item-time-value">-</p></div>
       <div class="stat"><p class="k">Total Bids</p><p class="v" id="item-bidcount-value">0</p></div>
     </div>
     <div class="item-info" id="item-info"></div>
@@ -545,7 +545,7 @@
     <p class="sheet-min" id="sheet-min-text"></p>
   </div>
   <div class="signin-gate" id="sheet-signin-gate">
-    <p class="signin-note">Sign in with Google to bid — every bid is tied to a real account.</p>
+    <p class="signin-note">Sign in with Google to bid. Every bid is tied to a real account.</p>
     <div id="sheet-google-btn" class="google-btn-slot"></div>
   </div>
   <div id="sheet-bidform">
@@ -566,14 +566,14 @@
       <div class="contact-row"><span class="k">Email</span><span class="v" id="sheet-email-display"></span></div>
       <label for="sheet-phone-input">Phone number <span class="req">*</span></label>
       <input id="sheet-phone-input" type="tel" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number">
-      <p class="contact-hint">Required so we can confirm your bid with you. No OTP — just double-check it's correct.</p>
+      <p class="contact-hint">Required so we can confirm your bid with you. No OTP, just double-check it's correct.</p>
       <label for="sheet-child-input">Child's name <span class="req">*</span></label>
       <input id="sheet-child-input" maxlength="79" placeholder="Your child's name" autocomplete="off">
       <label for="sheet-class-input">Class &amp; Section</label>
       <input id="sheet-class-input" maxlength="19" placeholder="e.g. 10-B or 10 B" autocomplete="off">
       <label for="sheet-admission-input">Admission number</label>
       <input id="sheet-admission-input" maxlength="4" inputmode="numeric" placeholder="4-digit admission number" autocomplete="off">
-      <p class="contact-hint">Fill in at least one — Class &amp; Section, or admission number. Only our team sees this; it is never shown publicly.</p>
+      <p class="contact-hint">Fill in at least one: Class &amp; Section, or admission number. Only our team sees this; it is never shown publicly.</p>
     </div>
     <button class="cta cta-cream" id="sheet-confirm">Confirm Bid</button>
   </div>
@@ -863,7 +863,7 @@ function showGisLoadError(msg) {
   // slot just stayed permanently blank with zero indication why — which looks
   // exactly like "Google sign-in isn't working," with no error anywhere to
   // go on. Both a load failure and a load that never completes are now surfaced.
-  s.onerror = () => showGisLoadError('Google Sign-In couldn\'t load — check your connection, or try disabling an ad/tracker blocker for this site, then reload.');
+  s.onerror = () => showGisLoadError('Google Sign-In couldn\'t load. Check your connection, or try disabling an ad/tracker blocker for this site, then reload.');
   document.head.appendChild(s);
   setTimeout(() => showGisLoadError('Google Sign-In is taking unusually long to load. Try reloading the page.'), 6000);
 })();
@@ -872,7 +872,7 @@ function updateSheetAuthGate() {
   document.getElementById('sheet-signin-gate').style.display = signedIn ? 'none' : 'block';
   document.getElementById('sheet-bidform').style.display = signedIn ? 'block' : 'none';
   if (!signedIn) renderGoogleButton();
-  else document.getElementById('sheet-email-display').textContent = googleUser.email || '—';
+  else document.getElementById('sheet-email-display').textContent = googleUser.email || '-';
 }
 
 // -----------------------------------------------------------------
@@ -927,8 +927,8 @@ function attachItemsListener() {
   }, err => {
     console.error('Failed to load items', err);
     showLoadError(err.code === 'permission-denied'
-      ? "Couldn't load the items (access was denied) — try again, or let the organizers know if this keeps happening."
-      : "Couldn't load the items — check your connection and try again.");
+      ? "Couldn't load the items (access was denied). Try again, or let the organizers know if this keeps happening."
+      : "Couldn't load the items. Check your connection and try again.");
   });
 }
 function showLoadError(msg) {
@@ -1073,7 +1073,7 @@ async function loadFullImage(it) {
 }
 
 function closedNoteHtml(it) {
-  return `<div class="closed-note">Bidding closed — won by <strong>${escapeHtml(winnerNameOf(it) || '—')}</strong> at ${money(winnerAmountOf(it))}</div>`;
+  return `<div class="closed-note">Bidding closed. Won by <strong>${escapeHtml(winnerNameOf(it) || '-')}</strong> at ${money(winnerAmountOf(it))}</div>`;
 }
 
 function renderItemView(it) {
@@ -1265,7 +1265,7 @@ function setSheetBlockedUI(until) {
       return;
     }
     lock();
-    errEl.textContent = `You're temporarily blocked from bidding — try again in ${countdownText(until)}.`;
+    errEl.textContent = `You're temporarily blocked from bidding. Try again in ${countdownText(until)}.`;
   };
   tick();
   bidBlockInterval = setInterval(tick, 1000);
@@ -1366,7 +1366,7 @@ document.getElementById('sheet-confirm').onclick = async () => {
       const it = doc.data();
       if (isClosed(it)) throw new Error('Bidding on this lot has just closed.');
       const minNext = it.currentBid + it.increment;
-      if (amount < minNext) throw new Error(`Someone beat you to it — bid must now be at least ${money(minNext)}.`);
+      if (amount < minNext) throw new Error(`Someone beat you to it. Bid must now be at least ${money(minNext)}.`);
       held = isHoldAmount(it, amount);
       const fields = {
         name, phone, childName, classSection, admissionNumber, email: googleUser.email || '', amount, uid: googleUser.uid,
@@ -1399,9 +1399,9 @@ document.getElementById('sheet-confirm').onclick = async () => {
     document.getElementById('success-overlay').classList.add('open');
   } catch (e) {
     if (e.code === 'permission-denied') {
-      errEl.textContent = "Couldn't place that bid — you may be bidding too fast, or the lot may have closed. Wait a moment and refresh.";
+      errEl.textContent = "Couldn't place that bid. You may be bidding too fast, or the lot may have closed. Wait a moment and refresh.";
     } else {
-      errEl.textContent = e.message || 'Could not place that bid — try again.';
+      errEl.textContent = e.message || 'Could not place that bid. Try again.';
     }
   } finally {
     btn.disabled = false;

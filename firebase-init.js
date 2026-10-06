@@ -228,7 +228,7 @@ async function checkAdminApprovalStatus(email) {
     return {
       approved: false,
       error: err.code === "permission-denied"
-        ? "Couldn't check approval status (permission denied). The live Firestore rules on this project may be out of date — re-publish the current firestore.rules in the Firebase console, then try again."
+        ? "Couldn't check approval status (permission denied). The live Firestore rules on this project may be out of date. Re-publish the current firestore.rules in the Firebase console, then try again."
         : "Couldn't check approval status: " + err.message,
     };
   }

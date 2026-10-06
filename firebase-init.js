@@ -156,6 +156,18 @@ function normalizePhoneInput(raw) {
   return digits;
 }
 
+// ─────────────────────────────────────────────────────────────
+// Class & Section — one of two ways (alongside admission number) a
+// family can be identified. A space or a dash is REQUIRED between the
+// class number and the section, deliberately, so the two parts can be
+// read back apart and tracked separately ("10-B" / "10 B") rather than
+// landing as one unparseable string ("10B").
+// ─────────────────────────────────────────────────────────────
+const CLASS_SECTION_REGEX = /^[0-9]{1,2}[ -][A-Za-z0-9]{1,4}$/;
+
+// Admission number — the other option, a plain 4-digit number.
+const ADMISSION_NUMBER_REGEX = /^[0-9]{4}$/;
+
 // Fast, sync, bootstrap-only check — use for an instant UI decision.
 function isAdminEmail(email) {
   return !!email && ADMIN_EMAILS.includes(email.toLowerCase());

@@ -561,9 +561,11 @@
       <p class="contact-hint">Required so we can confirm your bid with you. No OTP — just double-check it's correct.</p>
       <label for="sheet-child-input">Child's name <span class="req">*</span></label>
       <input id="sheet-child-input" maxlength="79" placeholder="Your child's name" autocomplete="off">
-      <label for="sheet-grade-select">Admission number, or Class &amp; Section <span class="req">*</span></label>
-      <input id="sheet-grade-select" maxlength="39" placeholder="e.g. AD12345, or 10-B" autocomplete="off">
-      <p class="contact-hint">Only our team sees this. It is never shown publicly.</p>
+      <label for="sheet-class-input">Class &amp; Section</label>
+      <input id="sheet-class-input" maxlength="19" placeholder="e.g. 10-B or 10 B" autocomplete="off">
+      <label for="sheet-admission-input">Admission number</label>
+      <input id="sheet-admission-input" maxlength="4" inputmode="numeric" placeholder="4-digit admission number" autocomplete="off">
+      <p class="contact-hint">Fill in at least one — Class &amp; Section, or admission number. Only our team sees this; it is never shown publicly.</p>
     </div>
     <button class="cta cta-cream" id="sheet-confirm">Confirm Bid</button>
   </div>
@@ -1196,7 +1198,8 @@ function openBidSheet(it) {
   document.getElementById('sheet-name-edit').classList.toggle('open', !savedName);
   document.getElementById('sheet-phone-input').value = localStorage.getItem('auction_phone') || '';
   document.getElementById('sheet-child-input').value = localStorage.getItem('auction_child_name') || '';
-  document.getElementById('sheet-grade-select').value = localStorage.getItem('auction_child_grade') || '';
+  document.getElementById('sheet-class-input').value = localStorage.getItem('auction_class_section') || '';
+  document.getElementById('sheet-admission-input').value = localStorage.getItem('auction_admission_number') || '';
   document.getElementById('sheet-err').textContent = '';
   updateSheetAuthGate();
 
@@ -1289,13 +1292,25 @@ document.getElementById('sheet-confirm').onclick = async () => {
   const name = document.getElementById('sheet-name-input').value.trim();
   const phone = normalizePhoneInput(document.getElementById('sheet-phone-input').value);
   const childName = document.getElementById('sheet-child-input').value.trim();
-  const childGrade = document.getElementById('sheet-grade-select').value.trim();
+  const classSection = document.getElementById('sheet-class-input').value.trim();
+  const admissionNumber = document.getElementById('sheet-admission-input').value.trim();
   const amount = Number(document.getElementById('sheet-amount').value);
   if (!googleUser) { errEl.textContent = 'Sign in with Google to bid.'; return; }
   if (!name) { errEl.textContent = 'Enter your name to bid.'; return; }
   if (!isValidPhone(phone)) { errEl.textContent = 'Enter a valid 10-digit phone number starting with 6, 7, 8, or 9.'; return; }
   if (!childName) { errEl.textContent = "Enter your child's name."; return; }
-  if (!childGrade) { errEl.textContent = "Enter your child's admission number, or class & section."; return; }
+  if (!classSection && !admissionNumber) { errEl.textContent = "Enter your child's Class & Section, or their admission number."; return; }
+  // A space or a dash between the class number and section (e.g. "10-B" or
+  // "10 B") is required so the two parts can actually be read back apart
+  // and tracked separately, instead of landing as one unparseable blob.
+  if (classSection && !CLASS_SECTION_REGEX.test(classSection)) {
+    errEl.textContent = 'Class & Section needs a space or a dash between them, e.g. 10-B or 10 B.';
+    return;
+  }
+  if (admissionNumber && !ADMISSION_NUMBER_REGEX.test(admissionNumber)) {
+    errEl.textContent = 'Admission number must be exactly 4 digits.';
+    return;
+  }
   if (!Number.isInteger(amount) || amount <= 0) { errEl.textContent = 'Enter a whole-rupee amount.'; return; }
 
   // ₹1,00,000 or more: rejected outright (firestore.rules enforces this too,
@@ -1320,7 +1335,8 @@ document.getElementById('sheet-confirm').onclick = async () => {
   localStorage.setItem('auction_name', name);
   localStorage.setItem('auction_phone', phone);
   localStorage.setItem('auction_child_name', childName);
-  localStorage.setItem('auction_child_grade', childGrade);
+  localStorage.setItem('auction_class_section', classSection);
+  localStorage.setItem('auction_admission_number', admissionNumber);
 
   const itemRef = db.collection('items').doc(sheetItem.id);
   const limitRef = db.collection('bidLimits').doc(googleUser.uid);
@@ -1340,7 +1356,7 @@ document.getElementById('sheet-confirm').onclick = async () => {
       if (amount < minNext) throw new Error(`Someone beat you to it — bid must now be at least ${money(minNext)}.`);
       held = isHoldAmount(it, amount);
       const fields = {
-        name, phone, childName, childGrade, email: googleUser.email || '', amount, uid: googleUser.uid,
+        name, phone, childName, classSection, admissionNumber, email: googleUser.email || '', amount, uid: googleUser.uid,
         isGoogle: true, deviceId: getDeviceId(),
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
       };

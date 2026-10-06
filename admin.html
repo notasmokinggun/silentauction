@@ -1038,7 +1038,11 @@ function renderBidRows(itemId) {
   if (!all.length) { container.innerHTML = '<p class="empty">No bids on this lot yet.</p>'; return; }
   const contactOf = b => [b.phone ? '📞 ' + escapeHtml(b.phone) : '', b.email ? escapeHtml(b.email) : '']
     .filter(Boolean).join(' · ');
-  const childOf = b => b.childName ? `<span class="c">Child: ${escapeHtml(b.childName)}, ${escapeHtml(String(b.childGrade || ''))}</span>` : '';
+  const childOf = b => {
+    if (!b.childName) return '';
+    const bits = [b.classSection, b.admissionNumber ? ('Adm# ' + b.admissionNumber) : ''].filter(Boolean).join(', ');
+    return `<span class="c">Child: ${escapeHtml(b.childName)}${bits ? ', ' + escapeHtml(bits) : ''}</span>`;
+  };
   const timeOf = b => bidTimeText(b) ? `<span class="c">🕒 ${escapeHtml(bidTimeText(b))}</span>` : '';
   const holdRows = holds.map(b => `<div class="bidrow onhold">
       <span class="rank tag-hold">HOLD</span>
@@ -1198,15 +1202,15 @@ const csvCell = c => {
   return `"${v.replace(/"/g, '""')}"`;
 };
 function buildBidsCsv() {
-  const rows = [['Lot', 'Title', 'Rank', 'Bidder', 'Phone', 'Child name', 'Admission # / Class-Section', 'Amount', 'Bid time', 'Google verified', 'Status', 'Marked winner']];
+  const rows = [['Lot', 'Title', 'Rank', 'Bidder', 'Phone', 'Child name', 'Class & Section', 'Admission #', 'Amount', 'Bid time', 'Google verified', 'Status', 'Marked winner']];
   for (const it of lots) {
     const lotLabel = 'LOT ' + String(it.lotNumber).padStart(3, '0');
     const all = allBids.filter(b => b.itemId === it.id);
     const bids = all.filter(isLiveBid).sort((a, b) => b.amount - a.amount);
     const others = all.filter(b => !isLiveBid(b));
-    if (!all.length) { rows.push([lotLabel, it.title, '', '(no bids)', '', '', '', '', '', '', '', '']); continue; }
-    bids.forEach((b, i) => rows.push([lotLabel, it.title, i + 1, b.name, b.phone || '', b.childName || '', b.childGrade || '', b.amount, bidTimeText(b), b.isGoogle ? 'Yes' : 'No', b.status === 'confirmed' ? 'Confirmed by call' : 'Live', it.winnerBidId === b.id ? 'WINNER' : '']));
-    others.forEach(b => rows.push([lotLabel, it.title, '', b.name, b.phone || '', b.childName || '', b.childGrade || '', b.amount, bidTimeText(b), b.isGoogle ? 'Yes' : 'No', b.status === 'pending' ? 'ON HOLD (not counted)' : 'Hold revoked', '']));
+    if (!all.length) { rows.push([lotLabel, it.title, '', '(no bids)', '', '', '', '', '', '', '', '', '']); continue; }
+    bids.forEach((b, i) => rows.push([lotLabel, it.title, i + 1, b.name, b.phone || '', b.childName || '', b.classSection || '', b.admissionNumber || '', b.amount, bidTimeText(b), b.isGoogle ? 'Yes' : 'No', b.status === 'confirmed' ? 'Confirmed by call' : 'Live', it.winnerBidId === b.id ? 'WINNER' : '']));
+    others.forEach(b => rows.push([lotLabel, it.title, '', b.name, b.phone || '', b.childName || '', b.classSection || '', b.admissionNumber || '', b.amount, bidTimeText(b), b.isGoogle ? 'Yes' : 'No', b.status === 'pending' ? 'ON HOLD (not counted)' : 'Hold revoked', '']));
   }
   return rows.map(r => r.map(csvCell).join(',')).join('\n');
 }

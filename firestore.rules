@@ -257,17 +257,29 @@ service cloud.firestore {
             request.resource.data.name.size() < 80 &&
             request.resource.data.phone is string &&
             request.resource.data.phone.matches('^[6789][0-9]{9}$') &&
-            // The child the family is bidding for: name plus admission
-            // number or class & section.
-            // Admin-only (bids are never public), used to identify the family.
+            // The child the family is bidding for: name, plus EITHER a
+            // class & section OR an admission number (or both) — never
+            // neither. Admin-only (bids are never public), used to
+            // identify the family.
             request.resource.data.childName is string &&
             request.resource.data.childName.size() > 0 &&
             request.resource.data.childName.size() < 80 &&
-            // Admission number, or class & section — free text (format
-            // varies by family/school office), just non-empty and sane length.
-            request.resource.data.childGrade is string &&
-            request.resource.data.childGrade.size() > 0 &&
-            request.resource.data.childGrade.size() < 40 &&
+            // Class & section: a space or dash is REQUIRED between the
+            // class number and the section (e.g. "10-B" / "10 B"), so the
+            // two parts can be read back apart and tracked separately —
+            // matches CLASS_SECTION_REGEX in firebase-init.js. Empty
+            // string is allowed here (the admission-number half of the
+            // "either/or" can cover it instead); the "at least one"
+            // requirement is enforced two lines down.
+            request.resource.data.classSection is string &&
+            (request.resource.data.classSection == '' ||
+             request.resource.data.classSection.matches('^[0-9]{1,2}[ -][A-Za-z0-9]{1,4}$')) &&
+            // Admission number: exactly 4 digits, or empty (same either/or
+            // as above) — matches ADMISSION_NUMBER_REGEX in firebase-init.js.
+            request.resource.data.admissionNumber is string &&
+            (request.resource.data.admissionNumber == '' ||
+             request.resource.data.admissionNumber.matches('^[0-9]{4}$')) &&
+            (request.resource.data.classSection != '' || request.resource.data.admissionNumber != '') &&
             request.resource.data.email == request.auth.token.email &&
             request.resource.data.timestamp == request.time &&
             request.resource.data.amount is int &&
@@ -283,7 +295,7 @@ service cloud.firestore {
         // bidCount + 1).
         function normalBid() {
           return request.resource.data.keys().hasOnly(
-              ['name', 'phone', 'email', 'amount', 'uid', 'isGoogle', 'deviceId', 'timestamp', 'childName', 'childGrade']) &&
+              ['name', 'phone', 'email', 'amount', 'uid', 'isGoogle', 'deviceId', 'timestamp', 'childName', 'classSection', 'admissionNumber']) &&
             request.resource.data.amount <= 20000 &&
             getAfter(/databases/$(database)/documents/items/$(itemId)).data.currentBid == request.resource.data.amount &&
             getAfter(/databases/$(database)/documents/items/$(itemId)).data.currentBidderUid == request.auth.uid &&
@@ -296,7 +308,7 @@ service cloud.firestore {
         function heldBid() {
           return bidId == 'hold_' + request.auth.uid &&
             request.resource.data.keys().hasOnly(
-              ['name', 'phone', 'email', 'amount', 'uid', 'isGoogle', 'deviceId', 'timestamp', 'childName', 'childGrade', 'status']) &&
+              ['name', 'phone', 'email', 'amount', 'uid', 'isGoogle', 'deviceId', 'timestamp', 'childName', 'classSection', 'admissionNumber', 'status']) &&
             request.resource.data.status == 'pending' &&
             request.resource.data.amount > 20000 &&
             get(/databases/$(database)/documents/items/$(itemId)).data.active == true &&

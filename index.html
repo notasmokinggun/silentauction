@@ -788,6 +788,21 @@ function renderResults() {
 // -----------------------------------------------------------------
 // Auth
 // -----------------------------------------------------------------
+// Name used on bids: a name the person typed themselves wins, otherwise the
+// name on their Google account, so nobody is asked to type it again.
+function bidderName() {
+  return (localStorage.getItem('auction_name') || '').trim() ||
+    (googleUser && googleUser.displayName ? googleUser.displayName.trim() : '');
+}
+// Fill the bid sheet's name field. force=true overwrites, otherwise only fills an empty field.
+function fillSheetName(force) {
+  const input = document.getElementById('sheet-name-input');
+  if (!force && input.value.trim()) return;
+  const name = bidderName();
+  input.value = name;
+  document.getElementById('sheet-name-display').textContent = name || 'someone new';
+  document.getElementById('sheet-name-edit').classList.toggle('open', !name);
+}
 auth.getRedirectResult().then(res => { if (res.user) { googleUser = res.user; renderProfile(); } }).catch(() => {});
 auth.onAuthStateChanged(u => {
   googleUser = u || null;
@@ -872,7 +887,10 @@ function updateSheetAuthGate() {
   document.getElementById('sheet-signin-gate').style.display = signedIn ? 'none' : 'block';
   document.getElementById('sheet-bidform').style.display = signedIn ? 'block' : 'none';
   if (!signedIn) renderGoogleButton();
-  else document.getElementById('sheet-email-display').textContent = googleUser.email || '-';
+  else {
+    document.getElementById('sheet-email-display').textContent = googleUser.email || '-';
+    fillSheetName(false); // just signed in: pull the name from the Google account
+  }
 }
 
 // -----------------------------------------------------------------
@@ -1205,10 +1223,7 @@ function openBidSheet(it) {
   });
   updateHoldNote();
 
-  const savedName = localStorage.getItem('auction_name') || (googleUser ? (googleUser.displayName || '') : '');
-  document.getElementById('sheet-name-input').value = savedName;
-  document.getElementById('sheet-name-display').textContent = savedName || 'someone new';
-  document.getElementById('sheet-name-edit').classList.toggle('open', !savedName);
+  fillSheetName(true);
   document.getElementById('sheet-phone-input').value = localStorage.getItem('auction_phone') || '';
   document.getElementById('sheet-child-input').value = localStorage.getItem('auction_child_name') || '';
   document.getElementById('sheet-class-input').value = localStorage.getItem('auction_class_section') || '';
@@ -1302,14 +1317,18 @@ document.getElementById('sheet-name-input').addEventListener('keydown', (e) => {
 document.getElementById('sheet-confirm').onclick = async () => {
   const errEl = document.getElementById('sheet-err');
   errEl.textContent = '';
-  const name = document.getElementById('sheet-name-input').value.trim();
+  const name = document.getElementById('sheet-name-input').value.trim() || bidderName();
   const phone = normalizePhoneInput(document.getElementById('sheet-phone-input').value);
   const childName = document.getElementById('sheet-child-input').value.trim();
   const classSection = document.getElementById('sheet-class-input').value.trim();
   const admissionNumber = document.getElementById('sheet-admission-input').value.trim();
   const amount = Number(document.getElementById('sheet-amount').value);
   if (!googleUser) { errEl.textContent = 'Sign in with Google to bid.'; return; }
-  if (!name) { errEl.textContent = 'Enter your name to bid.'; return; }
+  if (!name) {
+    document.getElementById('sheet-name-edit').classList.add('open');
+    errEl.textContent = "We couldn't get a name from your Google account. Please enter your name.";
+    return;
+  }
   if (!isValidPhone(phone)) { errEl.textContent = 'Enter a valid 10-digit phone number starting with 6, 7, 8, or 9.'; return; }
   if (!childName) { errEl.textContent = "Enter your child's name."; return; }
   if (!classSection && !admissionNumber) { errEl.textContent = "Enter your child's Class & Section, or their admission number."; return; }
@@ -1480,7 +1499,7 @@ function renderMyBids() {
 // Profile
 // -----------------------------------------------------------------
 function renderProfile() {
-  document.getElementById('profile-name').value = localStorage.getItem('auction_name') || '';
+  document.getElementById('profile-name').value = bidderName();
   const gwrap = document.getElementById('profile-google');
   if (googleUser) {
     gwrap.innerHTML = `

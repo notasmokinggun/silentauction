@@ -264,3 +264,38 @@ test('a bid needs a child name and a grade from 6 to 12', async () => {
   await assertFails(placeBid(g, 'k1', 'k1u', 'k1u@example.com', 110, 0, { childName: '' }));
   await assertSucceeds(placeBid(g, 'k1', 'k1u', 'k1u@example.com', 110, 0, { childGrade: '12' }));
 });
+
+// ── Email-only (anonymous) guests. Not run against the emulator yet: run
+// `npm run test:rules` before publishing the rules. ──
+const guest = uid => env.authenticatedContext(uid, { firebase: { sign_in_provider: 'anonymous' } }).firestore();
+const guestFields = (uid, over = {}) => ({
+  name: 'A', phone: '9876543210', email: 'a@example.com', amount: 110, uid, isGoogle: false, deviceId: 'dev_guest',
+  childName: 'Kid', classSection: '8-A', admissionNumber: '', timestamp: serverTimestamp(), ...over,
+});
+const guestBid = (db, lotId, uid, over = {}) => {
+  const b = writeBatch(db);
+  b.update(doc(db, 'items/' + lotId), { currentBid: 110, currentBidderName: 'A', currentBidderUid: uid, bidCount: 1 });
+  b.set(doc(collection(db, 'items/' + lotId + '/bids')), guestFields(uid, over));
+  b.set(doc(db, 'bidLimits/' + uid), { lastBidAt: serverTimestamp() });
+  return b.commit();
+};
+test('an email-only guest can bid with any well-formed email, flagged isGoogle:false', async () => {
+  await seedLot('guestlot1');
+  await assertSucceeds(guestBid(guest('guestA'), 'guestlot1', 'guestA'));
+});
+test('a guest bid with a malformed email or isGoogle:true is rejected', async () => {
+  await seedLot('guestlot2');
+  await assertFails(guestBid(guest('guestB'), 'guestlot2', 'guestB', { email: 'not-an-email' }));
+  await assertFails(guestBid(guest('guestC'), 'guestlot2', 'guestC', { isGoogle: true }));
+});
+test('a device ban blocks email-only guests on that device, but the ban must be well-formed', async () => {
+  await seedLot('guestlot3');
+  const g = guest('guestD');
+  await assertSucceeds(setDoc(doc(g, 'bidBlocks/dev_guest'), { bannedUntil: new Date(Date.now() + 300000) }));
+  await assertFails(guestBid(g, 'guestlot3', 'guestD'));
+  await assertFails(setDoc(doc(g, 'bidBlocks/dev_other'), { bannedUntil: new Date(Date.now() + 86400000) }));
+});
+test('unauthenticated visitors still cannot bid or touch bidBlocks', async () => {
+  const u = env.unauthenticatedContext().firestore();
+  await assertFails(setDoc(doc(u, 'bidBlocks/dev_x'), { bannedUntil: new Date(Date.now() + 300000) }));
+});

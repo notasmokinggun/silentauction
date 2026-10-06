@@ -26,9 +26,15 @@ service cloud.firestore {
     // the server-side half of "every bid has a mandatory user id": the
     // client can't spoof it, since request.auth comes from Firebase's own
     // verified ID token, not from anything the page sends.
+    // Email-only guests sign in with Firebase "anonymous" auth (no password);
+    // the email they type is NOT verified, and they are banned by device id.
+    function isGuest() {
+      return request.auth != null &&
+        request.auth.token.firebase.sign_in_provider == 'anonymous';
+    }
     function isVerifiedBidder() {
       return request.auth != null &&
-        request.auth.token.firebase.sign_in_provider == 'google.com';
+        request.auth.token.firebase.sign_in_provider in ['google.com', 'anonymous'];
     }
     function isAdmin() {
       return authedEmail() && (
@@ -167,9 +173,21 @@ service cloud.firestore {
     // a bid doc and dodge by changing deviceId) has been replaced by the
     // per-account ban in bidLimits/{uid} above, plus the BAN_THRESHOLD
     // rejection in commonBid() below. Only admins may clear leftover docs.
+    // Re-enabled ONLY for email-only guests: a device that triggered a ban
+    // (bid of 1,00,000 or more) can't bid as a guest until it expires. The id is
+    // client-supplied, so this stops casual evasion, not a determined person.
     match /bidBlocks/{deviceId} {
-      allow read, create, update: if false;
+      allow read: if isVerifiedBidder();
+      allow create, update: if isVerifiedBidder() && deviceId.size() <= 100 &&
+        request.resource.data.keys().hasOnly(['bannedUntil']) &&
+        request.resource.data.bannedUntil is timestamp &&
+        request.resource.data.bannedUntil > request.time &&
+        request.resource.data.bannedUntil <= request.time + duration.value(6, 'm');
       allow delete: if isAdmin();
+    }
+    function isDeviceBanned(deviceId) {
+      return exists(/databases/$(database)/documents/bidBlocks/$(deviceId)) &&
+        get(/databases/$(database)/documents/bidBlocks/$(deviceId)).data.get('bannedUntil', request.time) > request.time;
     }
     // Absolute ceiling on any bid amount — an obviously-absurd value (fat-
     // fingered or malicious) is rejected outright rather than accepted.
@@ -280,13 +298,19 @@ service cloud.firestore {
             (request.resource.data.admissionNumber == '' ||
              request.resource.data.admissionNumber.matches('^[0-9]{4}$')) &&
             (request.resource.data.classSection != '' || request.resource.data.admissionNumber != '') &&
-            request.resource.data.email == request.auth.token.email &&
+            request.resource.data.email is string &&
+            request.resource.data.email.size() <= 254 &&
+            ((isGuest() && request.resource.data.email.matches('^[^ @]+@[^ @]+[.][^ @]+$')) ||
+             (!isGuest() && request.resource.data.email == request.auth.token.email)) &&
+            request.resource.data.isGoogle == !isGuest() &&
             request.resource.data.timestamp == request.time &&
             request.resource.data.amount is int &&
             request.resource.data.amount < 100000 &&
             underMaxBid(request.resource.data.amount) &&
             request.resource.data.uid == request.auth.uid &&
             request.resource.data.deviceId is string &&
+            request.resource.data.deviceId.size() <= 100 &&
+            (!isGuest() || !isDeviceBanned(request.resource.data.deviceId)) &&
             !isBanned(request.auth.uid) &&
             getAfter(/databases/$(database)/documents/bidLimits/$(request.auth.uid)).data.lastBidAt == request.time;
         }

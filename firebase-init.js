@@ -94,10 +94,12 @@ function banRef(uid) {
   return db.collection("bidLimits").doc(uid);
 }
 
-// Resolves to a Date this account is banned until, or null if not banned.
-async function getActiveBan(uid) {
+function deviceBanRef() {
+  return db.collection("bidBlocks").doc(getDeviceId());
+}
+async function readBanDate(ref) {
   try {
-    const doc = await banRef(uid).get();
+    const doc = await ref.get();
     if (!doc.exists) return null;
     const until = doc.data().bannedUntil;
     const untilDate = until && until.toDate ? until.toDate() : null;
@@ -106,16 +108,28 @@ async function getActiveBan(uid) {
     return null; // Rules still enforce this server-side regardless.
   }
 }
+// Resolves to a Date this account is banned until, or null if not banned.
+// Email-only (anonymous) guests are also blocked by their device id.
+async function getActiveBan(uid) {
+  const user = firebase.auth().currentUser;
+  const [a, b] = await Promise.all([
+    readBanDate(banRef(uid)),
+    user && user.isAnonymous ? readBanDate(deviceBanRef()) : Promise.resolve(null),
+  ]);
+  if (a && b) return a > b ? a : b;
+  return a || b;
+}
 
 // Bans this account from bidding for BAN_MINUTES. Called when a bid of
 // BAN_THRESHOLD or more is attempted.
 async function triggerBan(uid) {
   try {
-    await banRef(uid).set({
-      bannedUntil: firebase.firestore.Timestamp.fromDate(
-        new Date(Date.now() + BAN_MINUTES * 60000)
-      ),
-    });
+    const until = firebase.firestore.Timestamp.fromDate(
+      new Date(Date.now() + BAN_MINUTES * 60000)
+    );
+    await banRef(uid).set({ bannedUntil: until });
+    // Also ban this device, so an email-only guest can't just re-enter a different email.
+    await deviceBanRef().set({ bannedUntil: until }).catch(() => {});
   } catch {
     // Best-effort — firestore.rules also rejects any bid attempt while
     // a valid block exists, so this isn't the only line of defense.

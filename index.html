@@ -330,6 +330,10 @@
     color:var(--text);text-decoration:none;background:var(--surface);border:1px solid var(--border);border-radius:12px;cursor:pointer;}
   .adminlink:active{background:var(--surface2);}
   #open-guide{background:var(--cream);color:#1B140A;border-color:var(--cream);}
+  /* Organizer link: deliberately quiet and far from the main button so guests don't tap it by accident */
+  .adminlink.admin-secondary{display:block;width:fit-content;margin:72px auto 0;padding:8px 6px;font-size:15px;font-weight:400;
+    background:none;border:none;border-radius:0;color:var(--muted);text-decoration:underline;}
+  .adminlink.admin-secondary:active{background:none;}
 
   /* ---------- Bottom nav ---------- */
   .bottomnav{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--bg2);
@@ -516,7 +520,7 @@
   </div>
   <div class="profile-card" id="profile-google"></div>
   <a class="adminlink" href="#" id="open-guide" style="margin-top:22px;">How bidding works</a>
-  <a class="adminlink" href="admin.html" style="margin-top:12px;">Auction organizer? Open admin</a>
+  <a class="adminlink admin-secondary" id="open-admin" href="admin.html">Auction organizer? Open admin</a>
 </section>
 
 <!-- ============ Bottom nav ============ -->
@@ -696,6 +700,9 @@ window.addEventListener('popstate', (e) => {
 // takes them to the catalog; it doesn't set anything to remember that.
 document.getElementById('splash-wordmark').textContent = 'Welcome to Silent Auction';
 // First time: show the instructions once. After that, straight to the items.
+document.getElementById('open-admin').addEventListener('click', (e) => {
+  if (!confirm('This is the organizer area. Open admin?')) e.preventDefault();
+});
 document.getElementById('splash-explore').onclick = () => {
   let seen = false;
   try { seen = !!localStorage.getItem('guide_seen'); } catch (_) {}

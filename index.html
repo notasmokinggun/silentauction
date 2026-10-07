@@ -105,11 +105,11 @@
   #view-splash.has-gallery .splash-cta{background:#FFB84D;color:#3B2A4A;box-shadow:0 6px 18px rgba(255,150,60,.35);}
 
   /* ---------- Instructions (soft, bright) ---------- */
-  #view-guide{padding-bottom:0;color:#3B2A4A;
+  #view-guide,#view-cause{padding-bottom:0;color:#3B2A4A;
     background:linear-gradient(170deg,#FFF3E4 0%,#FFE3EC 38%,#E6F0FF 72%,#E4F7EA 100%);}
   .guide-wrap{padding:calc(30px + env(safe-area-inset-top,0px)) 20px calc(30px + env(safe-area-inset-bottom,0px));}
   .guide-eyebrow{font-size:15px;letter-spacing:.08em;font-weight:600;color:#E0685A;margin:0;}
-  #view-guide h1{font-size:34px;line-height:1.1;margin:6px 0 10px;color:#3B2A4A;font-weight:500;}
+  #view-guide h1,#view-cause h1{font-size:34px;line-height:1.1;margin:6px 0 10px;color:#3B2A4A;font-weight:500;}
   .guide-lead{font-size:17px;line-height:1.6;color:#4A3858;margin:0 0 20px;}
   .guide-h{font-size:15px;letter-spacing:.08em;font-weight:700;color:#5A4666;margin:22px 0 10px;}
   .fact,.step{display:flex;gap:12px;align-items:flex-start;background:#fff;border-radius:18px;
@@ -122,6 +122,10 @@
     padding:16px;border:none;border-radius:14px;font-weight:700;font-size:17px;cursor:pointer;
     background:#FFB84D;color:#3B2A4A;box-shadow:0 8px 20px rgba(255,150,60,.3);}
   #view-guide.active ~ .bottomnav{display:none;}
+  #view-cause.active ~ .bottomnav{display:none;}
+  .cause-images{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .cause-img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:14px;background:var(--surface2);}
+  .cause-img:not([src]),.cause-img[src=""]{visibility:hidden;}
 
   /* ---------- Results (leaderboard) ---------- */
   #view-results .top{padding:calc(20px + env(safe-area-inset-top,0px)) 20px 4px;}
@@ -201,6 +205,8 @@
   .badges{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
   /* pre-line so admin-entered blank lines become real paragraph breaks */
   .item-desc{font-size:17px;line-height:1.6;color:#F0E8D8;margin-bottom:20px;white-space:pre-line;}
+  .read-more-link{background:none;border:none;padding:0;margin:-14px 0 20px;display:none;
+    font-size:14px;font-weight:600;color:var(--gold);cursor:pointer;}
   .stat-row{display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid var(--border);
     border-bottom:1px solid var(--border);padding:16px 0;margin-top:20px;margin-bottom:24px;}
   .stat-row .stat .k{font-size:14px;color:var(--muted);margin:0 0 4px;}
@@ -230,6 +236,7 @@
   .reading-body{padding:0 22px 24px;flex:1;}
   .reading-body .item-title{font-size:24px;margin-bottom:8px;}
   .reading-desc{font-size:17px;line-height:1.75;color:#F0E8D8;white-space:pre-line;margin:18px 0 26px;}
+  .reading-desc + .read-more-link{margin:-16px 0 20px;}
   .reading-actions{padding:0 22px calc(20px + env(safe-area-inset-bottom,0px));}
 
   /* ---------- Lightbox (Detailed — full uncropped photo pop-up) ---------- */
@@ -418,7 +425,7 @@
   @media (min-width:600px) and (max-width:1023px){
     .grid{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:18px;padding:0 28px 28px;}
     .pills{padding:18px 28px;}
-    #view-mybids,#view-results,#view-profile,#view-guide{max-width:760px;margin:0 auto;}
+    #view-mybids,#view-results,#view-profile,#view-guide,#view-cause{max-width:760px;margin:0 auto;}
     /* Lot page: photo stays in view on the left, details scroll on the right. */
     #view-item.active{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start;}
     #view-item .hero-wrap{position:sticky;top:0;height:100vh;height:100dvh;}
@@ -488,6 +495,20 @@ window.__ld = [
   </div>
 </section>
 
+<!-- ============ THE CAUSE (shown once, between the welcome and the guide) ============ -->
+<section class="view" id="view-cause">
+  <div class="guide-wrap">
+    <p class="guide-eyebrow">THE CAUSE</p>
+    <h1 class="serif">Where your bid goes</h1>
+    <div class="cause-images">
+      <img class="cause-img" id="cause-img-1" alt="Divyatarang Educare Foundation at work">
+      <img class="cause-img" id="cause-img-2" alt="Divyatarang Educare Foundation at work">
+    </div>
+    <p class="guide-lead" style="margin-top:20px;">Divyatarang Educare Foundation is a Non profit/ Non government organisation which started in 2013 informly to helps to educate underprivileged kids in various slum areas. It is youth driven organisation. It also work for women empowerment.</p>
+    <button class="guide-cta" id="cause-continue">Continue <span>&#8594;</span></button>
+  </div>
+</section>
+
 <!-- ============ INSTRUCTIONS (shown once, after the welcome) ============ -->
 <section class="view" id="view-guide">
   <div class="guide-wrap">
@@ -552,6 +573,8 @@ window.__ld = [
     <p class="item-sub" id="item-lotnum"></p>
     <div class="badges" id="item-badges"></div>
     <p class="item-desc" id="item-desc"></p>
+    <p class="item-desc" id="item-details" style="display:none;"></p>
+    <button class="read-more-link" id="item-readmore">Read more</button>
     <div class="item-cta-bar" id="item-cta-bar"></div>
     <div class="stat-row">
       <div class="stat"><p class="k" id="item-bid-label">Current Bid</p><p class="v gold" id="item-bid-value"></p></div>
@@ -570,6 +593,8 @@ window.__ld = [
     <h1 class="item-title serif" id="reading-title"></h1>
     <div class="badges" id="reading-badges"></div>
     <p class="reading-desc" id="reading-desc"></p>
+    <p class="reading-desc" id="reading-details" style="display:none;"></p>
+    <button class="read-more-link" id="reading-readmore">Read more</button>
   </div>
   <div class="reading-actions" id="reading-actions"></div>
 </div>
@@ -611,7 +636,8 @@ window.__ld = [
     </div>
   </div>
   <div class="profile-card" id="profile-google"></div>
-  <a class="adminlink" href="#" id="open-guide" style="margin-top:22px;">How bidding works</a>
+  <a class="adminlink" href="#" id="open-cause" style="margin-top:22px;">The Cause</a>
+  <a class="adminlink" href="#" id="open-guide" style="margin-top:12px;">How bidding works</a>
   <a class="adminlink admin-secondary" id="open-admin" href="admin.html">Auction organizer? Open admin</a>
   <p style="text-align:center;font-size:14px;color:var(--muted);margin:18px 0 0;">Site version <span id="site-version"></span></p>
 </section>
@@ -843,13 +869,30 @@ document.getElementById('open-admin').addEventListener('click', (e) => {
 document.getElementById('splash-explore').onclick = () => {
   let seen = false;
   try { seen = !!localStorage.getItem('guide_seen'); } catch (_) {}
-  showView(seen ? 'home' : 'guide');
+  showView(seen ? 'home' : 'cause');
 };
+document.getElementById('cause-continue').onclick = () => showView('guide');
 document.getElementById('guide-start').onclick = () => {
   try { localStorage.setItem('guide_seen', '1'); } catch (_) {}
   showView('home');
 };
 document.getElementById('open-guide').onclick = (e) => { e.preventDefault(); showView('guide'); };
+document.getElementById('open-cause').onclick = (e) => { e.preventDefault(); showView('cause'); };
+
+// "The Cause" photos — drop images/cause/1.jpg and images/cause/2.jpg (also
+// .jpeg/.png/.webp) into the repo; each <img> just stays invisible until a
+// matching file exists, same probing idea as the welcome gallery above.
+(function causePhotos() {
+  const exts = ['jpg', 'jpeg', 'png', 'webp'];
+  const probe = src => new Promise(r => { const i = new Image(); i.onload = () => r(true); i.onerror = () => r(false); i.src = src; });
+  ['cause-img-1', 'cause-img-2'].forEach(async (id, i) => {
+    const el = document.getElementById(id);
+    for (const e of exts) {
+      const src = `images/cause/${i + 1}.${e}`;
+      if (await probe(src)) { el.src = src; return; }
+    }
+  });
+})();
 
 // Rolling welcome gallery. Drop numbered photos into images/welcome/
 // (1.jpg, 2.jpg, ... also .jpeg/.png/.webp). The site probes 1, 2, 3...
@@ -1197,7 +1240,7 @@ function renderGrid() {
   if (activeCategory !== 'All') list = list.filter(l => (l.category || '') === activeCategory);
   if (searchTerm) {
     const q = searchTerm.toLowerCase();
-    list = list.filter(l => (l.title || '').toLowerCase().includes(q) || (l.description || '').toLowerCase().includes(q));
+    list = list.filter(l => (l.title || '').toLowerCase().includes(q) || (l.description || '').toLowerCase().includes(q) || (l.details || '').toLowerCase().includes(q));
   }
   const grid = document.getElementById('grid');
   document.getElementById('empty-state').style.display = list.length ? 'none' : 'block';
@@ -1285,6 +1328,23 @@ async function loadFullImage(it) {
   }
 }
 
+// A short summary shows by default; "Read more" reveals the full
+// write-up (it.details) in place. If there's no full write-up on this
+// lot, the link just stays hidden and nothing changes from before.
+function setupReadMore(summaryId, detailsId, linkId, fullText) {
+  const detailsEl = document.getElementById(detailsId);
+  const linkEl = document.getElementById(linkId);
+  detailsEl.textContent = fullText || '';
+  detailsEl.style.display = 'none';
+  linkEl.textContent = 'Read more';
+  linkEl.style.display = fullText ? 'block' : 'none';
+  linkEl.onclick = () => {
+    const expanded = detailsEl.style.display !== 'none';
+    detailsEl.style.display = expanded ? 'none' : 'block';
+    linkEl.textContent = expanded ? 'Read more' : 'Show less';
+  };
+}
+
 function closedNoteHtml(it) {
   return `<div class="closed-note">Bidding closed. Won by <strong>${escapeHtml(winnerNameOf(it) || '-')}</strong> at ${money(winnerAmountOf(it))}</div>`;
 }
@@ -1296,6 +1356,7 @@ function renderItemView(it) {
   document.getElementById('item-title').textContent = it.title;
   document.getElementById('item-lotnum').textContent = 'LOT ' + String(it.lotNumber).padStart(3, '0');
   document.getElementById('item-desc').textContent = it.description || '';
+  setupReadMore('item-desc', 'item-details', 'item-readmore', it.details);
   document.getElementById('item-badges').innerHTML = it.category ? `<span class="badge">${escapeHtml(it.category)}</span>` : '';
   document.getElementById('item-bid-label').textContent = closed ? 'Winning Bid' : 'Current Bid';
   document.getElementById('item-bid-value').textContent = money(closed ? winnerAmountOf(it) : it.currentBid);
@@ -1341,6 +1402,7 @@ function populateReadingOverlay(it) {
   document.getElementById('reading-title').textContent = it.title;
   document.getElementById('reading-badges').innerHTML = it.category ? `<span class="badge">${escapeHtml(it.category)}</span>` : '';
   document.getElementById('reading-desc').textContent = it.description || '';
+  setupReadMore('reading-desc', 'reading-details', 'reading-readmore', it.details);
 
   const actions = document.getElementById('reading-actions');
   actions.innerHTML = closed
@@ -1665,8 +1727,8 @@ document.getElementById('sheet-confirm').onclick = async () => {
     const firstName = (name || '').trim().split(/\s+/)[0];
     document.getElementById('success-title').textContent = firstName ? `Thank you, ${firstName}!` : 'Thank you!';
     document.getElementById('success-msg').textContent = held
-      ? `Your bid of ${money(amount)} on ${sheetItem.title} is on hold. Our team will call you on ${phone} to confirm it. It won't count as the highest bid until you do. Thank you so much for your generosity.`
-      : `Your bid of ${money(amount)} on ${sheetItem.title} has been placed. Thank you for being here and for supporting us.${announceName ? '' : ` If you win, we will contact you privately on ${phone}.`}`;
+      ? `Your bid of ${money(amount)} on ${sheetItem.title} is on hold. Our team will call you on ${phone} to confirm it. It won't count as the highest bid until you do. We appreciate your contribution for the cause.`
+      : `We appreciate your contribution for the cause. The results of the bid will be announced by the end of Unplugged.`;
     document.getElementById('success-overlay').classList.add('open');
     openOverlay(closeSuccess);
     refreshUndoUI();

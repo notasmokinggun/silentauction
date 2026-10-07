@@ -1178,12 +1178,14 @@ function renderUsersPanel() {
   const map = new Map();
   allBids.filter(isLiveBid).forEach(b => {
     const key = b.uid || ('n:' + (b.name || '').toLowerCase().trim());
-    if (!map.has(key)) map.set(key, { name: b.name, phone: b.phone || '', isGoogle: !!b.isGoogle, count: 0, total: 0 });
+    if (!map.has(key)) map.set(key, { name: b.name, phone: b.phone || '', isGoogle: !!b.isGoogle, count: 0, total: 0, perLot: new Map() });
     const rec = map.get(key);
     if (b.phone) rec.phone = b.phone; // most recent bid's phone wins if it ever changes
     rec.count++;
-    rec.total += b.amount || 0;
+    // Several bids on the same lot count once, at that person's highest bid on it.
+    rec.perLot.set(b.itemId, Math.max(rec.perLot.get(b.itemId) || 0, b.amount || 0));
   });
+  map.forEach(rec => { rec.total = [...rec.perLot.values()].reduce((x, y) => x + y, 0); });
   const rows = [...map.values()].sort((a, b) => b.total - a.total);
   document.getElementById('users-body').innerHTML = rows.length
     ? rows.map(r => `<tr><td>${escapeHtml(r.name)}</td><td>${escapeHtml(r.phone || '-')}</td><td>${r.isGoogle ? 'Yes' : 'No'}</td>

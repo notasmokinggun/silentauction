@@ -140,10 +140,8 @@ const seedLot = async (id, extra = {}) => env.withSecurityRulesDisabled(async ct
 });
 const placeBid = (db, lotId, uid, email, amount, bidCount = 0, over = {}) => {
   const b = writeBatch(db);
-  const bidRef = doc(collection(db, 'items/' + lotId + '/bids'));
-  b.update(doc(db, 'items/' + lotId), { currentBid: amount, currentBidderName: 'A', currentBidderUid: uid, bidCount: bidCount + 1,
-    prevBid: 100, prevBidderName: '', prevBidderUid: null, prevKnown: true, lastBidId: bidRef.id });
-  b.set(bidRef, {
+  b.update(doc(db, 'items/' + lotId), { currentBid: amount, currentBidderName: 'A', currentBidderUid: uid, bidCount: bidCount + 1 });
+  b.set(doc(collection(db, 'items/' + lotId + '/bids')), {
     name: 'A', phone: '9876543210', email, amount, uid, isGoogle: true, deviceId: 'dev_x',
     childName: 'Kid', childGrade: '8', timestamp: serverTimestamp(), ...over,
   });
@@ -300,29 +298,4 @@ test('a device ban blocks email-only guests on that device, but the ban must be 
 test('unauthenticated visitors still cannot bid or touch bidBlocks', async () => {
   const u = env.unauthenticatedContext().firestore();
   await assertFails(setDoc(doc(u, 'bidBlocks/dev_x'), { bannedUntil: new Date(Date.now() + 300000) }));
-});
-
-// ── 1-minute undo of the leading bid. Not run against the emulator yet:
-// run `npm run test:rules` before publishing the rules. ──
-test('the leader can undo their bid within 60s: lot rolls back and the bid is deleted', async () => {
-  await seedLot('undo1');
-  const g = bidder('u1', 'u1@example.com');
-  const b = writeBatch(g);
-  const bidRef = doc(collection(g, 'items/undo1/bids'));
-  b.update(doc(g, 'items/undo1'), { currentBid: 110, currentBidderName: 'A', currentBidderUid: 'u1', bidCount: 1,
-    prevBid: 100, prevBidderName: '', prevBidderUid: null, prevKnown: true, lastBidId: bidRef.id });
-  b.set(bidRef, { name: 'A', phone: '9876543210', email: 'u1@example.com', amount: 110, uid: 'u1', isGoogle: true, deviceId: 'dev_u',
-    childName: 'Kid', classSection: '8-A', admissionNumber: '', timestamp: serverTimestamp() });
-  b.set(doc(g, 'bidLimits/u1'), { lastBidAt: serverTimestamp() });
-  await assertSucceeds(b.commit());
-  const u = writeBatch(g);
-  u.update(doc(g, 'items/undo1'), { currentBid: 100, currentBidderName: '', currentBidderUid: null, bidCount: 0, prevKnown: false });
-  u.delete(bidRef);
-  await assertSucceeds(u.commit());
-});
-test('undo is refused for someone who is not the leader, or without deleting the bid', async () => {
-  await seedLot('undo2', { currentBid: 110, currentBidderUid: 'someone', currentBidderName: 'S', bidCount: 1,
-    prevBid: 100, prevBidderName: '', prevBidderUid: null, prevKnown: true, lastBidId: 'nope' });
-  const g = bidder('u2', 'u2@example.com');
-  await assertFails(setDoc(doc(g, 'items/undo2'), { currentBid: 100, currentBidderName: '', currentBidderUid: null, bidCount: 0, prevKnown: false }, { merge: true }));
 });

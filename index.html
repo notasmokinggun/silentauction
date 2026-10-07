@@ -6,6 +6,11 @@
 <title>Silent Auction</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🪔</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js">
+<link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js">
+<link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js">
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=Playfair+Display:wght@700;800&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -857,6 +862,7 @@ document.getElementById('open-guide').onclick = (e) => { e.preventDefault(); sho
   };
   (async () => {
     for (let n = 1; n <= 40; n++) {
+      if (n === 2) await new Promise(r => (window.requestIdleCallback ? requestIdleCallback(r, { timeout: 3000 }) : setTimeout(r, 1500)));
       let hit = null;
       for (const e of exts) { const src = `images/welcome/${n}.${e}`; if (await probe(src)) { hit = src; break; } }
       if (!hit) break;
@@ -877,7 +883,7 @@ function resultRow(it, kind) {
     who = it.bidCount ? `Highest: ${escapeHtml(it.currentBidderName || '')}` : 'No bids yet'; amt = money(it.currentBid); sub = `min. increase ${money(it.increment)}`;
   }
   return `<div class="rrow${cls}" data-id="${it.id}" role="button" tabindex="0" aria-label="${escapeHtml(it.title)}">
-    <img src="${it.imageUrl || ''}" alt="${escapeHtml(it.title)}" onerror="this.style.visibility='hidden'">
+    <img src="${it.imageUrl || ''}" alt="${escapeHtml(it.title)}" loading="lazy" decoding="async" onerror="this.style.visibility='hidden'">
     <div class="mid"><div class="lot">${lot}</div><div class="ttl">${escapeHtml(it.title)}</div><div class="who">${who}</div></div>
     <div class="amt">${amt}<small>${sub}</small></div></div>`;
 }
@@ -992,6 +998,7 @@ function initGis() {
   renderGoogleButton();
 }
 function renderGoogleButton() {
+  if (document.querySelector('.google-btn-slot')) ensureGis(); // loaded on first need, not at page start
   // Render into every GIS button slot currently in the DOM (bid sheet AND
   // profile tab share this) — whichever state we're in (loaded, still
   // loading, or failed), so a slot never sits blank with no explanation.
@@ -1002,7 +1009,8 @@ function renderGoogleButton() {
     } else if (gisLoadError) {
       el.innerHTML = `<p style="font-size:16px;color:var(--red);margin:0;">${gisLoadError}</p>`;
     }
-    // Still loading and no error yet: leave the slot as-is: renderGoogleButton()
+    else if (!el.firstChild) el.innerHTML = '<p style="font-size:16px;color:var(--muted);margin:0;">Loading Google sign-in...</p>';
+    // Still loading and no error yet: renderGoogleButton()
     // gets called again the moment either state resolves (see loadGis below).
   });
 }
@@ -1012,7 +1020,10 @@ function showGisLoadError(msg) {
   gisLoadError = msg;
   renderGoogleButton();
 }
-(function loadGis() {
+let gisStarted = false;
+function ensureGis() {
+  if (gisStarted) return;
+  gisStarted = true;
   const s = document.createElement('script');
   s.src = 'https://accounts.google.com/gsi/client';
   s.async = true;
@@ -1025,7 +1036,7 @@ function showGisLoadError(msg) {
   s.onerror = () => showGisLoadError('Google Sign-In couldn\'t load. Check your connection, or try disabling an ad/tracker blocker for this site, then reload.');
   document.head.appendChild(s);
   setTimeout(() => showGisLoadError('Google sign-in is taking a long time. Please reload the page, or use your email instead.'), 6000);
-})();
+}
 function updateSheetAuthGate() {
   const signedIn = !!googleUser;
   document.getElementById('sheet-signin-gate').style.display = signedIn ? 'none' : 'block';
@@ -1130,7 +1141,7 @@ function createCard(it) {
   card.setAttribute('role', 'button');
   card.tabIndex = 0;
   card.innerHTML = `
-      <img class="img" alt="" onerror="this.style.visibility='hidden'">
+      <img class="img" alt="" loading="lazy" decoding="async" onerror="this.style.visibility='hidden'">
       <div class="body">
         <p class="title"></p>
         <p class="price"></p>
@@ -1708,7 +1719,7 @@ function renderMyBids() {
   document.getElementById('mybids-empty').style.display = shown.length ? 'none' : 'block';
   document.getElementById('mybids-list').innerHTML = shown.map(r => `
     <div class="biditem" data-id="${r.it.id}" role="button" tabindex="0" aria-label="${escapeHtml(r.it.title)}">
-      <img src="${r.it.imageUrl || ''}" alt="${escapeHtml(r.it.title)}" onerror="this.style.visibility='hidden'">
+      <img src="${r.it.imageUrl || ''}" alt="${escapeHtml(r.it.title)}" loading="lazy" decoding="async" onerror="this.style.visibility='hidden'">
       <div class="b">
         <p class="t">${escapeHtml(r.it.title)}</p>
         <p class="p">${money(r.closed && r.it.winnerBidId ? winnerAmountOf(r.it) : r.it.currentBid)}</p>

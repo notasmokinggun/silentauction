@@ -37,6 +37,12 @@ html.fsp-inapp #fs-prompt .v-ios{display:none;}
 #fs-prompt .fs-arrow{position:fixed;left:50%;transform:translateX(-50%);text-align:center;font-weight:800;font-size:14px;color:#B0463A;animation:fsb 1.1s ease-in-out infinite;}
 html.fsp-safari #fs-prompt .fs-arrow.bot{display:block;bottom:calc(8px + env(safe-area-inset-bottom,0px));}
 html.fsp-iosother #fs-prompt .fs-arrow.top{display:block;top:calc(6px + env(safe-area-inset-top,0px));left:auto;right:10px;transform:none;}
+#fs-fab{display:none;position:fixed;right:12px;bottom:calc(96px + env(safe-area-inset-bottom,0px));z-index:800;border:none;border-radius:999px;
+  background:#FFB84D;color:#3B2A4A;font:800 14px Nunito,system-ui,sans-serif;padding:11px 15px;box-shadow:0 6px 18px rgba(0,0,0,.35);cursor:pointer;align-items:center;gap:7px;}
+#fs-fab.show{display:inline-flex;}
+#fs-fab.pulse{animation:fsp 1.4s ease-in-out 3;}
+html.fsp-on #fs-fab{display:none;}
+@keyframes fsp{0%,100%{transform:scale(1)}50%{transform:scale(1.09)}}
 @keyframes fsb{0%,100%{margin-bottom:0;margin-top:0}50%{margin-bottom:8px;margin-top:8px}}
 </style>
 <script>
@@ -619,8 +625,34 @@ html.fsp-iosother #fs-prompt .fs-arrow.top{display:block;top:calc(6px + env(safe
   if (go) go.onclick = function () {
     var r = d.requestFullscreen ? d.requestFullscreen() : d.webkitRequestFullscreen ? d.webkitRequestFullscreen() : null;
     if (!r) { go.textContent = 'Use the browser menu: Add to Home screen'; return; }
-    Promise.resolve(r).catch(function () {}).then(function () { close(true); });
+    Promise.resolve(r).catch(function () {}).then(function () { close(false); });
   };
+})();
+</script>
+<button type="button" id="fs-fab" aria-label="Go full screen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3B2A4A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>Full screen</button>
+<script>
+// Always-available "Full screen" button for phones whose browser allows it (Android Chrome etc).
+// Shows whenever the page is NOT full screen, so if someone leaves full screen they can go back in.
+// iPhones cannot do this, so they never see it.
+(function () {
+  var b = document.getElementById('fs-fab'), de = document.documentElement;
+  var can = !!(de.requestFullscreen || de.webkitRequestFullscreen);
+  var phone = matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) <= 820;
+  var installed = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches;
+  if (!b || !can || !phone || installed) return;
+  var inFs = function () { return !!(document.fullscreenElement || document.webkitFullscreenElement); };
+  var sync = function (pulse) {
+    if (inFs()) { b.classList.remove('show', 'pulse'); return; }
+    b.classList.add('show');
+    if (pulse) { b.classList.remove('pulse'); void b.offsetWidth; b.classList.add('pulse'); }
+  };
+  b.onclick = function () {
+    var r = de.requestFullscreen ? de.requestFullscreen() : de.webkitRequestFullscreen();
+    Promise.resolve(r).catch(function () {});
+  };
+  document.addEventListener('fullscreenchange', function () { sync(true); });
+  document.addEventListener('webkitfullscreenchange', function () { sync(true); });
+  sync(false);
 })();
 </script>
 <div id="app-loader" role="status" aria-live="polite">
@@ -912,7 +944,7 @@ window.__ld = [
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="firebase-init.js?v=202610071147"></script>
+<script src="firebase-init.js?v=202610071216"></script>
 <script>
 // -----------------------------------------------------------------
 // Icons — small inline SVGs, stroke = currentColor
@@ -1963,7 +1995,7 @@ document.getElementById('sheet-confirm').onclick = async () => {
 // GitHub Pages lets browsers keep index.html for a while, so a phone can sit on an old page.
 // version.json is fetched fresh (never cached); if it differs from this page's version, reload once
 // with a new web address so the browser fetches the new page. Waits while a bid is being made.
-const SITE_VERSION = '202610071147';
+const SITE_VERSION = '202610071216';
 document.getElementById('site-version').textContent = SITE_VERSION;
 async function checkForNewVersion() {
   try {

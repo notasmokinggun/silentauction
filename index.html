@@ -1549,7 +1549,7 @@ document.getElementById('sheet-confirm').onclick = async () => {
     // Replacing an earlier unconfirmed hold on this lot: clear it first (the
     // rules only allow this for pending/revoked holds; anything else is ignored).
     if (isHoldAmount(sheetItem, amount)) { try { await holdRef.delete(); } catch (_) {} }
-    await db.runTransaction(async (tx) => {
+    const runBid = (withUndo) => db.runTransaction(async (tx) => {
       const doc = await tx.get(itemRef);
       if (!doc.exists) throw new Error('This item is no longer available.');
       const it = doc.data();
@@ -1573,8 +1573,11 @@ document.getElementById('sheet-confirm').onclick = async () => {
           currentBidderUid: googleUser.uid,
           bidCount: (it.bidCount || 0) + 1,
           // Remember the previous leader so this bid can be undone for 1 minute.
-          prevBid: it.currentBid, prevBidderName: it.currentBidderName ?? '',
-          prevBidderUid: it.currentBidderUid ?? null, prevKnown: true, lastBidId: bidRef.id,
+          // Left out on the fallback attempt below (older published rules).
+          ...(withUndo ? {
+            prevBid: it.currentBid, prevBidderName: it.currentBidderName ?? '',
+            prevBidderUid: it.currentBidderUid ?? null, prevKnown: true, lastBidId: bidRef.id,
+          } : {}),
         });
         tx.set(bidRef, fields);
       }
@@ -1583,8 +1586,13 @@ document.getElementById('sheet-confirm').onclick = async () => {
       // transaction) gets rejected atomically.
       tx.set(limitRef, { lastBidAt: firebase.firestore.FieldValue.serverTimestamp() });
     });
+    // If the server turns down the bid with the undo details, try once without them, so
+    // bidding still works while the newest rules are not published yet (undo is skipped then).
+    let undoOk = true;
+    try { await runBid(true); }
+    catch (e) { if (e.code === 'permission-denied') { undoOk = false; await runBid(false); } else throw e; }
     recordMyBid(sheetItem.id, bidRef.id, amount, held ? 'pending' : null);
-    undoInfo = held ? null : { itemId: sheetItem.id, bidId: bidRef.id, until: Date.now() + UNDO_SECONDS * 1000 };
+    undoInfo = (held || !undoOk) ? null : { itemId: sheetItem.id, bidId: bidRef.id, until: Date.now() + UNDO_SECONDS * 1000 };
     closeOverlaySilently(closeBidSheet);
     document.getElementById('success-msg').textContent = held
       ? `Your bid of ${money(amount)} on ${sheetItem.title} is on hold. Our team will call you on ${phone} to confirm it. It won't count as the highest bid until you do.`
@@ -1594,7 +1602,7 @@ document.getElementById('sheet-confirm').onclick = async () => {
     refreshUndoUI();
   } catch (e) {
     if (e.code === 'permission-denied') {
-      errEl.textContent = "Couldn't place that bid. You may be bidding too fast, or the lot may have closed. Wait a moment and refresh.";
+      errEl.textContent = "Your bid didn't go through. Please wait a few seconds and try again. If it keeps happening, ask an organizer for help.";
     } else {
       errEl.textContent = e.message || 'Could not place that bid. Try again.';
     }

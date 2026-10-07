@@ -428,9 +428,34 @@
     .grid{grid-template-columns:1fr;}
     .stat-row{grid-template-columns:1fr 1fr;row-gap:12px;}
   }
+  /* ---------- First-load screen ---------- */
+  #app-loader{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;flex-direction:column;align-items:center;
+    justify-content:center;text-align:center;padding:24px;transition:opacity .3s ease;}
+  #app-loader.done{opacity:0;pointer-events:none;}
+  #app-loader .ld-mark{font-family:'Playfair Display','Newsreader',serif;font-size:30px;font-weight:700;color:var(--cream);margin-bottom:26px;}
+  #app-loader .ld-spin{width:46px;height:46px;border-radius:50%;border:4px solid var(--border);border-top-color:var(--gold);animation:ld-spin 1s linear infinite;}
+  @keyframes ld-spin{to{transform:rotate(360deg);}}
+  #app-loader p{font-size:18px;line-height:1.5;color:var(--text);max-width:300px;margin:22px 0 0;}
+  #app-loader button{margin-top:18px;padding:14px 26px;border-radius:12px;border:1px solid var(--cream);background:var(--cream);color:#1B140A;font-size:17px;font-weight:600;cursor:pointer;}
+  @media (prefers-reduced-motion:reduce){#app-loader .ld-spin{animation-duration:3s;}#app-loader{transition:none;}}
 </style>
 </head>
 <body>
+<div id="app-loader" role="status" aria-live="polite">
+  <div class="ld-mark">Silent Auction</div>
+  <div class="ld-spin" aria-hidden="true"></div>
+  <p id="ld-msg">Getting things ready. Please wait a moment.</p>
+  <button id="ld-reload" type="button" hidden onclick="location.reload()">Reload the page</button>
+</div>
+<script>
+// Runs immediately, before the rest of the app has loaded, so people always see
+// that something is happening, and are told what to do if it takes too long.
+window.__ld = [
+  setTimeout(function(){ var m=document.getElementById('ld-msg'); if(m) m.textContent='Still loading. This can take a few seconds on a slow internet connection.'; }, 5000),
+  setTimeout(function(){ var m=document.getElementById('ld-msg'), b=document.getElementById('ld-reload');
+    if(m) m.textContent='This is taking longer than usual. Please check your internet connection, then reload the page.'; if(b) b.hidden=false; }, 15000)
+];
+</script>
 
 <!-- ============ SPLASH / WELCOME ============ -->
 <section class="view active" id="view-splash">
@@ -440,7 +465,7 @@
     <div class="splash-content">
       <p class="splash-hello">Thank you for being here for us &#9829;</p>
       <h1 class="splash-title">BID, SUPPORT,<br>MAKE A CHANGE</h1>
-      <button class="splash-cta" id="splash-explore">Explore All Items <span>&#8594;</span></button>
+      <button class="splash-cta" id="splash-explore">See all items <span>&#8594;</span></button>
     </div>
   </div>
 </section>
@@ -450,30 +475,30 @@
   <div class="guide-wrap">
     <p class="guide-eyebrow">WELCOME</p>
     <h1 class="serif">Here's how it works</h1>
-    <p class="guide-lead">Every bid supports a good cause. It takes a minute to learn, and you can come back to this any time from your Profile.</p>
+    <p class="guide-lead">Every bid supports a good cause. This takes one minute to read. You can open it again any time from the Profile tab.</p>
 
     <div class="guide-h">HOW TO BID</div>
-    <div class="step"><div class="dot" style="background:#FFC9DE;">1</div><div><b>Pick something you love</b>
-      <span>Tap a photo to read the story behind it.</span></div></div>
-    <div class="step"><div class="dot" style="background:#FFC9DE;">2</div><div><b>Sign in with Google or your email</b>
-      <span>Use your Google account, or if you don't have one, just type your email. No password needed. Google keeps every bid verified.</span></div></div>
-    <div class="step"><div class="dot" style="background:#FFC9DE;">3</div><div><b>Tell us who you are</b>
-      <span>Your name comes from your Google account if you used one. Add your phone number, your child's name, and their class and section or admission number so we know which family placed the bid.</span></div></div>
+    <div class="step"><div class="dot" style="background:#FFC9DE;">1</div><div><b>Choose an item</b>
+      <span>Tap an item to see its photo and details.</span></div></div>
+    <div class="step"><div class="dot" style="background:#FFC9DE;">2</div><div><b>Sign in</b>
+      <span>Use your Google account. If you don't have one, just type your email address. You do not need a password.</span></div></div>
+    <div class="step"><div class="dot" style="background:#FFC9DE;">3</div><div><b>Add your details</b>
+      <span>We need your phone number, your child's name, and either their class and section or their admission number. This tells us which family placed the bid.</span></div></div>
     <div class="step"><div class="dot" style="background:#FFC9DE;">4</div><div><b>Place your bid</b>
-      <span>A very large bid gets a quick confirmation call from our team before it counts.</span></div></div>
+      <span>Type the amount you want to bid and tap Confirm Bid. If your bid is above &#8377;20,000, our team will call you to confirm it first. Made a mistake? You can undo your bid within 1 minute.</span></div></div>
 
     <div class="guide-h">THE BASICS</div>
     <div class="fact"><div class="dot" style="background:#FFD6A5;">&#8377;</div><div><b>Highest bid</b>
-      <span>The latest and highest verified bid is shared with you right here on every lot, live.</span></div></div>
-    <div class="fact"><div class="dot" style="background:#C9E4FF;">+</div><div><b>Minimum increment</b>
-      <span>Every lot shows its minimum increment. Your bid must beat the highest bid by at least that much.</span></div></div>
-    <div class="fact"><div class="dot" style="background:#D8F0D0;">&#9733;</div><div><b>Where results are announced</b>
-      <span>The final announcement for the lucky person for each object will be acknowledged on the <strong>Results</strong> tab of this site.</span></div></div>
+      <span>Each item shows the highest bid so far. It updates by itself, so you don't need to refresh.</span></div></div>
+    <div class="fact"><div class="dot" style="background:#C9E4FF;">+</div><div><b>Minimum raise</b>
+      <span>Each item shows how much higher your bid must be. Your bid must be at least that much more than the highest bid.</span></div></div>
+    <div class="fact"><div class="dot" style="background:#D8F0D0;">&#9733;</div><div><b>Where to see the winners</b>
+      <span>When bidding ends, the winner of each item is shown on the <strong>Results</strong> tab of this website.</span></div></div>
 
     <div class="fact"><div class="dot" style="background:#FFE3A8;">!</div><div><b>Please bid carefully</b>
-      <span>A bid of &#8377;1,00,000 or more is not accepted and pauses bidding on your account and this device for a few minutes. Signing in with a different email on the same device will not get around it.</span></div></div>
+      <span>Bids of &#8377;1,00,000 or more are not accepted. If you try one, bidding is paused for a few minutes on your account and on this phone. Using a different email on the same phone will not skip the pause.</span></div></div>
 
-    <button class="guide-cta" id="guide-start">Start exploring <span>&#8594;</span></button>
+    <button class="guide-cta" id="guide-start">See all items <span>&#8594;</span></button>
   </div>
 </section>
 
@@ -486,9 +511,9 @@
   <div class="searchbar" id="searchbar"><input id="search-input" placeholder="Search items…"></div>
   <div class="pills" id="pills"></div>
   <div class="grid" id="grid"></div>
-  <div class="empty-state" id="empty-state" style="display:none;">No lots yet. Check back shortly.</div>
+  <div class="empty-state" id="empty-state" style="display:none;">No items yet. Please check back soon.</div>
   <div class="load-error" id="load-error" style="display:none;">
-    <p id="load-error-msg">Couldn't load the items. Check your connection.</p>
+    <p id="load-error-msg">We couldn't load the items. Please check your internet connection.</p>
     <button id="load-retry">Try again</button>
   </div>
 </section>
@@ -502,7 +527,7 @@
       <button class="icon-btn" id="item-back"></button>
       <button class="icon-btn" id="item-share"></button>
     </div>
-    <div class="hero-tap-hint">Tap photo to read more</div>
+    <div class="hero-tap-hint">Tap the photo to see more</div>
   </div>
   <div class="body">
     <h1 class="item-title serif" id="item-title"></h1>
@@ -540,9 +565,9 @@
 <!-- ============ RESULTS (leaderboard) ============ -->
 <section class="view" id="view-results">
   <div class="top"><h1 class="serif">Results</h1></div>
-  <p class="results-note">The highest verified bid on every lot, live. Once a lot closes, its winner is announced here.</p>
+  <p class="results-note">The highest bid on each item, updated live. When an item closes, its winner is shown here.</p>
   <div id="results-list"></div>
-  <div class="empty-state" id="results-empty" style="display:none;">No lots yet. Check back shortly.</div>
+  <div class="empty-state" id="results-empty" style="display:none;">No items yet. Please check back soon.</div>
 </section>
 
 <!-- ============ MY BIDS ============ -->
@@ -594,14 +619,14 @@
     <p class="sheet-min" id="sheet-min-text"></p>
   </div>
   <div class="signin-gate" id="sheet-signin-gate">
-    <p class="signin-note">Sign in with Google to bid, or continue with just your email.</p>
+    <p class="signin-note">Please sign in to place a bid. Use Google, or just your email.</p>
     <div id="sheet-google-btn" class="google-btn-slot"></div>
     <div class="guest-email-slot"></div>
   </div>
   <div id="sheet-bidform">
     <div class="amount-field"><span>₹</span><input id="sheet-amount" type="number" inputmode="numeric" min="1" max="100000000"></div>
     <div class="quick-row" id="sheet-quick"></div>
-    <p class="sheet-hold-note" id="sheet-hold-note" style="display:none;font-size:15px;color:var(--muted);margin:8px 0 0;line-height:1.45;">Bids above ₹20,000 need a quick confirmation call from our team before they count. It won't show as the highest bid until you confirm.</p>
+    <p class="sheet-hold-note" id="sheet-hold-note" style="display:none;font-size:15px;color:var(--muted);margin:8px 0 0;line-height:1.45;">If your bid is above ₹20,000, our team will call you to confirm it. Until then, it will not show as the highest bid.</p>
     <div class="biddername">
       <span>Bidding as <strong id="sheet-name-display"></strong></span>
       <button id="sheet-name-change">Change</button>
@@ -616,14 +641,14 @@
       <div class="contact-row"><span class="k">Email</span><span class="v" id="sheet-email-display"></span></div>
       <label for="sheet-phone-input">Phone number <span class="req">*</span></label>
       <input id="sheet-phone-input" type="tel" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number">
-      <p class="contact-hint">Required so we can confirm your bid with you. No OTP, just double-check it's correct.</p>
+      <p class="contact-hint">We use this to call you about your bid. No code will be sent. Please check that the number is correct.</p>
       <label for="sheet-child-input">Child's name <span class="req">*</span></label>
       <input id="sheet-child-input" maxlength="79" placeholder="Your child's name" autocomplete="off">
       <label for="sheet-class-input">Class &amp; Section</label>
       <input id="sheet-class-input" maxlength="19" placeholder="e.g. 10-B or 10 B" autocomplete="off">
       <label for="sheet-admission-input">Admission number</label>
       <input id="sheet-admission-input" maxlength="4" inputmode="numeric" placeholder="4-digit admission number" autocomplete="off">
-      <p class="contact-hint">Fill in at least one: Class &amp; Section, or admission number. Only our team sees this; it is never shown publicly.</p>
+      <p class="contact-hint">Please fill in at least one: Class &amp; Section, or Admission number. Only our team can see this. It is never shown to others.</p>
     </div>
     <button class="cta cta-cream" id="sheet-confirm">Confirm Bid</button>
   </div>
@@ -633,12 +658,12 @@
 <!-- ============ Success ============ -->
 <div class="success-overlay" id="success-overlay">
   <div class="success-badge" id="success-badge"></div>
-  <h1 class="serif">Bid Placed Successfully!</h1>
+  <h1 class="serif">Your bid is placed!</h1>
   <p id="success-msg"></p>
   <div class="success-actions">
-    <button class="cta cta-cream" id="success-view">View Item</button>
+    <button class="cta cta-cream" id="success-view">See this item</button>
     <button class="link-btn undo-btn" id="success-undo" style="display:none;"></button>
-    <button class="link-btn" id="success-browse">Keep Browsing</button>
+    <button class="link-btn" id="success-browse">Back to all items</button>
   </div>
 </div>
 
@@ -785,7 +810,7 @@ window.addEventListener('popstate', (e) => {
 document.getElementById('splash-wordmark').textContent = 'Welcome to Silent Auction';
 // First time: show the instructions once. After that, straight to the items.
 document.getElementById('open-admin').addEventListener('click', (e) => {
-  if (!confirm('This is the organizer area. Open admin?')) e.preventDefault();
+  if (!confirm('This page is only for the auction organizers. Open it anyway?')) e.preventDefault();
 });
 document.getElementById('splash-explore').onclick = () => {
   let seen = false;
@@ -901,11 +926,11 @@ function renderGuestEmailForms() {
       <div class="gm-row"><input type="email" inputmode="email" autocomplete="email" placeholder="Your email address" maxlength="254">
       <button type="button">Continue</button></div>
       <p class="gm-err"></p>
-      <p class="gm-note">No password needed. Bidding limits for email sign-in apply to this device.</p></div>`;
+      <p class="gm-note">No password needed. Please type your own email address.</p></div>`;
     const input = slot.querySelector('input'), btn = slot.querySelector('button'), err = slot.querySelector('.gm-err');
     const go = async () => {
       const email = input.value.trim().toLowerCase();
-      if (!EMAIL_RE.test(email) || email.length > 254) { err.textContent = 'Enter a valid email address.'; return; }
+      if (!EMAIL_RE.test(email) || email.length > 254) { err.textContent = 'Please type a valid email address, like name@example.com.'; return; }
       err.textContent = ''; btn.disabled = true;
       try {
         localStorage.setItem('auction_guest_email', email);
@@ -913,7 +938,7 @@ function renderGuestEmailForms() {
         else { googleUser = auth.currentUser; renderProfile(); if (sheet && sheet.classList.contains('open')) updateSheetAuthGate(); }
       } catch (e) {
         localStorage.removeItem('auction_guest_email');
-        err.textContent = "Couldn't sign in with email. Check your connection and try again.";
+        err.textContent = "We couldn't sign you in. Please check your internet connection and try again.";
       }
       btn.disabled = false;
     };
@@ -949,7 +974,7 @@ function initGis() {
           await auth.signInWithCredential(credential);
           if (errEl) errEl.textContent = '';
         } catch (err) {
-          if (errEl) errEl.textContent = 'Sign-in failed: ' + (err.message || err);
+          if (errEl) errEl.textContent = "We couldn't sign you in with Google. Please try again.";
         }
       },
       ux_mode: 'popup',
@@ -960,7 +985,7 @@ function initGis() {
     // this, that exception was uncaught, gisReady never got set, and every
     // slot stayed blank forever with nothing but a console error nobody but a
     // developer would ever see.
-    showGisLoadError('Google Sign-In is misconfigured: ' + (initErr.message || initErr));
+    showGisLoadError('Google sign-in is not working right now. Please use your email instead, or tell the organizers.');
     return;
   }
   gisReady = true;
@@ -999,7 +1024,7 @@ function showGisLoadError(msg) {
   // go on. Both a load failure and a load that never completes are now surfaced.
   s.onerror = () => showGisLoadError('Google Sign-In couldn\'t load. Check your connection, or try disabling an ad/tracker blocker for this site, then reload.');
   document.head.appendChild(s);
-  setTimeout(() => showGisLoadError('Google Sign-In is taking unusually long to load. Try reloading the page.'), 6000);
+  setTimeout(() => showGisLoadError('Google sign-in is taking a long time. Please reload the page, or use your email instead.'), 6000);
 })();
 function updateSheetAuthGate() {
   const signedIn = !!googleUser;
@@ -1029,6 +1054,7 @@ function attachItemsListener() {
   if (itemsUnsub) itemsUnsub();
   document.getElementById('load-error').style.display = 'none';
   itemsUnsub = db.collection('items').orderBy('lotNumber').onSnapshot(snap => {
+    hideAppLoader();
     try {
       lots = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       document.getElementById('load-error').style.display = 'none';
@@ -1048,7 +1074,7 @@ function attachItemsListener() {
           sheetItem = fresh;
           document.getElementById('sheet-current-bid').textContent = money(fresh.currentBid);
           document.getElementById('sheet-min-text').textContent =
-            `Your bid must be at least ${money(fresh.currentBid + fresh.increment)} (minimum increase ${money(fresh.increment)})`;
+            `Please bid at least ${money(fresh.currentBid + fresh.increment)}. Each bid must be ${money(fresh.increment)} or more above the current bid.`;
           updateHoldNote();
         }
       }
@@ -1059,14 +1085,22 @@ function attachItemsListener() {
       }
     } catch (err) {
       console.error('Failed to render items', err);
-      showLoadError("Something went wrong showing the items. Tap 'Try again', and if it keeps happening let the organizers know.");
+      showLoadError("Something went wrong. Please tap 'Try again', and tell the organizers if this keeps happening.");
     }
   }, err => {
+    hideAppLoader();
     console.error('Failed to load items', err);
     showLoadError(err.code === 'permission-denied'
-      ? "Couldn't load the items (access was denied). Try again, or let the organizers know if this keeps happening."
-      : "Couldn't load the items. Check your connection and try again.");
+      ? "We couldn't load the items. Please try again, and tell the organizers if this keeps happening."
+      : "We couldn't load the items. Please check your internet connection and try again.");
   });
+}
+function hideAppLoader() {
+  (window.__ld || []).forEach(clearTimeout);
+  const el = document.getElementById('app-loader');
+  if (!el || el.classList.contains('done')) return;
+  el.classList.add('done');
+  setTimeout(() => el.remove(), 400);
 }
 function showLoadError(msg) {
   document.getElementById('grid').innerHTML = '';
@@ -1336,7 +1370,7 @@ function openBidSheet(it) {
   document.getElementById('sheet-lot').textContent = 'LOT ' + String(it.lotNumber).padStart(3, '0');
   document.getElementById('sheet-current-bid').textContent = money(it.currentBid);
   const minNext = it.currentBid + it.increment;
-  document.getElementById('sheet-min-text').textContent = `Your bid must be at least ${money(minNext)} (minimum increase ${money(it.increment)})`;
+  document.getElementById('sheet-min-text').textContent = `Please bid at least ${money(minNext)}. Each bid must be ${money(it.increment)} or more above the current bid.`;
   document.getElementById('sheet-amount').value = minNext;
   document.getElementById('sheet-quick').innerHTML = [it.increment, it.increment * 2, it.increment * 5]
     .map(v => `<button class="quick-btn" data-add="${v}">+${money(v)}</button>`).join('');
@@ -1448,27 +1482,27 @@ document.getElementById('sheet-confirm').onclick = async () => {
   const classSection = document.getElementById('sheet-class-input').value.trim();
   const admissionNumber = document.getElementById('sheet-admission-input').value.trim();
   const amount = Number(document.getElementById('sheet-amount').value);
-  if (!googleUser) { errEl.textContent = 'Sign in with Google to bid.'; return; }
+  if (!googleUser) { errEl.textContent = 'Please sign in to place a bid.'; return; }
   if (!name) {
     document.getElementById('sheet-name-edit').classList.add('open');
     errEl.textContent = "We couldn't get a name from your Google account. Please enter your name.";
     return;
   }
-  if (!isValidPhone(phone)) { errEl.textContent = 'Enter a valid 10-digit phone number starting with 6, 7, 8, or 9.'; return; }
-  if (!childName) { errEl.textContent = "Enter your child's name."; return; }
-  if (!classSection && !admissionNumber) { errEl.textContent = "Enter your child's Class & Section, or their admission number."; return; }
+  if (!isValidPhone(phone)) { errEl.textContent = 'Please enter a 10-digit mobile number that starts with 6, 7, 8 or 9.'; return; }
+  if (!childName) { errEl.textContent = "Please enter your child's name."; return; }
+  if (!classSection && !admissionNumber) { errEl.textContent = "Please enter your child's Class & Section, or their admission number."; return; }
   // A space or a dash between the class number and section (e.g. "10-B" or
   // "10 B") is required so the two parts can actually be read back apart
   // and tracked separately, instead of landing as one unparseable blob.
   if (classSection && !CLASS_SECTION_REGEX.test(classSection)) {
-    errEl.textContent = 'Class & Section needs a space or a dash between them, e.g. 10-B or 10 B.';
+    errEl.textContent = 'Please write Class & Section like this: 10-B or 10 B.';
     return;
   }
   if (admissionNumber && !ADMISSION_NUMBER_REGEX.test(admissionNumber)) {
-    errEl.textContent = 'Admission number must be exactly 4 digits.';
+    errEl.textContent = 'The admission number should be 4 digits.';
     return;
   }
-  if (!Number.isInteger(amount) || amount <= 0) { errEl.textContent = 'Enter a whole-rupee amount.'; return; }
+  if (!Number.isInteger(amount) || amount <= 0) { errEl.textContent = 'Please enter the amount in whole rupees, like 5000.'; return; }
 
   // ₹1,00,000 or more: rejected outright (firestore.rules enforces this too,
   // regardless of what the client does) and the account is banned from
@@ -1479,7 +1513,7 @@ document.getElementById('sheet-confirm').onclick = async () => {
     await triggerBan(googleUser.uid);
     const until = await getActiveBan(googleUser.uid);
     setSheetBlockedUI(until || new Date(Date.now() + BAN_MINUTES * 60000));
-    errEl.textContent = `Bids of ${money(BAN_THRESHOLD)} or more aren't accepted. You're temporarily blocked from bidding.`;
+    errEl.textContent = `Bids of ${money(BAN_THRESHOLD)} or more are not accepted. Bidding is paused for a few minutes.`;
     return;
   }
   if (amount > MAX_BID_AMOUNT) {
@@ -1506,11 +1540,11 @@ document.getElementById('sheet-confirm').onclick = async () => {
     if (isHoldAmount(sheetItem, amount)) { try { await holdRef.delete(); } catch (_) {} }
     await db.runTransaction(async (tx) => {
       const doc = await tx.get(itemRef);
-      if (!doc.exists) throw new Error('This lot no longer exists.');
+      if (!doc.exists) throw new Error('This item is no longer available.');
       const it = doc.data();
-      if (isClosed(it)) throw new Error('Bidding on this lot has just closed.');
+      if (isClosed(it)) throw new Error('Bidding on this item has just closed.');
       const minNext = it.currentBid + it.increment;
-      if (amount < minNext) throw new Error(`Someone beat you to it. Bid must now be at least ${money(minNext)}.`);
+      if (amount < minNext) throw new Error(`Someone just bid higher. Please bid at least ${money(minNext)}.`);
       held = isHoldAmount(it, amount);
       const fields = {
         name, phone, childName, classSection, admissionNumber, email: userEmail(), amount, uid: googleUser.uid,
@@ -1592,7 +1626,7 @@ async function undoMyBid() {
       const snap = await tx.get(itemRef);
       const it = snap.data();
       if (!it || it.lastBidId !== bidId || it.currentBidderUid !== googleUser.uid || it.prevKnown !== true) {
-        throw new Error('Someone has already bid higher, so this bid can no longer be undone.');
+        throw new Error('Someone has bid higher, so this bid can't be undone now.');
       }
       tx.update(itemRef, {
         currentBid: it.prevBid, currentBidderName: it.prevBidderName || '',
@@ -1606,10 +1640,10 @@ async function undoMyBid() {
     refreshUndoUI();
     if (document.getElementById('success-overlay').classList.contains('open')) closeOverlay(closeSuccess);
     renderMyBids();
-    alert('Your bid has been withdrawn.');
+    alert('Your bid has been undone.');
   } catch (e) {
     const msg = e && e.code === 'permission-denied'
-      ? "It's too late to undo this bid. The 1-minute window has ended, someone bid higher, or the lot is about to close."
+      ? "It's too late to undo this bid. You can only undo within 1 minute, and only if nobody has bid higher."
       : (e.message || "Couldn't undo that bid. Try again.");
     alert(msg);
   }

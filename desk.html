@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>if (window.top !== window.self) { document.documentElement.style.display = 'none'; try { window.top.location = window.self.location; } catch (e) {} }</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="images/jashn-logo.png">
+<title>Paper bid desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0E0C0A; --surface:#1B1815; --surface2:#221E19; --border:#4D4538;
+    --cream:#F3EBDA; --text:#F3EBDA; --muted:#CBC0AF; --gold:#E3B75C; --green:#7FBF8E; --red:#D9836E;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:17px;line-height:1.45;}
+  .serif{font-family:'Newsreader',serif;}
+  button{font-family:inherit;cursor:pointer;}
+  input,select{font-family:inherit;font-size:17px;width:100%;padding:13px 14px;border-radius:10px;
+    border:1px solid var(--border);background:var(--surface);color:var(--text);}
+  input:focus,select:focus,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
+  label.f{display:block;font-weight:600;margin:16px 0 6px;}
+  .hint{font-size:15px;color:var(--muted);margin:5px 0 0;}
+  .wrap{max-width:560px;margin:0 auto;padding:18px 16px calc(40px + env(safe-area-inset-bottom,0px));}
+  .head{display:flex;align-items:center;gap:12px;margin-bottom:6px;}
+  .head img{height:44px;width:auto;}
+  .head h1{font-size:23px;margin:0;font-weight:600;}
+  .who{display:flex;justify-content:space-between;align-items:center;gap:10px;color:var(--muted);font-size:15px;margin-bottom:8px;}
+  .linkbtn{background:none;border:none;color:var(--cream);text-decoration:underline;font-size:15px;padding:6px;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-top:12px;}
+  .card b{color:var(--cream);}
+  .btn{display:flex;align-items:center;justify-content:center;width:100%;padding:15px;border:none;border-radius:12px;
+    font-weight:600;font-size:17px;margin-top:18px;}
+  .btn.primary{background:var(--cream);color:#1B140A;}
+  .btn.outline{background:transparent;border:1px solid var(--border);color:var(--text);}
+  .btn[disabled]{opacity:.45;pointer-events:none;}
+  .opt{display:flex;gap:12px;align-items:flex-start;padding:9px 0;cursor:pointer;}
+  .opt input{width:24px;height:24px;flex:none;margin:0;padding:0;}
+  .err{color:var(--red);font-weight:600;margin:12px 0 0;min-height:1.2em;}
+  .gate{min-height:100vh;display:flex;flex-direction:column;justify-content:center;max-width:380px;margin:0 auto;padding:30px 18px;}
+  .gate h1{font-size:24px;margin:0 0 4px;}
+  .modal{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;padding:16px;}
+  .modal.open{display:flex;}
+  .modal .box{background:var(--surface);border:1px solid var(--border);border-radius:16px;width:100%;max-width:420px;
+    max-height:92vh;overflow:auto;padding:20px 18px;}
+  .modal h2{margin:0 0 10px;font-size:21px;}
+  dl.review{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 14px;}
+  dl.review dt{color:var(--muted);}
+  dl.review dd{margin:0;font-weight:600;word-break:break-word;}
+  .log{list-style:none;margin:8px 0 0;padding:0;}
+  .log li{padding:9px 0;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:10px;}
+  .log li span.s{color:var(--muted);font-size:15px;}
+  .tag-held{color:var(--gold);}
+  .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translate(-50%,12px);
+    max-width:min(92vw,440px);padding:13px 18px;border-radius:12px;background:var(--surface2);border:1px solid var(--green);
+    text-align:center;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:90;}
+  .toast.show{opacity:1;transform:translate(-50%,0);}
+</style>
+</head>
+<body>
+
+<!-- Sign in -->
+<div id="gate" class="gate">
+  <div class="head"><img src="images/jashn-logo.png" alt="" onerror="this.style.display='none'"><h1 class="serif">Paper bid desk</h1></div>
+  <p class="hint" style="margin-bottom:6px;">Sign in with the login the organizers gave you.</p>
+  <form id="signin-form">
+    <label class="f" for="email">Email</label>
+    <input id="email" type="email" autocomplete="username" required>
+    <label class="f" for="password">Password</label>
+    <input id="password" type="password" autocomplete="current-password" required>
+    <button class="btn primary" id="signin-btn" type="submit">Sign in</button>
+  </form>
+  <p class="err" id="signin-err" role="alert"></p>
+</div>
+
+<!-- Signed in, but not a desk helper -->
+<div id="denied" class="gate" style="display:none;">
+  <h1 class="serif">No access</h1>
+  <p>This login isn't set up for the paper bid desk. Ask an organizer to add you.</p>
+  <button class="btn outline" id="denied-signout" type="button">Sign out</button>
+</div>
+
+<!-- The desk -->
+<div id="desk" class="wrap" style="display:none;">
+  <div class="head"><img src="images/jashn-logo.png" alt="" onerror="this.style.display='none'"><h1 class="serif">Paper bid desk</h1></div>
+  <div class="who"><span id="who"></span><button class="linkbtn" id="signout" type="button">Sign out</button></div>
+
+  <label class="f" for="lot">Lot</label>
+  <select id="lot"><option value="">Loading lots...</option></select>
+  <div class="card" id="lotinfo" style="display:none;"></div>
+
+  <label class="f" for="name">Bidder's name</label>
+  <input id="name" type="text" autocomplete="off" maxlength="79">
+
+  <label class="f" for="phone">Mobile number</label>
+  <input id="phone" type="tel" inputmode="numeric" autocomplete="off" placeholder="10 digits">
+  <p class="hint">Checked on the sheet? The organizers may call this number.</p>
+
+  <label class="f" for="child">Child's name</label>
+  <input id="child" type="text" autocomplete="off" maxlength="79">
+
+  <label class="f" for="cls">Class and section</label>
+  <input id="cls" type="text" autocomplete="off" placeholder="e.g. 10-B" maxlength="8">
+
+  <label class="f" for="amount">Bid amount (&#8377;)</label>
+  <input id="amount" type="text" inputmode="numeric" autocomplete="off" placeholder="in figures">
+  <p class="hint" id="amount-hint"></p>
+
+  <label class="f" id="announce-h">If they win</label>
+  <div role="group" aria-labelledby="announce-h">
+    <label class="opt"><input type="checkbox" id="ann-yes"><span>Yes, we may announce their name out loud</span></label>
+    <label class="opt"><input type="checkbox" id="ann-no"><span>No, do not announce. Contact them privately on their phone number</span></label>
+  </div>
+  <p class="hint">Tick whichever box they marked on the sheet.</p>
+
+  <p class="err" id="form-err" role="alert"></p>
+  <button class="btn primary" id="review-btn" type="button">Review bid</button>
+
+  <div class="card" id="logcard" style="display:none;margin-top:26px;">
+    <b>Entered on this screen</b>
+    <ul class="log" id="log"></ul>
+    <p class="hint">This list clears when you close or refresh the page. You can't look up or change bids from here; ask an organizer to correct a mistake.</p>
+  </div>
+</div>
+
+<!-- Review before placing -->
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="box">
+    <h2 class="serif" id="modal-title">Check before placing</h2>
+    <dl class="review" id="review"></dl>
+    <p class="hint" id="held-note" style="display:none;color:var(--gold);"></p>
+    <p class="err" id="modal-err" role="alert"></p>
+    <button class="btn primary" id="place-btn" type="button">Place this bid</button>
+    <button class="btn outline" id="edit-btn" type="button">Go back and edit</button>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="firebase-init.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+let lots = [];
+let lotsUnsub = null;
+let myLabel = '';
+let pending = null;      // the details being reviewed
+const entered = [];      // this page only; never stored
+
+// ---------- Toast ----------
+let toastTimer = null;
+function toast(msg) {
+  const el = $('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 4500);
+}
+
+// ---------- Sign in / role check ----------
+$('signin-form').onsubmit = async (e) => {
+  e.preventDefault();
+  const btn = $('signin-btn'), err = $('signin-err');
+  err.textContent = ''; btn.disabled = true;
+  try {
+    await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+    await auth.signInWithEmailAndPassword($('email').value.trim(), $('password').value);
+  } catch (e2) {
+    err.textContent = (e2.code === 'auth/invalid-credential' || e2.code === 'auth/wrong-password' || e2.code === 'auth/user-not-found' || e2.code === 'auth/invalid-login-credentials')
+      ? 'That email or password is not right.' : (e2.message || 'Could not sign in.');
+  } finally { btn.disabled = false; }
+};
+$('signout').onclick = () => auth.signOut();
+$('denied-signout').onclick = () => auth.signOut();
+
+function show(which) {
+  $('gate').style.display = which === 'gate' ? 'flex' : 'none';
+  $('denied').style.display = which === 'denied' ? 'flex' : 'none';
+  $('desk').style.display = which === 'desk' ? 'block' : 'none';
+}
+async function roleLabel(u) {
+  try {
+    const d = await db.collection('desks').doc(u.uid).get();
+    if (d.exists && d.data().active === true) return d.data().label || 'Desk helper';
+  } catch (_) { /* not a helper */ }
+  try { if (await checkIsAdmin(u)) return u.email + ' (admin)'; } catch (_) { /* not an admin */ }
+  return null;
+}
+auth.onAuthStateChanged(async (u) => {
+  if (lotsUnsub) { lotsUnsub(); lotsUnsub = null; }
+  lots = []; entered.length = 0; renderLog();
+  if (!u) { show('gate'); return; }
+  const label = await roleLabel(u);
+  if (!label) { show('denied'); return; }
+  myLabel = label;
+  $('who').textContent = 'Signed in: ' + label;
+  show('desk');
+  lotsUnsub = db.collection('items').orderBy('lotNumber').onSnapshot(snap => {
+    lots = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderLots();
+  }, e => { $('form-err').textContent = 'Could not load the lots: ' + e.message; });
+});
+
+// ---------- Lots ----------
+const lotNo = it => String(it.lotNumber).padStart(3, '0');
+function currentLot() { return lots.find(l => l.id === $('lot').value) || null; }
+function renderLots() {
+  const sel = $('lot'), keep = sel.value;
+  const open = lots.filter(l => !isClosed(l));
+  sel.innerHTML = '<option value="">Choose a lot...</option>' +
+    open.map(l => `<option value="${l.id}">Lot ${lotNo(l)} - ${escapeHtml(l.title || '')}</option>`).join('');
+  if (keep && open.some(l => l.id === keep)) sel.value = keep;
+  renderLotInfo();
+}
+function minNext(it) { return (it.currentBid || 0) + (it.increment || 0); }
+function renderLotInfo() {
+  const it = currentLot(), box = $('lotinfo');
+  if (!it) { box.style.display = 'none'; $('amount-hint').textContent = ''; return; }
+  box.style.display = 'block';
+  box.innerHTML = it.bidCount
+    ? `Highest bid so far: <b>${money(it.currentBid)}</b><br>Next bid must be at least <b>${money(minNext(it))}</b>`
+    : `No bids yet. Starting bid <b>${money(it.currentBid)}</b><br>First bid must be at least <b>${money(minNext(it))}</b>`;
+  $('amount-hint').textContent = `At least ${money(minNext(it))}. Bids of ${money(HOLD_THRESHOLD)} or more are held until the organizers confirm by phone.`;
+}
+$('lot').onchange = renderLotInfo;
+
+// ---------- Announce ticks (one at a time, neither pre-ticked) ----------
+$('ann-yes').onchange = () => { if ($('ann-yes').checked) $('ann-no').checked = false; };
+$('ann-no').onchange = () => { if ($('ann-no').checked) $('ann-yes').checked = false; };
+
+// ---------- Validate and review ----------
+function readForm() {
+  const it = currentLot();
+  if (!it) return { error: 'Choose a lot first.' };
+  if (isClosed(it)) return { error: 'That lot is closed.' };
+  const name = $('name').value.trim().replace(/\s+/g, ' ');
+  if (!name) return { error: "Enter the bidder's name." };
+  const phone = normalizePhoneInput($('phone').value);
+  if (!isValidPhone(phone)) return { error: 'The mobile number must be 10 digits and start with 6, 7, 8 or 9.' };
+  const child = $('child').value.trim().replace(/\s+/g, ' ');
+  if (!child) return { error: "Enter the child's name." };
+  let cls = $('cls').value.trim().toUpperCase();
+  if (!CLASS_SECTION_REGEX.test(cls)) {
+    const m = cls.match(/^(\d{1,2})\s*[- ]?\s*([A-Z][A-Z0-9]{0,3})$/); // "10B" -> "10-B"
+    if (m) cls = m[1] + '-' + m[2];
+  }
+  if (!CLASS_SECTION_REGEX.test(cls)) return { error: 'Class and section like 10-B (a dash or space between them).' };
+  const amountText = $('amount').value.replace(/[\s,\u20B9]/g, '').replace(/^Rs\.?/i, '');
+  if (!/^\d+$/.test(amountText)) return { error: 'Enter the bid amount in figures, numbers only.' };
+  const amount = parseInt(amountText, 10);
+  if (amount <= 0) return { error: 'Enter the bid amount.' };
+  if (amount >= BAN_THRESHOLD) return { error: `Bids of ${money(BAN_THRESHOLD)} or more can't be entered here. Please ask an organizer.` };
+  if (amount < minNext(it)) return { error: `This bid must be at least ${money(minNext(it))}. The highest bid on this lot is ${money(it.currentBid)}.` };
+  if (!$('ann-yes').checked && !$('ann-no').checked) return { error: 'Tick whether their name may be announced if they win.' };
+  return { it, name, phone, child, cls, amount, announce: $('ann-yes').checked };
+}
+$('review-btn').onclick = () => {
+  $('form-err').textContent = '';
+  const d = readForm();
+  if (d.error) { $('form-err').textContent = d.error; return; }
+  pending = d;
+  const rows = [
+    ['Lot', `${lotNo(d.it)} - ${d.it.title || ''}`], ['Bid', money(d.amount)], ['Bidder', d.name],
+    ['Mobile', d.phone], ['Child', d.child], ['Class', d.cls],
+    ['Announce name', d.announce ? 'Yes' : 'No, contact privately'],
+  ];
+  $('review').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${escapeHtml(v)}</dd>`).join('');
+  const held = d.amount >= HOLD_THRESHOLD;
+  $('held-note').style.display = held ? 'block' : 'none';
+  $('held-note').textContent = held
+    ? `This is ${money(HOLD_THRESHOLD)} or more, so it is held and will not show on the lot until the organizers confirm it by phone.` : '';
+  $('modal-err').textContent = '';
+  $('modal').classList.add('open');
+  $('edit-btn').focus();
+};
+function closeModal() { $('modal').classList.remove('open'); }
+$('edit-btn').onclick = closeModal;
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// ---------- Place the bid ----------
+$('place-btn').onclick = async () => {
+  if (!pending) return;
+  const d = pending, btn = $('place-btn');
+  btn.disabled = true; $('modal-err').textContent = '';
+  const itemRef = db.collection('items').doc(d.it.id);
+  const bidRef = itemRef.collection('bids').doc();
+  const held = d.amount >= HOLD_THRESHOLD;
+  const uid = 'paper:' + d.phone;
+  const bid = {
+    name: d.name, phone: d.phone, email: '', amount: d.amount, uid, isGoogle: false, deviceId: 'paper',
+    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+    childName: d.child, classSection: d.cls, announceName: d.announce,
+    source: 'paper', enteredBy: auth.currentUser.uid,
+  };
+  try {
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(itemRef);
+      if (!snap.exists) throw new Error('That lot no longer exists.');
+      const it = snap.data();
+      if (isClosed(it)) throw new Error('This lot has just closed. The bid was not placed.');
+      if (held) { tx.set(bidRef, { ...bid, status: 'pending' }); return; }
+      if (d.amount < (it.currentBid || 0) + (it.increment || 0)) {
+        throw new Error(`Someone bid in the meantime. The highest bid is now ${money(it.currentBid)}; this bid must be at least ${money(it.currentBid + it.increment)}.`);
+      }
+      tx.update(itemRef, {
+        currentBid: d.amount, currentBidderName: d.name, currentBidderUid: uid,
+        bidCount: (it.bidCount || 0) + 1, prevKnown: false, lastBidId: bidRef.id,
+      });
+      tx.set(bidRef, bid);
+    });
+    entered.unshift({ lot: lotNo(d.it), amount: d.amount, name: d.name, held });
+    renderLog();
+    closeModal(); pending = null;
+    ['name', 'phone', 'child', 'cls', 'amount'].forEach(id => { $(id).value = ''; });
+    $('ann-yes').checked = false; $('ann-no').checked = false;
+    toast(held ? `Held for a confirmation call: ${money(d.amount)} on Lot ${lotNo(d.it)}.` : `Placed: ${money(d.amount)} on Lot ${lotNo(d.it)} for ${d.name}.`);
+    $('name').focus();
+  } catch (e) {
+    $('modal-err').textContent = e.code === 'permission-denied'
+      ? 'The server refused this bid. The lot may have closed, the amount may be too low, or this login may have been switched off.'
+      : (e.message || 'Could not place the bid. Try again.');
+  } finally { btn.disabled = false; }
+};
+function renderLog() {
+  $('logcard').style.display = entered.length ? 'block' : 'none';
+  $('log').innerHTML = entered.map(e =>
+    `<li><span>Lot ${e.lot} &middot; ${money(e.amount)}<br><span class="s">${escapeHtml(e.name)}</span></span>` +
+    `<span class="s ${e.held ? 'tag-held' : ''}">${e.held ? 'held for call' : 'placed'}</span></li>`).join('');
+}
+</script>
+</body>
+</html>

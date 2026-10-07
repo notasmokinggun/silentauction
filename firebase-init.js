@@ -65,7 +65,12 @@ function isClosed(it) {
 
 // Who won / at what price. "Set winner" writes winnerName/winnerAmount and does
 // NOT touch currentBidderName/currentBid, so prefer the winner fields.
-function winnerNameOf(it) { return it.winnerName ?? it.currentBidderName; }
+// A bidder who ticked "do not announce my name" shows as "Anonymous bidder" on public
+// pages once a winner is set (admin.html stores that choice as winnerAnnounce).
+function winnerNameOf(it) {
+  if (it.winnerBidId && it.winnerAnnounce === false) return "Anonymous bidder";
+  return it.winnerName ?? it.currentBidderName;
+}
 function winnerAmountOf(it) { return it.winnerAmount ?? it.currentBid; }
 
 function money(n) {

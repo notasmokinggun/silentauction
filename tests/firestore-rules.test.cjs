@@ -145,7 +145,7 @@ const placeBid = (db, lotId, uid, email, amount, bidCount = 0, over = {}) => {
     prevBid: 100, prevBidderName: '', prevBidderUid: null, prevKnown: true, lastBidId: bidRef.id });
   b.set(bidRef, {
     name: 'A', phone: '9876543210', email, amount, uid, isGoogle: true, deviceId: 'dev_x',
-    childName: 'Kid', childGrade: '8', timestamp: serverTimestamp(), ...over,
+    childName: 'Kid', classSection: '8-A', admissionNumber: '', timestamp: serverTimestamp(), ...over,
   });
   b.set(doc(db, 'bidLimits/' + uid), { lastBidAt: serverTimestamp() });
   return b.commit();
@@ -194,7 +194,7 @@ test('nobody can write another uid\'s bidLimits, and bidBlocks are closed', asyn
 // ── 5x review hold ──
 const holdFields = (uid, email, amount, over = {}) => ({
   name: 'A', phone: '9876543210', email, amount, uid, isGoogle: true, deviceId: 'dev_x',
-  childName: 'Kid', childGrade: '8', timestamp: serverTimestamp(), status: 'pending', ...over,
+  childName: 'Kid', classSection: '8-A', admissionNumber: '', timestamp: serverTimestamp(), status: 'pending', ...over,
 });
 const placeHold = (db, lotId, uid, email, amount, over = {}, id = 'hold_' + uid) => {
   const b = writeBatch(db);
@@ -258,13 +258,13 @@ test('itemImages: anyone can get one by id, nobody can list, only admins write',
 });
 
 // ── Child's name and grade ──
-test('a bid needs a child name and a grade from 6 to 12', async () => {
+test('a bid needs a child name and a class-section or a 4-digit admission number', async () => {
   await seedLot('k1');
   const g = bidder('k1u', 'k1u@example.com');
-  await assertFails(placeBid(g, 'k1', 'k1u', 'k1u@example.com', 110, 0, { childGrade: '5' }));
-  await assertFails(placeBid(g, 'k1', 'k1u', 'k1u@example.com', 110, 0, { childGrade: '13' }));
+  await assertFails(placeBid(g, 'k1', 'k1u', 'k1u@example.com', 110, 0, { classSection: '10B' }));
+  await assertFails(placeBid(g, 'k1', 'k1u', 'k1u@example.com', 110, 0, { classSection: '', admissionNumber: '' }));
   await assertFails(placeBid(g, 'k1', 'k1u', 'k1u@example.com', 110, 0, { childName: '' }));
-  await assertSucceeds(placeBid(g, 'k1', 'k1u', 'k1u@example.com', 110, 0, { childGrade: '12' }));
+  await assertSucceeds(placeBid(g, 'k1', 'k1u', 'k1u@example.com', 110, 0, { classSection: '', admissionNumber: '1234' }));
 });
 
 // ── Email-only (anonymous) guests. Not run against the emulator yet: run
@@ -276,8 +276,10 @@ const guestFields = (uid, over = {}) => ({
 });
 const guestBid = (db, lotId, uid, over = {}) => {
   const b = writeBatch(db);
-  b.update(doc(db, 'items/' + lotId), { currentBid: 110, currentBidderName: 'A', currentBidderUid: uid, bidCount: 1 });
-  b.set(doc(collection(db, 'items/' + lotId + '/bids')), guestFields(uid, over));
+  const bidRef = doc(collection(db, 'items/' + lotId + '/bids'));
+  b.update(doc(db, 'items/' + lotId), { currentBid: 110, currentBidderName: 'A', currentBidderUid: uid, bidCount: 1,
+    prevBid: 100, prevBidderName: '', prevBidderUid: null, prevKnown: true, lastBidId: bidRef.id });
+  b.set(bidRef, guestFields(uid, over));
   b.set(doc(db, 'bidLimits/' + uid), { lastBidAt: serverTimestamp() });
   return b.commit();
 };
@@ -348,3 +350,34 @@ test('a bid may say announceName true or false, or omit it (older pages)', async
 test('announceName must be a real boolean', async () => {
   await seedLot('cons4'); await assertFails(consentBid('cons4', 'c4', { announceName: 'yes' }));
 });
+
+// ── Hardening added with the legal/security pass. Not run against the emulator
+// (it can't be downloaded in the sandbox this was written in): run
+// `npm run test:rules` before publishing the rules. ──
+test('raising a lot without creating a matching bid doc is rejected (no bypass of phone/cooldown/ban)', async () => {
+  await seedLot('h1');
+  const g = bidder('h1u', 'h1u@example.com');
+  // an unrelated, already-existing bid doc to point lastBidId at
+  await env.withSecurityRulesDisabled(async ctx => { await setDoc(doc(ctx.firestore(), 'items/h1/bids/old'), { uid: 'x', amount: 110, name: 'A' }); });
+  await assertFails(updateDocViaBatch(g, 'items/h1', { currentBid: 110, currentBidderName: 'A', currentBidderUid: 'h1u', bidCount: 1,
+    prevBid: 100, prevBidderName: '', prevBidderUid: null, prevKnown: true, lastBidId: 'old' }));
+  await assertSucceeds(placeBid(g, 'h1', 'h1u', 'h1u@example.com', 110));
+});
+test('the lot name and amount must match the bid doc that raised it', async () => {
+  await seedLot('h2');
+  const g = bidder('h2u', 'h2u@example.com');
+  await assertFails(placeBid(g, 'h2', 'h2u', 'h2u@example.com', 110, 0, { name: 'Somebody Else' }));
+});
+test('a cooldown write cannot wipe a running ban, and a ban cannot be shortened', async () => {
+  const g = bidder('h3u', 'h3u@example.com');
+  await assertSucceeds(setDoc(doc(g, 'bidLimits/h3u'), { bannedUntil: new Date(Date.now() + 300000) }));
+  await assertFails(setDoc(doc(g, 'bidLimits/h3u'), { lastBidAt: serverTimestamp() }));
+  await assertFails(setDoc(doc(g, 'bidLimits/h3u'), { bannedUntil: new Date(Date.now() + 5000) }));
+});
+test('bidBlocks cannot be listed by a bidder, and a device block cannot be shortened', async () => {
+  const g = bidder('h4u', 'h4u@example.com');
+  await assertFails(getDocs(collection(g, 'bidBlocks')));
+  await assertSucceeds(setDoc(doc(g, 'bidBlocks/dev_h4'), { bannedUntil: new Date(Date.now() + 300000) }));
+  await assertFails(setDoc(doc(g, 'bidBlocks/dev_h4'), { bannedUntil: new Date(Date.now() + 5000) }));
+});
+function updateDocViaBatch(db, path, data) { const b = writeBatch(db); b.update(doc(db, path), data); return b.commit(); }

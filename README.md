@@ -188,3 +188,21 @@ permissions issue, not a missing index — check the browser console.
 | `item.html` | Redirects old `?id=` links into `index.html` |
 | `firebase-init.js` | Your Firebase config, bootstrap admin email, and shared helper functions |
 | `firestore.rules` | Server-side rules: bidding logic, rate limit, and the two-layer admin check |
+
+## Security and legal checklist (read before each event)
+
+1. **Publish the rules.** Pushing `firestore.rules` to GitHub does **not** change the live
+   database. Run `firebase deploy --only firestore:rules`, or paste the file into
+   Firebase console → Firestore → Rules → Publish. Then run `npm run test:rules` locally
+   (needs the emulator, which downloads on first run).
+2. **Fill in `ORG` at the bottom of `legal.html`** (organiser name, contact email/phone, city,
+   retention wording). Empty fields fall back to neutral wording.
+3. **Firebase console:** turn on App Check (reCAPTCHA) and enforce it for Firestore and
+   Authentication; restrict the web API key to this site's domain (Google Cloud console →
+   APIs & Services → Credentials); in Authentication, keep only Google, Anonymous and
+   Email/Password enabled; set the authorised domains to this site only.
+4. **After the event:** delete bids (`items/*/bids`), `bidLimits`, `bidBlocks`, `users`, and the
+   anonymous Auth users, as promised in the privacy notice.
+5. The site stores only essential data in the browser (see the Cookies & storage section of
+   `legal.html`). If you add analytics, ads or any new storage key, update that page and add
+   a consent step first.

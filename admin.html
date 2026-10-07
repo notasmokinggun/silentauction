@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>if (window.top !== window.self) { document.documentElement.style.display = 'none'; try { window.top.location = window.self.location; } catch (e) {} }</script>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Auction Admin</title>
@@ -1105,6 +1107,7 @@ function renderBidRows(itemId) {
     db.collection('items').doc(itemId).update({
       winnerBidId: bid.id, winnerName: bid.name, winnerAmount: bid.amount,
       winnerUid: bid.uid || null, winnerIsGoogle: !!bid.isGoogle,
+      winnerAnnounce: bid.announceName !== false, // false = bidder said do NOT announce my name; public pages then show "Anonymous bidder"
       winnerSetAt: firebase.firestore.FieldValue.serverTimestamp(),
     }).catch(err => alert('Could not set the winner: ' + err.message));
   });
@@ -1189,7 +1192,7 @@ async function invalidateBid(itemId, bidId, bid) {
         patch.currentBidderUid = top.uid || null;
       }
       if (it.winnerBidId === bidId) {
-        ['winnerBidId', 'winnerName', 'winnerAmount', 'winnerUid', 'winnerIsGoogle', 'winnerSetAt']
+        ['winnerBidId', 'winnerName', 'winnerAmount', 'winnerUid', 'winnerIsGoogle', 'winnerSetAt', 'winnerAnnounce']
           .forEach(k => { patch[k] = firebase.firestore.FieldValue.delete(); });
       }
       tx.delete(bidRef);

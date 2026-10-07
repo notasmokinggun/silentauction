@@ -153,14 +153,19 @@ service cloud.firestore {
            request.resource.data.bannedUntil > request.time &&
            request.resource.data.bannedUntil <= request.time + duration.value(6, 'm'))
         );
+      // A cooldown write may NOT replace a ban that is still running (a plain
+      // set({lastBidAt}) would otherwise wipe bannedUntil), and a ban write
+      // may only extend an existing ban, never shorten it.
       allow update: if isVerifiedBidder() && request.auth.uid == uid &&
         (
           (request.resource.data.keys().hasOnly(['lastBidAt']) &&
            request.resource.data.lastBidAt == request.time &&
+           resource.data.get('bannedUntil', request.time) <= request.time &&
            request.time >= resource.data.get('lastBidAt', timestamp.date(1970,1,1)) + duration.value(3, 's')) ||
           (request.resource.data.keys().hasOnly(['bannedUntil']) &&
            request.resource.data.bannedUntil is timestamp &&
            request.resource.data.bannedUntil > request.time &&
+           request.resource.data.bannedUntil >= resource.data.get('bannedUntil', request.time) &&
            request.resource.data.bannedUntil <= request.time + duration.value(6, 'm'))
         );
     }
@@ -177,11 +182,19 @@ service cloud.firestore {
     // (bid of 1,00,000 or more) can't bid as a guest until it expires. The id is
     // client-supplied, so this stops casual evasion, not a determined person.
     match /bidBlocks/{deviceId} {
-      allow read: if isVerifiedBidder();
-      allow create, update: if isVerifiedBidder() && deviceId.size() <= 100 &&
+      allow get: if isVerifiedBidder();
+      allow list: if isAdmin();
+      allow create: if isVerifiedBidder() && deviceId.size() <= 100 &&
         request.resource.data.keys().hasOnly(['bannedUntil']) &&
         request.resource.data.bannedUntil is timestamp &&
         request.resource.data.bannedUntil > request.time &&
+        request.resource.data.bannedUntil <= request.time + duration.value(6, 'm');
+      // An existing block can only be extended, never shortened.
+      allow update: if isVerifiedBidder() && deviceId.size() <= 100 &&
+        request.resource.data.keys().hasOnly(['bannedUntil']) &&
+        request.resource.data.bannedUntil is timestamp &&
+        request.resource.data.bannedUntil > request.time &&
+        request.resource.data.bannedUntil >= resource.data.get('bannedUntil', request.time) &&
         request.resource.data.bannedUntil <= request.time + duration.value(6, 'm');
       allow delete: if isAdmin();
     }
@@ -265,7 +278,15 @@ service cloud.firestore {
         request.resource.data.prevBidderUid == resource.data.get('currentBidderUid', null) &&
         request.resource.data.prevKnown == true &&
         request.resource.data.lastBidId is string &&
+        // The raise must arrive together with a bid doc CREATED in this same
+        // write (not one that already exists), and that doc must carry the same
+        // amount, uid and name. Without this, someone could raise the lot with
+        // no phone/child details, no cooldown and no ban check at all.
+        !exists(/databases/$(database)/documents/items/$(itemId)/bids/$(request.resource.data.lastBidId)) &&
         existsAfter(/databases/$(database)/documents/items/$(itemId)/bids/$(request.resource.data.lastBidId)) &&
+        getAfter(/databases/$(database)/documents/items/$(itemId)/bids/$(request.resource.data.lastBidId)).data.amount == request.resource.data.currentBid &&
+        getAfter(/databases/$(database)/documents/items/$(itemId)/bids/$(request.resource.data.lastBidId)).data.uid == request.auth.uid &&
+        getAfter(/databases/$(database)/documents/items/$(itemId)/bids/$(request.resource.data.lastBidId)).data.name == request.resource.data.currentBidderName &&
         request.resource.data.currentBid is number &&
         underMaxBid(request.resource.data.currentBid) &&
         request.resource.data.currentBid >= resource.data.currentBid + resource.data.increment &&

@@ -391,6 +391,43 @@
     #view-splash.active.has-gallery .splash-photo{background:#FFE7D6;}
     #view-splash.active.has-gallery .splash-photo::before{display:block;}
   }
+
+  /* ---------- Foldables and small tablets ----------
+     Unfolded Galaxy Z Fold / Pixel Fold style screens report roughly 600-1000
+     CSS px wide, nearly square. Use that room instead of stretching one phone
+     column: a multi-column lot grid, a photo-beside-details lot page, and
+     centered panels. Narrow cover screens (about 280-360px) get tighter spacing. */
+  @media (min-width:600px) and (max-width:1023px){
+    .grid{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:18px;padding:0 28px 28px;}
+    .pills{padding:18px 28px;}
+    #view-mybids,#view-results,#view-profile,#view-guide{max-width:760px;margin:0 auto;}
+    /* Lot page: photo stays in view on the left, details scroll on the right. */
+    #view-item.active{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start;}
+    #view-item .hero-wrap{position:sticky;top:0;height:100vh;height:100dvh;}
+    #view-item .body{padding:28px 28px calc(40px + env(safe-area-inset-bottom,0px));}
+    .item-title{font-size:28px;}
+    /* Bid sheet, nav and pop-ups: a centered panel, not edge to edge. */
+    .bottomnav,.sheet{max-width:640px;width:100%;left:50%;right:auto;transform:translateX(-50%);}
+    .sheet{border-radius:18px 18px 0 0;}
+    .bottomnav{border-radius:18px 18px 0 0;border:1px solid var(--border);border-bottom:0;}
+  }
+  /* If the browser reports a physical fold (two screens), keep content off the hinge. */
+  @media (horizontal-viewport-segments:2){
+    #view-item.active{grid-template-columns:env(viewport-segment-width 0 0, 1fr) env(viewport-segment-width 1 0, 1fr);}
+  }
+  /* Folded cover screens and other very narrow widths. */
+  @media (max-width:360px){
+    .grid{gap:10px;padding:0 12px 16px;}
+    .pills{padding:12px 12px;}
+    #view-item .body{padding:16px;}
+    .item-title{font-size:21px;}
+    .navbtn{font-size:13px;}
+    .bottomnav{padding-left:4px;padding-right:4px;}
+  }
+  @media (max-width:300px){
+    .grid{grid-template-columns:1fr;}
+    .stat-row{grid-template-columns:1fr 1fr;row-gap:12px;}
+  }
 </style>
 </head>
 <body>

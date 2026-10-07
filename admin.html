@@ -141,6 +141,14 @@
   .bidrow button.set{background:var(--gold);border-color:var(--gold);color:#1B140A;}
   .bidlist .empty{font-size:13px;color:var(--muted);padding:6px 0;}
 
+  .printbox{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:16px;}
+  .pb-title{font-weight:700;margin-bottom:10px;}
+  .pb-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;}
+  .pb-grid label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--muted);}
+  .pb-grid input{background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:9px 10px;font-size:14px;}
+  .pb-grid input:disabled{opacity:.4;}
+  .pb-hint{font-size:12px;color:var(--muted);margin:10px 0 0;}
+  .pb-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;}
   /* ---------- A4 bid details sheet (handwritten bids) ---------- */
   @page{size:A4;margin:12mm;}
   #bidsheet{display:none;}
@@ -158,6 +166,8 @@
   .bs-boxes span{width:24px;height:28px;border:1px solid #000;display:block;}
   .bs-sq{display:inline-block;width:16px;height:16px;border:1.5px solid #000;vertical-align:-3px;margin:0 6px 0 14px;}
   .bs-note{font-size:10.5pt;margin:4px 0 0;}
+  .bs{break-after:page;page-break-after:always;}
+  .bs:last-child{break-after:auto;page-break-after:auto;}
   body.print-bidsheet #qrsheet{display:none !important;}
   @media print{
     body.print-bidsheet *{visibility:hidden;}
@@ -350,10 +360,34 @@
     <div class="panel" id="panel-bids">
       <h1>Bids &amp; winners</h1>
       <p class="sub">Rank bids per lot and mark the winner. See exactly who placed what, and revoke any bid you don't trust. It's removed for good and the leading bid recalculates automatically.</p>
-      <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
-        <select id="printLot" title="Lot to print the sheet for" style="max-width:260px;"><option value="">Blank sheet (no lot)</option></select>
-        <button class="btn-ghost" id="printBidSheet">Print A4 bid details sheet</button>
-        <button class="btn-ghost" id="exportCsvBids">Export bids as CSV</button>
+      <div class="printbox">
+        <div class="pb-title">Paper bid sheets</div>
+        <div class="pb-grid">
+          <label>Lot
+            <select id="printLot" title="Lot to print the sheet for"><option value="">Blank sheet (no lot)</option></select>
+          </label>
+          <label>What gets pre-printed
+            <select id="printMode">
+              <option value="manual">Lot + minimum raise (write highest bid by hand)</option>
+              <option value="system">Lot + minimum raise + current highest bid from system</option>
+              <option value="lotonly">Lot only (write everything else by hand)</option>
+            </select>
+          </label>
+          <label>Highest bid, optional
+            <input id="printHigh" type="number" min="0" inputmode="numeric" placeholder="type to pre-fill">
+          </label>
+          <label>Minimum raise, optional
+            <input id="printInc" type="number" min="0" inputmode="numeric" placeholder="type to override">
+          </label>
+          <label>Copies per lot
+            <input id="printCopies" type="number" min="1" max="50" value="1">
+          </label>
+        </div>
+        <p class="pb-hint" id="printHint"></p>
+        <div class="pb-actions">
+          <button class="btn-ghost" id="printBidSheet">Print A4 bid sheet(s)</button>
+          <button class="btn-ghost" id="exportCsvBids">Export bids as CSV</button>
+        </div>
       </div>
       <div id="bids-lots"></div>
     </div>
@@ -1132,29 +1166,45 @@ document.getElementById('lotForm').addEventListener('submit', async (e) => {
 // it, hand it out. Thresholds come from firebase-init.js so the printed
 // rules always match the live ones.
 // -----------------------------------------------------------------
-// Lot dropdown next to the print button. Choose a lot and the sheet comes out with that
-// lot's number, name, highest bid and minimum next bid filled in; everything else stays blank.
+// Pre-printed sheets. Pick one lot, or "All lots" for a ready-to-hand-out batch (one page per lot).
+// Lot number and name are always filled when a lot is chosen. The minimum raise is printed from the
+// lot's increment; the highest bid is left blank to write by hand unless you choose "from system" or
+// type a value in the optional boxes (typed values win; single lot only). No print timestamps.
 function fillPrintLotSelect() {
   const sel = document.getElementById('printLot');
   if (!sel) return;
   const keep = sel.value;
-  sel.innerHTML = '<option value="">Blank sheet (no lot)</option>' + [...lots]
+  sel.innerHTML = '<option value="">Blank sheet (no lot)</option><option value="__all__">All lots (one sheet each)</option>' + [...lots]
     .sort((x, y) => (x.lotNumber || 0) - (y.lotNumber || 0))
     .map(l => `<option value="${l.id}">Lot ${String(l.lotNumber).padStart(3, '0')} - ${escapeHtml(l.title || '')}</option>`).join('');
-  if (keep && lots.some(l => l.id === keep)) sel.value = keep;
+  if (keep && (keep === '__all__' || lots.some(l => l.id === keep))) sel.value = keep;
+  syncPrintControls();
 }
-function printBidSheet() {
+function syncPrintControls() {
+  const v = document.getElementById('printLot').value;
+  const single = v !== '__all__';
+  document.getElementById('printHigh').disabled = !single;
+  document.getElementById('printInc').disabled = !single;
+  document.getElementById('printHint').textContent = single
+    ? 'Anything you type in the two optional boxes is printed on the sheet and overrides the system value.'
+    : 'All lots: each sheet gets its own lot number, name and minimum raise. The optional boxes are ignored.';
+}
+document.getElementById('printLot').addEventListener('change', syncPrintControls);
+
+function bidSheetHtml(lot, mode, ovHigh, ovInc) {
   const inr = n => '\u20B9' + Number(n).toLocaleString('en-IN');
-  const lot = lots.find(l => l.id === document.getElementById('printLot').value);
-  const stamp = new Date().toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
   const lotNumHtml = lot ? String(lot.lotNumber).padStart(3, '0') : '';
   const lotNameHtml = lot ? escapeHtml(lot.title || '') : '';
-  const lotInfoHtml = lot
-    ? `<p class="bs-note"><strong>${lot.bidCount ? 'Highest bid when this sheet was printed (' + stamp + '): ' + inr(lot.currentBid) : 'No bids yet when printed (' + stamp + '). Starting bid: ' + inr(lot.currentBid)}.</strong>
-        Your bid must be at least <strong>${inr((lot.currentBid || 0) + (lot.increment || 0))}</strong>. Bids may have come in since, so the organizers will confirm the latest highest bid.</p>`
-    : '';
+  let high = '', inc = '';
+  if (lot && mode === 'system') high = lot.currentBid || 0;
+  if (lot && mode !== 'lotonly') inc = lot.increment || 0;
+  if (ovHigh !== '') high = Number(ovHigh);
+  if (ovInc !== '') inc = Number(ovInc);
+  const highHtml = high === '' ? '' : inr(high);
+  const incHtml = inc === '' ? '' : inr(inc);
+  const minHtml = (high !== '' && inc !== '') ? inr(high + inc) : '';
   const phoneBoxes = '<span></span>'.repeat(10);
-  document.getElementById('bidsheet').innerHTML = `
+  return `
     <div class="bs">
       <div class="bs-head">
         <img src="images/jashn-logo.png" alt="" onerror="this.style.display='none'">
@@ -1167,7 +1217,9 @@ function printBidSheet() {
       <h2>The item</h2>
       <div class="bs-row"><label>Lot number</label><div class="bs-line bs-fill" style="max-width:150px;">${lotNumHtml}</div>
         <label>Item name</label><div class="bs-line bs-fill">${lotNameHtml}</div></div>
-      ${lotInfoHtml}
+      <div class="bs-row"><label>Highest bid so far (\u20B9)</label><div class="bs-line bs-fill" style="max-width:190px;">${highHtml}</div>
+        <label>Minimum raise (\u20B9)</label><div class="bs-line bs-fill" style="max-width:150px;">${incHtml}</div></div>
+      <div class="bs-row"><label>Your bid must be at least (\u20B9)</label><div class="bs-line bs-fill" style="max-width:190px;">${minHtml}</div></div>
 
       <h2>Your details</h2>
       <div class="bs-row"><label>Your name</label><div class="bs-line"></div></div>
@@ -1179,7 +1231,7 @@ function printBidSheet() {
 
       <h2>Your bid</h2>
       <div class="bs-row"><label>Bid amount (\u20B9)</label><div class="bs-line" style="max-width:200px;"></div></div>
-      <p class="bs-note">Your bid must be higher than the highest bid shown on the item, by at least the minimum raise.
+      <p class="bs-note">Your bid must be higher than the highest bid shown above, by at least the minimum raise.
         Large bids will be confirmed by a phone call first.</p>
 
       <h2>If you win</h2>
@@ -1191,6 +1243,20 @@ function printBidSheet() {
       <div class="bs-row"><label>Signature</label><div class="bs-line"></div>
         <label>Date</label><div class="bs-line" style="max-width:130px;"></div></div>
     </div>`;
+}
+function printBidSheet() {
+  const v = document.getElementById('printLot').value;
+  const mode = document.getElementById('printMode').value;
+  const copies = Math.min(50, Math.max(1, parseInt(document.getElementById('printCopies').value, 10) || 1));
+  const ovHigh = v === '__all__' ? '' : document.getElementById('printHigh').value.trim();
+  const ovInc = v === '__all__' ? '' : document.getElementById('printInc').value.trim();
+  const targets = v === '__all__'
+    ? [...lots].sort((x, y) => (x.lotNumber || 0) - (y.lotNumber || 0))
+    : [lots.find(l => l.id === v) || null];
+  if (!targets.length) { alert('There are no lots to print yet.'); return; }
+  let html = '';
+  targets.forEach(lot => { for (let i = 0; i < copies; i++) html += bidSheetHtml(lot, mode, ovHigh, ovInc); });
+  document.getElementById('bidsheet').innerHTML = html;
   document.body.classList.add('print-bidsheet');
   const done = () => { document.body.classList.remove('print-bidsheet'); window.removeEventListener('afterprint', done); };
   window.addEventListener('afterprint', done);

@@ -102,6 +102,8 @@
     border-radius:26px;box-shadow:0 12px 40px rgba(120,70,60,.2);}
   #view-splash.has-gallery .splash-hello{color:#E0685A;}
   #view-splash.has-gallery .splash-title{color:#3B2A4A;font-size:46px;}
+  .splash-cta-alt{margin-left:10px;background:rgba(255,255,255,.7)!important;color:#3B2A4A!important;box-shadow:none!important;}
+  @media (max-width:420px){.splash-cta-alt{margin-left:0;margin-top:10px;}}
   #view-splash.has-gallery .splash-cta{background:#FFB84D;color:#3B2A4A;box-shadow:0 6px 18px rgba(255,150,60,.35);}
 
   /* ---------- Instructions (soft, bright) ---------- */
@@ -494,6 +496,7 @@ window.__ld = [
       <p class="splash-hello">Thank you for being here for us &#9829;</p>
       <h1 class="splash-title">BID, SUPPORT,<br>MAKE A CHANGE</h1>
       <button class="splash-cta" id="splash-explore">See all items <span>&#8594;</span></button>
+      <button class="splash-cta splash-cta-alt" id="splash-cause" style="display:none;">The Cause <span>&#8594;</span></button>
     </div>
   </div>
 </section>
@@ -876,7 +879,11 @@ document.getElementById('splash-explore').onclick = () => {
   try { seen = !!localStorage.getItem('guide_seen'); } catch (_) {}
   showView(seen ? 'home' : 'cause');
 };
-document.getElementById('cause-continue').onclick = () => showView('guide');
+// Repeat visitors (already read the guide) also get a "The Cause" button on the welcome screen.
+const hasSeenGuide = () => { try { return !!localStorage.getItem('guide_seen'); } catch (_) { return false; } };
+if (hasSeenGuide()) document.getElementById('splash-cause').style.display = '';
+document.getElementById('splash-cause').onclick = () => showView('cause');
+document.getElementById('cause-continue').onclick = () => showView(hasSeenGuide() ? 'home' : 'guide');
 document.getElementById('guide-start').onclick = () => {
   try { localStorage.setItem('guide_seen', '1'); } catch (_) {}
   showView('home');

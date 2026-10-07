@@ -116,6 +116,10 @@
   .guide-wrap{padding:calc(30px + env(safe-area-inset-top,0px)) 20px calc(30px + env(safe-area-inset-bottom,0px));}
   .guide-eyebrow{font-size:15px;letter-spacing:.08em;font-weight:600;color:#E0685A;margin:0;}
   #view-guide h1,#view-cause h1{font-size:34px;line-height:1.1;margin:6px 0 10px;color:#3B2A4A;font-weight:500;}
+  .cause-list{list-style:none;margin:0;padding:0;display:grid;gap:10px;}
+  .cause-list li{display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:12px;background:#FFF;border:1px solid #EADFE6;
+    font-size:17px;font-weight:600;color:#3B2A4A;}
+  .cause-list .cl-dot{flex:none;width:12px;height:12px;border-radius:50%;background:#E0685A;}
   .guide-lead{font-size:17px;line-height:1.6;color:#4A3858;margin:0 0 20px;}
   .guide-h{font-size:15px;letter-spacing:.08em;font-weight:700;color:#5A4666;margin:22px 0 10px;}
   .fact,.step{display:flex;gap:12px;align-items:flex-start;background:#fff;border-radius:18px;
@@ -560,6 +564,15 @@ window.__ld = [
       <img class="cause-img" id="cause-img-3" alt="Divyatarang Educare Foundation at work">
     </div>
     <p class="guide-lead" style="margin-top:20px;">Divyatarang Educare Foundation is a non-profit, non-governmental organisation that started informally in 2013 with the aim of helping educate underprivileged children in various slum areas. It is a youth-driven organisation that also works towards women’s empowerment.</p>
+    <div class="guide-h">WHAT YOUR BID MAKES POSSIBLE</div>
+    <p class="guide-lead" style="margin-bottom:12px;">Your contributions will help us procure one or more of the items below for the NGO, giving the children a safer, more comfortable place to learn every single day.</p>
+    <ul class="cause-list">
+      <li><span class="cl-dot"></span>Student benches</li>
+      <li><span class="cl-dot"></span>Lockers for children</li>
+      <li><span class="cl-dot"></span>Long tables and chairs</li>
+      <li><span class="cl-dot"></span>Shoe racks</li>
+    </ul>
+    <p class="guide-lead" style="margin-top:16px;">Every bid, big or small, brings these essentials one step closer to the children who need them. Thank you for being part of it.</p>
     <button class="guide-cta" id="cause-continue">Continue <span>&#8594;</span></button>
   </div>
 </section>
@@ -892,6 +905,19 @@ function closeOverlaySilently(closeFn) {
   if (i !== -1) overlayStack.splice(i, 1);
   closeFn();
 }
+// html AND body are both overflow-x:hidden with height:100%, so on many browsers the BODY is the
+// scrolling element and window.scrollTo(0,0) silently does nothing. Reset every candidate, and again
+// after layout, so a new page always opens at the top.
+function resetScroll() {
+  const go = () => {
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
+  };
+  go();
+  requestAnimationFrame(go);
+}
 function showView(name, fromPop) {
   while (overlayStack.length) overlayStack.pop()();
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
@@ -904,7 +930,7 @@ function showView(name, fromPop) {
   }
   if (name === 'profile') renderProfile();
   if (name === 'results') renderResults();
-  window.scrollTo(0, 0);
+  resetScroll();
   if (!fromPop) {
     const itemId = name === 'item' ? currentItemId : null;
     const url = location.pathname + (itemId ? ('?id=' + itemId) : '');

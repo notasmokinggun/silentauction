@@ -102,8 +102,8 @@ html,body{overscroll-behavior-y:none;}
      at least ~56% of the screen and it grows to fill taller phones. On short phones the page just gets
      longer and scrolls, so the card can never cover the photo and the button is always reachable. */
   #view-splash.has-gallery .splash-gallery{display:block;position:relative;inset:auto;flex:1 0 auto;
-    min-height:clamp(300px,56vh,620px);min-height:clamp(300px,56svh,620px);border-radius:0 0 26px 26px;}
-  #view-splash.has-gallery .splash-gallery::after{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;
+    min-height:clamp(260px,46vh,560px);min-height:clamp(260px,46svh,560px);margin:0 14px;border-radius:24px;}
+  #view-splash.has-gallery .splash-gallery::after{content:none;position:absolute;inset:0;z-index:1;pointer-events:none;
     background:linear-gradient(200deg, rgba(227,122,74,.4) 0%, rgba(227,183,92,.28) 28%, transparent 55%);}
   /* A landscape photo filling this frame edge-to-edge (cover) on a tall
      phone screen means zooming in so far that almost the whole photo is
@@ -131,7 +131,11 @@ html,body{overscroll-behavior-y:none;}
     background:
       linear-gradient(to top, rgba(255,236,222,.6) 0%, rgba(255,236,222,0) 55%),
       linear-gradient(200deg, rgba(227,122,74,.4) 0%, rgba(227,183,92,.28) 28%, transparent 55%);}
-  #view-splash.has-gallery .splash-wordmark{z-index:2;color:#fff;text-shadow:0 1px 10px rgba(60,30,40,.45);}
+  /* Logo + title sit on the paper in their own band, with room above and below, so the photos start a clear gap beneath them. */
+  #view-splash.has-gallery .splash-head{display:flex;align-items:center;justify-content:space-between;gap:16px;position:relative;z-index:3;
+    padding:calc(20px + env(safe-area-inset-top,0px)) 24px 22px;}
+  #view-splash.has-gallery .splash-brand,#view-splash.has-gallery .splash-wordmark{position:static;top:auto;left:auto;right:auto;}
+  #view-splash.has-gallery .splash-wordmark{z-index:2;color:#3B2A4A;text-shadow:none;max-width:62%;font-size:19px;line-height:1.25;text-wrap:balance;}
   #view-splash.has-gallery .splash-content{z-index:2;margin:14px 14px calc(16px + env(safe-area-inset-bottom,0px));
     padding:22px 20px 22px;background:rgba(255,249,242,.86);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
     border-radius:26px;box-shadow:0 12px 40px rgba(120,70,60,.2);}
@@ -624,9 +628,11 @@ window.__ld = [
 <!-- ============ SPLASH / WELCOME ============ -->
 <section class="view active" id="view-splash">
   <div class="splash-photo">
+    <div class="splash-head">
+      <div class="splash-brand"><a class="brand" href="index.html" aria-label="Back to home"><img class="brand-img" src="images/jashn-logo.png" alt="JASHN" onerror="this.parentNode.classList.add('nologo')"></a></div>
+      <div class="splash-wordmark serif" id="splash-wordmark">Welcome to the SBS Silent Auction</div>
+    </div>
     <div class="splash-gallery" id="splash-gallery" aria-hidden="true"></div>
-    <div class="splash-brand"><a class="brand" href="index.html" aria-label="Back to home"><img class="brand-img" src="images/jashn-logo.png" alt="JASHN" onerror="this.parentNode.classList.add('nologo')"></a></div>
-    <div class="splash-wordmark serif" id="splash-wordmark">Welcome to the SBS Silent Auction</div>
     <div class="splash-content">
       <p class="splash-hello">Thank you for being here for us &#9829;</p>
       <h1 class="splash-title serif">BID, SUPPORT,<br>MAKE A CHANGE</h1>
@@ -894,7 +900,7 @@ window.__ld = [
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="firebase-init.js?v=202610071813"></script>
+<script src="firebase-init.js?v=202610071839"></script>
 <script>
 // -----------------------------------------------------------------
 // Icons — small inline SVGs, stroke = currentColor
@@ -1947,7 +1953,7 @@ document.getElementById('sheet-confirm').onclick = async () => {
 // GitHub Pages lets browsers keep index.html for a while, so a phone can sit on an old page.
 // version.json is fetched fresh (never cached); if it differs from this page's version, reload once
 // with a new web address so the browser fetches the new page. Waits while a bid is being made.
-const SITE_VERSION = '202610071813';
+const SITE_VERSION = '202610071839';
 document.getElementById('site-version').textContent = SITE_VERSION;
 async function checkForNewVersion() {
   try {

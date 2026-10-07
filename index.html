@@ -39,6 +39,8 @@ html.fsp-safari #fs-prompt .fs-arrow.bot{display:block;bottom:calc(8px + env(saf
 html.fsp-iosother #fs-prompt .fs-arrow.top{display:block;top:calc(6px + env(safe-area-inset-top,0px));left:auto;right:10px;transform:none;}
 #fs-fab{display:none;position:fixed;right:10px;bottom:calc(96px + env(safe-area-inset-bottom,0px));z-index:9;border:none;border-radius:50%;
   width:40px;height:40px;padding:0;background:#FFB84D;opacity:.7;box-shadow:0 2px 8px rgba(0,0,0,.25);cursor:pointer;align-items:center;justify-content:center;}
+html.splash-lock,html.splash-lock body{overflow:hidden;overscroll-behavior:none;}
+html.splash-lock body{height:100vh;height:100dvh;}
 #fs-fab.show{display:inline-flex;}
 #fs-fab.pulse{animation:fsp 1.4s ease-in-out 1;}
 html.fsp-on #fs-fab{display:none;}
@@ -664,6 +666,24 @@ body:not(:has(#view-home.active,#view-results.active,#view-mybids.active)) #fs-f
   sync(!seen);
 })();
 </script>
+<script>
+// Welcome page: no scrolling when everything already fits on screen. If a very short phone
+// can't fit the card, scrolling stays on so nothing is ever cut off.
+(function () {
+  var h = document.documentElement, sp = document.getElementById('view-splash');
+  if (!sp) return;
+  function fit() {
+    h.classList.remove('splash-lock');
+    if (!sp.classList.contains('active')) return;
+    if (h.scrollHeight <= window.innerHeight + 2) h.classList.add('splash-lock');
+  }
+  fit();
+  window.addEventListener('load', fit);
+  window.addEventListener('resize', fit);
+  window.addEventListener('orientationchange', function () { setTimeout(fit, 250); });
+  try { new MutationObserver(fit).observe(sp, { attributes: true, attributeFilter: ['class'] }); } catch (e) {}
+})();
+</script>
 <div id="app-loader" role="status" aria-live="polite">
   <div class="ld-mark">Welcome to the SBS Silent Auction</div>
   <div class="ld-spin" aria-hidden="true"></div>
@@ -953,7 +973,7 @@ window.__ld = [
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="firebase-init.js?v=202610071243"></script>
+<script src="firebase-init.js?v=202610071254"></script>
 <script>
 // -----------------------------------------------------------------
 // Icons — small inline SVGs, stroke = currentColor
@@ -2004,7 +2024,7 @@ document.getElementById('sheet-confirm').onclick = async () => {
 // GitHub Pages lets browsers keep index.html for a while, so a phone can sit on an old page.
 // version.json is fetched fresh (never cached); if it differs from this page's version, reload once
 // with a new web address so the browser fetches the new page. Waits while a bid is being made.
-const SITE_VERSION = '202610071243';
+const SITE_VERSION = '202610071254';
 document.getElementById('site-version').textContent = SITE_VERSION;
 async function checkForNewVersion() {
   try {

@@ -344,6 +344,8 @@ service cloud.firestore {
             ((isGuest() && request.resource.data.email.matches('^[^ @]+@[^ @]+[.][^ @]+$')) ||
              (!isGuest() && request.resource.data.email == request.auth.token.email)) &&
             request.resource.data.isGoogle == !isGuest() &&
+            // Optional (older pages omit it): the bidder's choice on having their name announced if they win.
+            (!('announceName' in request.resource.data) || request.resource.data.announceName is bool) &&
             request.resource.data.timestamp == request.time &&
             request.resource.data.amount is int &&
             request.resource.data.amount < 100000 &&
@@ -360,7 +362,7 @@ service cloud.firestore {
         // bidCount + 1).
         function normalBid() {
           return request.resource.data.keys().hasOnly(
-              ['name', 'phone', 'email', 'amount', 'uid', 'isGoogle', 'deviceId', 'timestamp', 'childName', 'classSection', 'admissionNumber']) &&
+              ['name', 'phone', 'email', 'amount', 'uid', 'isGoogle', 'deviceId', 'timestamp', 'childName', 'classSection', 'admissionNumber', 'announceName']) &&
             request.resource.data.amount <= 20000 &&
             getAfter(/databases/$(database)/documents/items/$(itemId)).data.currentBid == request.resource.data.amount &&
             getAfter(/databases/$(database)/documents/items/$(itemId)).data.currentBidderUid == request.auth.uid &&
@@ -373,7 +375,7 @@ service cloud.firestore {
         function heldBid() {
           return bidId == 'hold_' + request.auth.uid &&
             request.resource.data.keys().hasOnly(
-              ['name', 'phone', 'email', 'amount', 'uid', 'isGoogle', 'deviceId', 'timestamp', 'childName', 'classSection', 'admissionNumber', 'status']) &&
+              ['name', 'phone', 'email', 'amount', 'uid', 'isGoogle', 'deviceId', 'timestamp', 'childName', 'classSection', 'admissionNumber', 'announceName', 'status']) &&
             request.resource.data.status == 'pending' &&
             request.resource.data.amount > 20000 &&
             get(/databases/$(database)/documents/items/$(itemId)).data.active == true &&

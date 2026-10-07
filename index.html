@@ -233,14 +233,35 @@ html,body{overscroll-behavior-y:none;}
   .pill{flex:none;padding:9px 16px;border-radius:20px;border:1px solid var(--border);
     background:var(--surface);color:var(--muted);font-size:16px;font-weight:500;cursor:pointer;white-space:nowrap;}
   .pill.on{background:var(--cream);color:#1B140A;border-color:var(--cream);}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:0 20px 20px;}
-  .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;cursor:pointer;}
-  .card .img{width:100%;aspect-ratio:1/1;object-fit:cover;background:var(--surface2);}
-  .card .body{padding:10px 12px 13px;}
-  .card .title{font-size:17px;font-weight:600;margin:0 0 6px;line-height:1.25;
+  /* ---- Catalogue grid (Operate mode: scan, compare, tap) ---- */
+  :root{--ring:0 0 0 1px rgba(255,255,255,.07),0 1px 2px -1px rgba(0,0,0,.5),0 6px 14px -6px rgba(0,0,0,.5);}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:4px 14px 28px;}
+  @media (min-width:640px){.grid{grid-template-columns:repeat(3,1fr);gap:16px;padding:4px 24px 32px;}}
+  .card{background:var(--surface);border-radius:20px;padding:6px;box-shadow:var(--ring);cursor:pointer;overflow:hidden;
+    display:flex;flex-direction:column;transition:scale 150ms ease-out,box-shadow 150ms ease-out;animation:cardIn 420ms ease-out backwards;}
+  .card:active{scale:.98;}
+  .card:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
+  .card:nth-child(2){animation-delay:60ms}.card:nth-child(3){animation-delay:120ms}.card:nth-child(4){animation-delay:180ms}
+  .card:nth-child(5){animation-delay:240ms}.card:nth-child(n+6){animation-delay:300ms}
+  @keyframes cardIn{from{opacity:0;transform:translateY(12px);}}
+  @media (prefers-reduced-motion:reduce){.card{animation:none;transition:none;}}
+  .card .media{position:relative;border-radius:14px;overflow:hidden;background:var(--surface2);}
+  .card .img{display:block;width:100%;aspect-ratio:4/5;object-fit:cover;outline:1px solid rgba(255,255,255,.1);outline-offset:-1px;}
+  .card .left{position:absolute;left:8px;bottom:8px;margin:0;padding:5px 10px;border-radius:999px;font-size:13px;font-weight:700;
+    background:rgba(14,12,10,.82);color:var(--cream);}
+  .card .left:empty{display:none;}
+  .card .body{padding:10px 8px 8px;display:flex;flex-direction:column;gap:6px;flex:1;}
+  .card .title{margin:0;font-size:16px;font-weight:700;line-height:1.25;text-wrap:balance;overflow-wrap:anywhere;
     display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
-  .card .price{font-size:17px;font-weight:600;margin:0 0 2px;}
-  .card .left{font-size:14px;color:var(--muted);}
+  .card .pricebox{margin-top:auto;display:flex;flex-direction:column;gap:1px;}
+  .card .lbl{font-size:13px;color:var(--muted);font-weight:500;}
+  .card .price{margin:0;font-size:21px;font-weight:800;line-height:1.1;color:var(--gold);font-family:var(--display);}
+  .card.is-closed .img{filter:grayscale(.6) brightness(.8);}
+  .card.is-closed .lbl{color:var(--muted);}
+  /* filter pills: stay in reach while you scroll */
+  .pills{position:sticky;top:0;z-index:15;background:linear-gradient(var(--bg) 82%,transparent);padding:calc(10px + env(safe-area-inset-top,0px)) 14px 12px;}
+  .pill{border:none;box-shadow:var(--ring);}
+  .pill.on{box-shadow:none;font-weight:700;}
   .empty-state{padding:60px 24px;text-align:center;color:var(--muted);}
   .load-error{padding:40px 24px;text-align:center;}
   .load-error p{color:var(--muted);font-size:17px;margin-bottom:14px;}
@@ -873,7 +894,7 @@ window.__ld = [
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="firebase-init.js?v=202610071809"></script>
+<script src="firebase-init.js?v=202610071813"></script>
 <script>
 // -----------------------------------------------------------------
 // Icons — small inline SVGs, stroke = currentColor
@@ -1392,11 +1413,11 @@ function createCard(it) {
   card.setAttribute('role', 'button');
   card.tabIndex = 0;
   card.innerHTML = `
-      <img class="img" alt="" loading="lazy" decoding="async" onerror="this.style.visibility='hidden'">
+      <div class="media"><img class="img" alt="" loading="lazy" decoding="async" onerror="this.style.visibility='hidden'">
+        <p class="left" data-endsat></p></div>
       <div class="body">
         <p class="title"></p>
-        <p class="price"></p>
-        <p class="left" data-endsat></p>
+        <div class="pricebox"><span class="lbl"></span><p class="price"></p></div>
       </div>`;
   card.onclick = () => openItem(card.dataset.id);
   card.onkeydown = onActivateKey;
@@ -1411,6 +1432,8 @@ function updateCard(card, it) {
   card.setAttribute('aria-label', it.title || '');
   const set = (sel, txt) => { const el = card.querySelector(sel); if (el.textContent !== txt) el.textContent = txt; };
   set('.title', it.title || '');
+  card.classList.toggle('is-closed', isClosed(it));
+  set('.lbl', isClosed(it) ? (it.winnerAmount != null ? 'Sold for' : 'Closed') : 'Current bid');
   set('.price', money(isClosed(it) && it.winnerAmount != null ? it.winnerAmount : it.currentBid));
   set('[data-endsat]', gridTimeLabel(it));
 }
@@ -1924,7 +1947,7 @@ document.getElementById('sheet-confirm').onclick = async () => {
 // GitHub Pages lets browsers keep index.html for a while, so a phone can sit on an old page.
 // version.json is fetched fresh (never cached); if it differs from this page's version, reload once
 // with a new web address so the browser fetches the new page. Waits while a bid is being made.
-const SITE_VERSION = '202610071809';
+const SITE_VERSION = '202610071813';
 document.getElementById('site-version').textContent = SITE_VERSION;
 async function checkForNewVersion() {
   try {

@@ -676,7 +676,7 @@ window.__ld = [
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="firebase-init.js?v=20261007c"></script>
+<script src="firebase-init.js?v=20261007e"></script>
 <script>
 // -----------------------------------------------------------------
 // Icons — small inline SVGs, stroke = currentColor
@@ -956,6 +956,10 @@ function renderGuestEmailForms() {
 auth.onAuthStateChanged(u => {
   // An anonymous account with no email on this device is not a usable sign-in.
   if (u && u.isAnonymous && !guestEmail()) { auth.signOut(); u = null; }
+  if (u && !u.isAnonymous && !(u.providerData || []).some(p => p.providerId === 'google.com')) {
+    console.info('Signed in with a non-bidder account (e.g. admin email/password); bidding needs Google or email sign-in.');
+    u = null; // not signed out, so the admin page keeps its session
+  }
   googleUser = u || null;
   renderProfile();
   if (sheet && sheet.classList.contains('open')) updateSheetAuthGate();
@@ -1576,8 +1580,10 @@ document.getElementById('sheet-confirm').onclick = async () => {
           // Remember the previous leader so this bid can be undone for 1 minute.
           // Left out on the fallback attempt below (older published rules).
           ...(withUndo ? {
-            prevBid: it.currentBid, prevBidderName: it.currentBidderName ?? '',
-            prevBidderUid: it.currentBidderUid ?? null, prevKnown: true, lastBidId: bidRef.id,
+            prevBid: it.currentBid,
+            prevBidderName: ('currentBidderName' in it) ? it.currentBidderName : '',
+            prevBidderUid: ('currentBidderUid' in it) ? it.currentBidderUid : null,
+            prevKnown: true, lastBidId: bidRef.id,
           } : {}),
         });
         tx.set(bidRef, fields);
@@ -1591,9 +1597,9 @@ document.getElementById('sheet-confirm').onclick = async () => {
     // bidding still works while the newest rules are not published yet (undo is skipped then).
     let undoOk = true;
     try { await runBid(true); }
-    catch (e) { if (e.code === 'permission-denied') { undoOk = false; await runBid(false); } else throw e; }
+    catch (e) { if (e.code === 'permission-denied') { console.warn('Bid with undo details was rejected:', e.code, e.message); undoOk = false; await runBid(false); } else throw e; }
     recordMyBid(sheetItem.id, bidRef.id, amount, held ? 'pending' : null, googleUser.uid);
-    undoInfo = (held || !undoOk) ? null : { itemId: sheetItem.id, bidId: bidRef.id, until: Date.now() + UNDO_SECONDS * 1000 };
+    undoInfo = (held || !undoOk || closesWithinTenMin(sheetItem)) ? null : { itemId: sheetItem.id, bidId: bidRef.id, until: Date.now() + UNDO_SECONDS * 1000 };
     closeOverlaySilently(closeBidSheet);
     document.getElementById('success-msg').textContent = held
       ? `Your bid of ${money(amount)} on ${sheetItem.title} is on hold. Our team will call you on ${phone} to confirm it. It won't count as the highest bid until you do.`
@@ -1603,7 +1609,8 @@ document.getElementById('sheet-confirm').onclick = async () => {
     refreshUndoUI();
   } catch (e) {
     if (e.code === 'permission-denied') {
-      errEl.textContent = "Your bid didn't go through. Please wait a few seconds and try again. If it keeps happening, ask an organizer for help.";
+      console.error('Bid rejected:', e.code, e.message);
+      errEl.textContent = "Your bid didn't go through (permission-denied). Please wait a few seconds and try again. If it keeps happening, ask an organizer for help.";
     } else {
       errEl.textContent = e.message || 'Could not place that bid. Try again.';
     }
@@ -1614,7 +1621,15 @@ document.getElementById('sheet-confirm').onclick = async () => {
 
 // ---- Undo a bid for 1 minute (only while it is still the highest bid) ----
 // Keep in sync with the 60 seconds in firestore.rules (bidderUndo).
-function undoActive() { return !!(undoInfo && Date.now() < undoInfo.until); }
+function closesWithinTenMin(it) {
+  const e = it && it.endsAt;
+  if (!e) return false;
+  const t = e.toDate ? e.toDate().getTime() : new Date(e).getTime();
+  return Number.isFinite(t) && t - Date.now() < 10 * 60 * 1000; // keep in sync with rules (bidderUndo)
+}
+function undoActive() {
+  return !!(undoInfo && Date.now() < undoInfo.until && !closesWithinTenMin(lots.find(l => l.id === undoInfo.itemId)));
+}
 function undoLabel() {
   const s = Math.max(0, Math.ceil((undoInfo.until - Date.now()) / 1000));
   return `Undo this bid (0:${String(s).padStart(2, '0')})`;
@@ -1649,8 +1664,9 @@ async function undoMyBid() {
         throw new Error("Someone has bid higher, so this bid can't be undone now.");
       }
       tx.update(itemRef, {
-        currentBid: it.prevBid, currentBidderName: it.prevBidderName ?? '',
-        currentBidderUid: it.prevBidderUid ?? null, bidCount: Math.max(0, (it.bidCount || 1) - 1),
+        currentBid: it.prevBid,
+        currentBidderName: it.prevBidderName === undefined ? '' : it.prevBidderName,
+        currentBidderUid: it.prevBidderUid === undefined ? null : it.prevBidderUid, bidCount: Math.max(0, (it.bidCount || 1) - 1),
         prevKnown: false,
       });
       tx.delete(bidRef);

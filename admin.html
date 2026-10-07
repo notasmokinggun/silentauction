@@ -157,8 +157,6 @@
   .bs-boxes span{width:24px;height:28px;border:1px solid #000;display:block;}
   .bs-sq{display:inline-block;width:16px;height:16px;border:1.5px solid #000;vertical-align:-3px;margin:0 6px 0 14px;}
   .bs-note{font-size:10.5pt;margin:4px 0 0;}
-  .bs-office{margin-top:16px;border:1.5px dashed #000;padding:8px 12px 10px;}
-  .bs-office h3{margin:0 0 4px;font-size:10.5pt;letter-spacing:.08em;text-transform:uppercase;color:#000;}
   body.print-bidsheet #qrsheet{display:none !important;}
   @media print{
     body.print-bidsheet *{visibility:hidden;}
@@ -1179,8 +1177,7 @@ function printBidSheet() {
         <span class="bs-note" style="margin:0;">e.g. 10-B</span></div>
 
       <h2>Your bid</h2>
-      <div class="bs-row"><label>Bid amount (\u20B9) in figures</label><div class="bs-line" style="max-width:200px;"></div></div>
-      <div class="bs-row"><label>In words</label><div class="bs-line"></div></div>
+      <div class="bs-row"><label>Bid amount (\u20B9)</label><div class="bs-line" style="max-width:200px;"></div></div>
       <p class="bs-note">Your bid must be higher than the highest bid shown on the item, by at least the minimum raise.
         Large bids will be confirmed by a phone call first.</p>
 
@@ -1192,15 +1189,6 @@ function printBidSheet() {
       <p class="bs-note" style="margin-bottom:8px;"><span class="bs-sq" style="margin-left:0;"></span>I am 18 or older. I understand my bid is a promise to pay if I win.</p>
       <div class="bs-row"><label>Signature</label><div class="bs-line"></div>
         <label>Date</label><div class="bs-line" style="max-width:130px;"></div></div>
-
-      <div class="bs-office">
-        <h3>For the organisers only</h3>
-        <div class="bs-row" style="margin:8px 0 2px;"><label>Received by</label><div class="bs-line"></div>
-          <label>Time</label><div class="bs-line" style="max-width:110px;"></div></div>
-        <div class="bs-row" style="margin:8px 0 0;">
-          <span><span class="bs-sq" style="margin-left:0;"></span>Confirmed by call</span>
-          <span><span class="bs-sq"></span>Entered online</span></div>
-      </div>
     </div>`;
   document.body.classList.add('print-bidsheet');
   const done = () => { document.body.classList.remove('print-bidsheet'); window.removeEventListener('afterprint', done); };

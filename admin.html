@@ -19,6 +19,10 @@
   }
   *{box-sizing:border-box;}
   html,body{margin:0;background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;}
+  body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-variant-numeric:tabular-nums;}
+  h1,h2,h3{text-wrap:balance;}
+  p{text-wrap:pretty;}
+  @media (prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;}}
   .serif,h1,h2,h3{font-family:var(--display);}
   h1,h2{font-weight:600;}
   a{color:inherit;}
@@ -28,11 +32,11 @@
   .gate{min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;
     text-align:center;padding:40px;}
   .gbtn{padding:12px 22px;border:1px solid var(--border);background:var(--surface);color:var(--text);
-    font-size:15px;border-radius:10px;}
+    font-size:15px;border-radius:12px;}
   .uid{font-family:monospace;background:var(--surface);border:1px solid var(--border);padding:10px;
     word-break:break-all;font-size:13px;margin:14px 0;border-radius:8px;}
   .gate form{width:100%;max-width:320px;text-align:left;}
-  .gate input{width:100%;padding:12px 13px;border-radius:9px;border:1px solid var(--border);
+  .gate input{width:100%;padding:12px 13px;border-radius:8px;border:1px solid var(--border);
     background:var(--surface2);color:var(--text);font-size:14px;}
   .gate-err{color:var(--red);font-size:12.5px;margin-top:12px;min-height:16px;}
   .gate-hint{font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:14px;max-width:340px;}
@@ -44,7 +48,7 @@
   .sidebar{width:230px;flex:none;background:var(--bg2);border-right:1px solid var(--border);
     padding:22px 14px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;}
   .sidebar .wordmark{font-size:19px;padding:0 10px 22px;}
-  .navitem{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:10px;
+  .navitem{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:12px;
     color:var(--muted);font-size:14px;cursor:pointer;margin-bottom:2px;}
   .navitem svg{flex:none;}
   .navitem.on{background:var(--surface);color:var(--text);}
@@ -55,7 +59,7 @@
   .topbar{display:flex;align-items:center;gap:14px;padding:18px 28px;border-bottom:1px solid var(--border);}
   .topbar .searchwrap{flex:1;position:relative;max-width:420px;}
   .topbar .searchwrap svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--muted);}
-  .topbar input{width:100%;padding:10px 14px 10px 38px;border-radius:10px;border:1px solid var(--border);
+  .topbar input{width:100%;padding:10px 14px 10px 38px;border-radius:12px;border:1px solid var(--border);
     background:var(--surface);color:var(--text);font-size:13px;}
   .topbar .avatar{width:32px;height:32px;border-radius:50%;background:var(--gold);color:#1B140A;
     display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex:none;}
@@ -66,28 +70,28 @@
   .panel .sub{font-size:13px;color:var(--muted);margin:0 0 22px;}
 
   .statgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
-  .statcard{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;}
+  .statcard{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px;}
   .statcard .lbl{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-bottom:10px;}
   .statcard .val{font-size:24px;font-weight:600;}
 
   .panelgrid{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;align-items:start;}
-  .block{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;}
+  .block{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px;}
   .block h2{font-size:15px;margin:0 0 14px;}
   table{width:100%;border-collapse:collapse;font-size:13px;}
-  th{text-align:left;color:var(--muted);font-weight:500;font-size:11px;text-transform:uppercase;
+  th{text-align:left;color:var(--muted);font-weight:500;font-size:12px;text-transform:uppercase;
     letter-spacing:.03em;padding:0 8px 10px;}
   td{padding:9px 8px;border-top:1px solid var(--border);}
   .chart-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
   select{background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;
     padding:6px 10px;font-size:12px;}
 
-  fieldset{border:1px solid var(--border);border-radius:14px;padding:18px;background:var(--surface);}
+  fieldset{border:1px solid var(--border);border-radius:16px;padding:18px;background:var(--surface);}
   legend{font-weight:600;font-size:15px;padding:0 6px;}
   label{display:block;font-size:12px;color:var(--muted);margin:12px 0 4px;}
-  .form-row input, .form-row textarea{width:100%;padding:10px;border-radius:9px;border:1px solid var(--border);
+  .form-row input, .form-row textarea{width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);
     background:var(--surface2);color:var(--text);font-size:14px;}
   textarea{resize:vertical;min-height:70px;}
-  .charcount{font-size:11px;color:var(--muted);text-align:right;margin-top:2px;}
+  .charcount{font-size:12px;color:var(--muted);text-align:right;margin-top:2px;}
   .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
   .photo-picker{display:flex;gap:12px;align-items:center;margin-top:6px;}
   .photo-preview{width:64px;height:64px;object-fit:cover;background:var(--surface2);flex:none;border-radius:8px;
@@ -100,10 +104,10 @@
   .upload-status{font-size:12px;color:var(--gold);margin-top:6px;}
   .form-actions{display:flex;gap:10px;margin-top:16px;}
   .btn-primary{flex:1;padding:12px;background:var(--cream);border:none;color:#1B140A;font-weight:700;
-    font-size:14px;border-radius:10px;}
+    font-size:14px;border-radius:12px;}
   .btn-primary[disabled]{opacity:.5;}
   .btn-cancel{padding:12px 16px;background:none;border:1px solid var(--border);color:var(--text);
-    border-radius:10px;font-size:14px;display:none;}
+    border-radius:12px;font-size:14px;display:none;}
   .btn-ghost{padding:9px 13px;background:var(--surface2);border:1px solid var(--border);color:var(--text);
     border-radius:8px;font-size:12px;}
   .btn-danger{color:var(--red);border-color:var(--red);}
@@ -126,18 +130,18 @@
   .bidrow:first-child{border-top:none;}
   .bidrow .rank{width:20px;color:var(--muted);flex:none;}
   .bidrow .who{flex:1;}
-  .bidrow .who .g{font-size:11px;color:var(--muted);}
-  .bidrow .who .c{font-size:11px;color:var(--muted);display:block;}
+  .bidrow .who .g{font-size:12px;color:var(--muted);}
+  .bidrow .who .c{font-size:12px;color:var(--muted);display:block;}
   .bidrow .amt{font-weight:600;width:80px;text-align:right;flex:none;}
-  .hold-badge{background:var(--red);color:#fff;border-radius:999px;font-size:11px;font-weight:700;padding:1px 7px;margin-left:6px;}
-  .hold-banner{background:#2A1A18;border:1px solid var(--red);color:var(--text);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:13px;}
+  .hold-badge{background:var(--red);color:#fff;border-radius:999px;font-size:12px;font-weight:700;padding:1px 7px;margin-left:6px;}
+  .hold-banner{background:#2A1A18;border:1px solid var(--red);color:var(--text);border-radius:12px;padding:10px 12px;margin-bottom:14px;font-size:13px;}
   .bidrow.onhold{background:#2A1A18;margin:0 -6px;padding:6px;border-radius:8px;}
   .bidrow.revoked{opacity:.55;}
-  .tag-hold{color:var(--red);font-weight:600;font-size:11px;}
-  #admin-banner{display:none;background:#2A1A18;border:1px solid var(--red);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:13px;}
+  .tag-hold{color:var(--red);font-weight:600;font-size:12px;}
+  #admin-banner{display:none;background:#2A1A18;border:1px solid var(--red);border-radius:12px;padding:10px 12px;margin-bottom:14px;font-size:13px;}
   .bidrow.iswinner{background:#2A2416;margin:0 -6px;padding:6px;border-radius:8px;}
-  .bidrow button{flex:none;padding:5px 9px;font-size:11px;border:1px solid var(--border);
-    background:var(--surface2);color:var(--text);border-radius:6px;}
+  .bidrow button{flex:none;padding:5px 9px;font-size:12px;border:1px solid var(--border);
+    background:var(--surface2);color:var(--text);border-radius:8px;}
   .bidrow button.set{background:var(--gold);border-color:var(--gold);color:#1B140A;}
   .bidlist .empty{font-size:13px;color:var(--muted);padding:6px 0;}
 
@@ -323,7 +327,7 @@
                 <div style="flex:1;">
                   <label class="filebtn">Choose photo<input type="file" id="f-file" accept="image/*"></label>
                   <button type="button" class="urltoggle" id="urltoggle">or paste an image URL</button>
-                  <div id="url-wrap" style="display:none;margin-top:8px;"><input class="form-row" id="f-img" placeholder="https://…" style="width:100%;padding:10px;border-radius:9px;border:1px solid var(--border);background:var(--surface2);color:var(--text);"></div>
+                  <div id="url-wrap" style="display:none;margin-top:8px;"><input class="form-row" id="f-img" placeholder="https://…" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);"></div>
                   <div class="upload-status" id="upload-status"></div>
                 </div>
               </div>
@@ -887,7 +891,7 @@ function renderLots() {
           <button class="btn-ghost btn-danger" data-act="delete" data-id="${it.id}">Delete</button>
         </div>
         <div class="actions" style="margin-top:6px;">
-          <span style="font-size:11px;color:var(--muted);align-self:center;">Extend deadline:</span>
+          <span style="font-size:12px;color:var(--muted);align-self:center;">Extend deadline:</span>
           <button class="btn-ghost" data-extend="${it.id}" data-secs="900">+15m</button>
           <button class="btn-ghost" data-extend="${it.id}" data-secs="3600">+1h</button>
           <button class="btn-ghost" data-extend="${it.id}" data-secs="86400">+1d</button>

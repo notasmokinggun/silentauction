@@ -17,9 +17,13 @@
   }
   *{box-sizing:border-box;}
   html,body{margin:0;background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:17px;line-height:1.45;}
+  body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-variant-numeric:tabular-nums;}
+  h1,h2,h3{text-wrap:balance;}
+  p{text-wrap:pretty;}
+  @media (prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;}}
   .serif,h1,h2,h3{font-family:var(--display);}
   button{font-family:inherit;cursor:pointer;}
-  input,select{font-family:inherit;font-size:17px;width:100%;padding:13px 14px;border-radius:10px;
+  input,select{font-family:inherit;font-size:17px;width:100%;padding:13px 14px;border-radius:12px;
     border:1px solid var(--border);background:var(--surface);color:var(--text);}
   input:focus,select:focus,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
   label.f{display:block;font-weight:600;margin:16px 0 6px;}
@@ -30,7 +34,7 @@
   .head h1{font-size:23px;margin:0;font-weight:600;}
   .who{display:flex;justify-content:space-between;align-items:center;gap:10px;color:var(--muted);font-size:15px;margin-bottom:8px;}
   .linkbtn{background:none;border:none;color:var(--cream);text-decoration:underline;font-size:15px;padding:6px;}
-  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-top:12px;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px 16px;margin-top:12px;}
   .card b{color:var(--cream);}
   .btn{display:flex;align-items:center;justify-content:center;width:100%;padding:15px;border:none;border-radius:12px;
     font-weight:600;font-size:17px;margin-top:18px;}

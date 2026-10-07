@@ -10,7 +10,8 @@
       "*.md",
       "package*.json",
       "firestore.rules",
-      "firestore.indexes.json"
+      "firestore.indexes.json",
+      "design/**"
     ],
     "headers": [
       {

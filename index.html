@@ -664,7 +664,7 @@ window.__ld = [
 <!-- ============ Success ============ -->
 <div class="success-overlay" id="success-overlay">
   <div class="success-badge" id="success-badge"></div>
-  <h1 class="serif">Your bid is placed!</h1>
+  <h1 class="serif" id="success-title">Thank you!</h1>
   <p id="success-msg"></p>
   <div class="success-actions">
     <button class="cta cta-cream" id="success-view">See this item</button>
@@ -1601,9 +1601,11 @@ document.getElementById('sheet-confirm').onclick = async () => {
     recordMyBid(sheetItem.id, bidRef.id, amount, held ? 'pending' : null, googleUser.uid);
     undoInfo = (held || !undoOk || closesWithinTenMin(sheetItem)) ? null : { itemId: sheetItem.id, bidId: bidRef.id, until: Date.now() + UNDO_SECONDS * 1000 };
     closeOverlaySilently(closeBidSheet);
+    const firstName = (name || '').trim().split(/\s+/)[0];
+    document.getElementById('success-title').textContent = firstName ? `Thank you, ${firstName}!` : 'Thank you!';
     document.getElementById('success-msg').textContent = held
-      ? `Your bid of ${money(amount)} on ${sheetItem.title} is on hold. Our team will call you on ${phone} to confirm it. It won't count as the highest bid until you do.`
-      : `Your bid of ${money(amount)} has been placed on ${sheetItem.title}.`;
+      ? `Your bid of ${money(amount)} on ${sheetItem.title} is on hold. Our team will call you on ${phone} to confirm it. It won't count as the highest bid until you do. Thank you so much for your generosity.`
+      : `Your bid of ${money(amount)} on ${sheetItem.title} has been placed. Thank you for being here and for supporting us.`;
     document.getElementById('success-overlay').classList.add('open');
     openOverlay(closeSuccess);
     refreshUndoUI();

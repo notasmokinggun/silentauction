@@ -274,8 +274,10 @@
                 <input id="f-cat" list="cat-options" placeholder="Art, Experiences, Sports…" maxlength="40">
                 <datalist id="cat-options"><option value="Art"><option value="Experiences"><option value="Sports"></datalist>
               </div>
-              <div class="form-row"><label for="f-desc">Description <span style="font-weight:400;">(multiple paragraphs OK, leave a blank line between them)</span></label>
-                <textarea id="f-desc" maxlength="4000" style="min-height:150px;"></textarea><div class="charcount" id="desc-count">0 / 4000</div></div>
+              <div class="form-row"><label for="f-desc">Summary <span style="font-weight:400;">(1–2 sentences — this is what shows on the lot before "Read more")</span></label>
+                <textarea id="f-desc" maxlength="300" style="min-height:60px;"></textarea><div class="charcount" id="desc-count">0 / 300</div></div>
+              <div class="form-row"><label for="f-details">Full details <span style="font-weight:400;">(optional — shown when a bidder taps "Read more"; multiple paragraphs OK, blank line between them)</span></label>
+                <textarea id="f-details" maxlength="4000" style="min-height:150px;"></textarea><div class="charcount" id="details-count">0 / 4000</div></div>
               <label>Photo</label>
               <div class="photo-picker">
                 <img class="photo-preview" id="photo-preview" alt="">
@@ -689,6 +691,24 @@ function svgAreaChart(values, labels) {
 // -----------------------------------------------------------------
 // Items panel (add/edit/delete + photo)
 // -----------------------------------------------------------------
+// The "Extend deadline" buttons existed with no visible deadline to extend
+// FROM — you had to open Edit just to see what the current cutoff even
+// was. Show it plainly on every row instead.
+function lotDeadlineText(it) {
+  if (!it.endsAt) return '<span style="color:var(--muted);">No deadline set</span>';
+  const end = it.endsAt.toDate ? it.endsAt.toDate() : new Date(it.endsAt);
+  const dt = end.toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  const diff = end.getTime() - Date.now();
+  if (diff <= 0) return `Closed ${dt}`;
+  const totalMin = Math.floor(diff / 60000);
+  const days = Math.floor(totalMin / 1440), hours = Math.floor((totalMin % 1440) / 60), mins = totalMin % 60;
+  const left = days > 0 ? `${days}d ${hours}h left` : hours > 0 ? `${hours}h ${mins}m left` : `${mins}m left`;
+  return `Closes ${dt} · <span style="color:var(--gold);">${left}</span>`;
+}
+
+if (!window.__lotDeadlineTicker) {
+  window.__lotDeadlineTicker = setInterval(() => { if (typeof renderLots === 'function') renderLots(); }, 60000);
+}
 function renderLots() {
   const el = document.getElementById('lots');
   const list = itemsSearchTerm
@@ -705,6 +725,7 @@ function renderLots() {
         <div class="meta">${money(it.currentBid)} · ${it.bidCount || 0} bid(s)${it.category ? ' · ' + escapeHtml(it.category) : ''}
           ${it.winnerName ? ' · <span class="winner-tag">Winner: ' + escapeHtml(it.winnerName) + '</span>' + winnerConsentTag(it) : ''}
           ${isClosed(it) ? ' · <span class="closed-tag">CLOSED</span>' : ''}</div>
+        <div class="meta" style="margin-top:-6px;">${lotDeadlineText(it)}</div>
         <div class="actions">
           <a class="btn-ghost" style="text-decoration:none;" href="index.html?id=${it.id}" target="_blank">View</a>
           <button class="btn-ghost" data-act="edit" data-id="${it.id}">Edit</button>
@@ -776,6 +797,7 @@ let pendingFile = null;
 const fTitle = document.getElementById('f-title');
 const fCat = document.getElementById('f-cat');
 const fDesc = document.getElementById('f-desc');
+const fDetails = document.getElementById('f-details');
 const fImg = document.getElementById('f-img');
 const fStart = document.getElementById('f-start');
 const fInc = document.getElementById('f-inc');
@@ -789,7 +811,8 @@ const submitBtn = document.getElementById('submitLot');
 const cancelEditBtn = document.getElementById('cancelEdit');
 const addErr = document.getElementById('addErr');
 
-fDesc.addEventListener('input', () => { document.getElementById('desc-count').textContent = fDesc.value.length + ' / 4000'; });
+fDesc.addEventListener('input', () => { document.getElementById('desc-count').textContent = fDesc.value.length + ' / 300'; });
+fDetails.addEventListener('input', () => { document.getElementById('details-count').textContent = fDetails.value.length + ' / 4000'; });
 document.getElementById('urltoggle').onclick = () => { urlWrap.style.display = urlWrap.style.display === 'none' ? 'block' : 'none'; };
 fFile.addEventListener('change', () => {
   const file = fFile.files[0];
@@ -807,7 +830,9 @@ function startEdit(id) {
   fTitle.value = it.title || '';
   fCat.value = it.category || '';
   fDesc.value = it.description || '';
-  document.getElementById('desc-count').textContent = fDesc.value.length + ' / 4000';
+  document.getElementById('desc-count').textContent = fDesc.value.length + ' / 300';
+  fDetails.value = it.details || '';
+  document.getElementById('details-count').textContent = fDetails.value.length + ' / 4000';
   fImg.value = '';
   photoPreview.src = it.imageUrl || '';
   fStart.value = it.startingBid ?? it.currentBid ?? '';
@@ -862,7 +887,8 @@ function resetForm() {
   setEndsFields(null);
   photoPreview.src = '';
   urlWrap.style.display = 'none';
-  document.getElementById('desc-count').textContent = '0 / 4000';
+  document.getElementById('desc-count').textContent = '0 / 300';
+  document.getElementById('details-count').textContent = '0 / 4000';
   document.getElementById('form-legend').textContent = 'Add a lot';
   submitBtn.textContent = 'Add lot';
   cancelEditBtn.style.display = 'none';
@@ -917,6 +943,7 @@ document.getElementById('lotForm').addEventListener('submit', async (e) => {
   const title = fTitle.value.trim();
   const category = fCat.value.trim();
   const description = fDesc.value.trim();
+  const details = fDetails.value.trim();
   const start = Number(fStart.value);
   const inc = Number(fInc.value);
   if (!title || fStart.value === '' || !inc) { addErr.textContent = 'Title, starting bid and increment are required.'; return; }
@@ -945,7 +972,7 @@ document.getElementById('lotForm').addEventListener('submit', async (e) => {
 
     if (editingId) {
       const it = lots.find(l => l.id === editingId);
-      const patch = { title, category, description, imageUrl, startingBid: start, increment: inc, endsAt };
+      const patch = { title, category, description, details, imageUrl, startingBid: start, increment: inc, endsAt };
       if (!it || (it.bidCount || 0) === 0) patch.currentBid = start;
       if (fullUrl) patch.hasFullImage = true;
       else if (clearFull) patch.hasFullImage = false;
@@ -960,7 +987,7 @@ document.getElementById('lotForm').addEventListener('submit', async (e) => {
       const newRef = db.collection('items').doc();
       const batch = db.batch();
       batch.set(newRef, {
-        lotNumber: nextLotNumber, title, category, description, imageUrl,
+        lotNumber: nextLotNumber, title, category, description, details, imageUrl,
         hasFullImage: !!fullUrl,
         startingBid: start, increment: inc, currentBid: start, endsAt,
         currentBidderName: '', currentBidderUid: null, bidCount: 0, active: true,

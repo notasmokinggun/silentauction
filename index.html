@@ -13,7 +13,6 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Silent Auction">
 <style>
-html,body{overscroll-behavior-y:none;}
 #fs-prompt{display:none;position:fixed;inset:0;z-index:9500;align-items:center;justify-content:center;flex-direction:column;
   background:linear-gradient(170deg,#FFF3E4 0%,#FFE3EC 55%,#FFF1E6 100%);color:#3B2A4A;font-family:Nunito,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   padding:calc(20px + env(safe-area-inset-top,0px)) 22px calc(20px + env(safe-area-inset-bottom,0px));overflow-y:auto;text-align:center;}
@@ -40,6 +39,8 @@ html.fsp-safari #fs-prompt .fs-arrow.bot{display:block;bottom:calc(8px + env(saf
 html.fsp-iosother #fs-prompt .fs-arrow.top{display:block;top:calc(6px + env(safe-area-inset-top,0px));left:auto;right:10px;transform:none;}
 #fs-fab{display:none;position:fixed;right:10px;bottom:calc(96px + env(safe-area-inset-bottom,0px));z-index:9;border:none;border-radius:50%;
   width:40px;height:40px;padding:0;background:#FFB84D;opacity:.7;box-shadow:0 2px 8px rgba(0,0,0,.25);cursor:pointer;align-items:center;justify-content:center;}
+html.splash-lock,html.splash-lock body{overflow:hidden;overscroll-behavior:none;}
+html.splash-lock body{height:100vh;height:100dvh;}
 #fs-fab.show{display:inline-flex;}
 #fs-fab.pulse{animation:fsp 1.4s ease-in-out 1;}
 html.fsp-on #fs-fab{display:none;}
@@ -140,10 +141,7 @@ body:not(:has(#view-home.active,#view-results.active,#view-mybids.active)) #fs-f
   /* Rolling welcome gallery: images/welcome/1.jpg, 2.jpg ... If none exist,
      .has-gallery is never added and the original dark welcome shows. */
   .splash-gallery{position:absolute;inset:0;overflow:hidden;display:none;}
-  #view-splash.has-gallery .splash-gallery{display:block;position:relative;inset:auto;flex:1 0 auto;
-    min-height:clamp(280px,48vh,520px);min-height:clamp(280px,48dvh,520px);border-radius:0 0 26px 26px;}
-  #view-splash.has-gallery .splash-gallery::after{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;
-    background:linear-gradient(200deg, rgba(227,122,74,.4) 0%, rgba(227,183,92,.28) 28%, transparent 55%);}
+  #view-splash.has-gallery .splash-gallery{display:block;}
   /* A landscape photo filling this frame edge-to-edge (cover) on a tall
      phone screen means zooming in so far that almost the whole photo is
      cropped away -- a hand holding a hammer became an unrecognizable
@@ -161,17 +159,17 @@ body:not(:has(#view-home.active,#view-results.active,#view-mybids.active)) #fs-f
      meant the card sat right over the real photo's subject. Pushing the
      photo up means the card instead overlaps only the blurred gal-bg
      backdrop below it, never the sharp photo itself. */
-  .gal-fg{position:absolute;inset:0;background-size:contain;background-position:center;
+  .gal-fg{position:absolute;inset:0;background-size:contain;background-position:center 24%;
     background-repeat:no-repeat;}
   @media (prefers-reduced-motion:reduce){.gal-bg,.gal-slide.on .gal-bg{transform:none;transition:none;}}
   .splash-hello{font-size:15px;letter-spacing:.04em;color:var(--gold);margin:0 0 12px;font-weight:600;}
   #view-splash.has-gallery .splash-photo{background:#FFE7D6;}
-  #view-splash.has-gallery .splash-photo::before{content:none;z-index:1;
+  #view-splash.has-gallery .splash-photo::before{z-index:1;
     background:
       linear-gradient(to top, rgba(255,236,222,.6) 0%, rgba(255,236,222,0) 55%),
       linear-gradient(200deg, rgba(227,122,74,.4) 0%, rgba(227,183,92,.28) 28%, transparent 55%);}
   #view-splash.has-gallery .splash-wordmark{z-index:2;color:#fff;text-shadow:0 1px 10px rgba(60,30,40,.45);}
-  #view-splash.has-gallery .splash-content{z-index:2;margin:14px 14px calc(16px + env(safe-area-inset-bottom,0px));
+  #view-splash.has-gallery .splash-content{z-index:2;margin:0 14px calc(16px + env(safe-area-inset-bottom,0px));
     padding:22px 20px 22px;background:rgba(255,249,242,.86);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
     border-radius:26px;box-shadow:0 12px 40px rgba(120,70,60,.2);}
   #view-splash.has-gallery .splash-hello{color:#E0685A;}
@@ -668,6 +666,24 @@ body:not(:has(#view-home.active,#view-results.active,#view-mybids.active)) #fs-f
   sync(!seen);
 })();
 </script>
+<script>
+// Welcome page: no scrolling when everything already fits on screen. If a very short phone
+// can't fit the card, scrolling stays on so nothing is ever cut off.
+(function () {
+  var h = document.documentElement, sp = document.getElementById('view-splash');
+  if (!sp) return;
+  function fit() {
+    h.classList.remove('splash-lock');
+    if (!sp.classList.contains('active')) return;
+    if (h.scrollHeight <= window.innerHeight + 2) h.classList.add('splash-lock');
+  }
+  fit();
+  window.addEventListener('load', fit);
+  window.addEventListener('resize', fit);
+  window.addEventListener('orientationchange', function () { setTimeout(fit, 250); });
+  try { new MutationObserver(fit).observe(sp, { attributes: true, attributeFilter: ['class'] }); } catch (e) {}
+})();
+</script>
 <div id="app-loader" role="status" aria-live="polite">
   <div class="ld-mark">Welcome to the SBS Silent Auction</div>
   <div class="ld-spin" aria-hidden="true"></div>
@@ -957,7 +973,7 @@ window.__ld = [
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="firebase-init.js?v=202610071301"></script>
+<script src="firebase-init.js?v=202610071254"></script>
 <script>
 // -----------------------------------------------------------------
 // Icons — small inline SVGs, stroke = currentColor
@@ -2008,7 +2024,7 @@ document.getElementById('sheet-confirm').onclick = async () => {
 // GitHub Pages lets browsers keep index.html for a while, so a phone can sit on an old page.
 // version.json is fetched fresh (never cached); if it differs from this page's version, reload once
 // with a new web address so the browser fetches the new page. Waits while a bid is being made.
-const SITE_VERSION = '202610071301';
+const SITE_VERSION = '202610071254';
 document.getElementById('site-version').textContent = SITE_VERSION;
 async function checkForNewVersion() {
   try {

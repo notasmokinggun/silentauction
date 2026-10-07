@@ -12,13 +12,62 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Silent Auction">
+<style>
+#fs-prompt{display:none;position:fixed;inset:0;z-index:9500;align-items:center;justify-content:center;flex-direction:column;
+  background:linear-gradient(170deg,#FFF3E4 0%,#FFE3EC 55%,#FFF1E6 100%);color:#3B2A4A;font-family:Nunito,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  padding:calc(20px + env(safe-area-inset-top,0px)) 22px calc(20px + env(safe-area-inset-bottom,0px));overflow-y:auto;text-align:center;}
+html.fsp-on #fs-prompt{display:flex;}
+html.fsp-on body{overflow:hidden;}
+#fs-prompt .fs-in{width:100%;max-width:400px;margin:auto;}
+#fs-prompt .fs-ic{width:62px;height:62px;border-radius:18px;background:#FFE3C2;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;}
+#fs-prompt h2{margin:0 0 8px;font-size:27px;line-height:1.15;font-weight:800;}
+#fs-prompt p{margin:0 0 16px;font-size:16.5px;line-height:1.5;color:#4A3858;}
+#fs-prompt .fs-steps{list-style:none;margin:0 0 18px;padding:0;text-align:left;display:grid;gap:10px;}
+#fs-prompt .fs-steps li{display:flex;gap:12px;align-items:center;background:#fff;border:1px solid #EADFE6;border-radius:14px;padding:12px 14px;font-size:16px;line-height:1.35;font-weight:600;}
+#fs-prompt .fs-n{flex:none;width:28px;height:28px;border-radius:50%;background:#FFB84D;color:#3B2A4A;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:15px;}
+#fs-prompt .fs-steps svg{flex:none;vertical-align:middle;}
+#fs-prompt .fs-btn{width:100%;border:none;border-radius:14px;background:#FFB84D;color:#3B2A4A;font:800 17px Nunito,system-ui,sans-serif;padding:15px;cursor:pointer;box-shadow:0 6px 18px rgba(255,150,60,.35);}
+#fs-prompt .fs-link{display:block;width:100%;border:none;background:none;color:#6B5A78;font:600 15px Nunito,system-ui,sans-serif;padding:12px 0 2px;cursor:pointer;text-decoration:underline;}
+#fs-prompt .v-ios,#fs-prompt .v-android,#fs-prompt .v-inapp,#fs-prompt .fs-arrow{display:none;}
+html.fsp-ios #fs-prompt .v-ios{display:block;}
+html.fsp-android #fs-prompt .v-android{display:block;}
+html.fsp-inapp #fs-prompt .v-inapp{display:block;}
+html.fsp-inapp #fs-prompt .v-ios{display:none;}
+#fs-prompt .fs-arrow{position:fixed;left:50%;transform:translateX(-50%);text-align:center;font-weight:800;font-size:14px;color:#B0463A;animation:fsb 1.1s ease-in-out infinite;}
+html.fsp-safari #fs-prompt .fs-arrow.bot{display:block;bottom:calc(8px + env(safe-area-inset-bottom,0px));}
+html.fsp-iosother #fs-prompt .fs-arrow.top{display:block;top:calc(6px + env(safe-area-inset-top,0px));left:auto;right:10px;transform:none;}
+@keyframes fsb{0%,100%{margin-bottom:0;margin-top:0}50%{margin-bottom:8px;margin-top:8px}}
+</style>
+<script>
+// Decide BEFORE the page paints, so the full-screen prompt is the very first thing a phone shows
+// while the rest of the site loads behind it.
+(function () {
+  try {
+    var d = document.documentElement, ua = navigator.userAgent;
+    var ios = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    var phone = matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) <= 820;
+    var installed = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true;
+    var never = false, sess = false;
+    try { never = !!localStorage.getItem('fs_prompt_v1'); sess = !!sessionStorage.getItem('fs_prompt_s'); } catch (e) {}
+    if (!phone || installed || never || sess) return;
+    var inapp = /FBAN|FBAV|Instagram|Line\/|Snapchat|Twitter|LinkedInApp/i.test(ua);
+    d.classList.add('fsp-on');
+    if (inapp) d.classList.add('fsp-inapp');
+    else if (ios) {
+      d.classList.add('fsp-ios');
+      d.classList.add(/CriOS|FxiOS|EdgiOS|OPiOS|GSA/.test(ua) ? 'fsp-iosother' : 'fsp-safari');
+    } else d.classList.add('fsp-android');
+  } catch (e) {}
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
 <link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js">
 <link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js">
 <link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js">
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800&family=Playfair+Display:wght@700;800&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800&family=Playfair+Display:wght@700;800&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800&family=Playfair+Display:wght@700;800&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"></noscript>
 <style>
   :root{
     --display:'Nunito','IBM Plex Sans',system-ui,sans-serif;
@@ -149,17 +198,6 @@
   .terms-opt{display:flex;gap:12px;align-items:flex-start;font-size:15.5px;line-height:1.45;margin:0 0 14px;cursor:pointer;}
   .terms-opt input{width:24px;height:24px;flex:none;margin:0;}
   .terms-opt a{color:inherit;text-decoration:underline;}
-  #fs-prompt{position:fixed;inset:0;z-index:8800;display:none;align-items:flex-end;justify-content:center;background:rgba(30,20,30,.5);
-    padding:16px calc(14px + env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) calc(14px + env(safe-area-inset-left,0px));}
-  #fs-prompt.show{display:flex;}
-  #fs-prompt .fs-card{width:100%;max-width:440px;background:#FFF9F2;color:#3B2A4A;border-radius:24px;padding:22px 20px 18px;
-    box-shadow:0 18px 50px rgba(60,30,60,.4);text-align:center;}
-  #fs-prompt .fs-icon{width:54px;height:54px;border-radius:16px;background:#FFE3C2;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;}
-  #fs-prompt h2{margin:0 0 8px;font-size:22px;line-height:1.2;}
-  #fs-prompt p{margin:0 0 16px;font-size:16px;line-height:1.5;color:#4A3858;}
-  #fs-prompt .fs-go{width:100%;border:none;border-radius:14px;background:#FFB84D;color:#3B2A4A;font-weight:800;font-size:17px;padding:15px;cursor:pointer;
-    box-shadow:0 6px 18px rgba(255,150,60,.35);}
-  #fs-prompt .fs-skip{width:100%;border:none;background:none;color:#6B5A78;font-weight:600;font-size:15px;padding:12px 0 2px;cursor:pointer;}
   #storage-notice{position:fixed;left:10px;right:10px;top:calc(10px + env(safe-area-inset-top,0px));z-index:9000;display:none;
     background:#fff;color:#3B2A4A;border-radius:14px;padding:12px 14px;box-shadow:0 8px 28px rgba(60,30,60,.3);font-size:14.5px;line-height:1.45;
     max-width:560px;margin:0 auto;gap:12px;align-items:center;}
@@ -534,6 +572,52 @@
 </style>
 </head>
 <body>
+<div id="fs-prompt" role="dialog" aria-modal="true" aria-labelledby="fs-title">
+  <div class="fs-in">
+    <div class="fs-ic" aria-hidden="true"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#3B2A4A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></div>
+    <h2 id="fs-title">Best experience: full screen</h2>
+
+    <div class="v-ios">
+      <p>Add the auction to your Home Screen. It opens full screen with no browser bars, and it takes 10 seconds.</p>
+      <ol class="fs-steps">
+        <li><span class="fs-n">1</span><span>Tap the <b>Share</b> button <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2F6FED" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M8 7l4-4 4 4M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg></span></li>
+        <li><span class="fs-n">2</span><span>Scroll down, tap <b>Add to Home Screen</b> <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3B2A4A" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M12 8v8M8 12h8"/></svg></span></li>
+        <li><span class="fs-n">3</span><span>Tap <b>Add</b>, then open <b>Silent Auction</b> from your Home Screen</span></li>
+      </ol>
+    </div>
+
+    <div class="v-inapp">
+      <p>This page is open inside another app. For full screen, open it in Safari or Chrome first: tap the <b>&#8943;</b> or Share menu, then <b>Open in Browser</b>. After that, use <b>Add to Home Screen</b>.</p>
+    </div>
+
+    <div class="v-android">
+      <p>View the auction in full screen. It hides the browser bars so you see more of every item.</p>
+      <button type="button" class="fs-btn" id="fs-go">Go full screen</button>
+    </div>
+
+    <button type="button" class="fs-btn" id="fs-continue" style="margin-top:2px;">Continue to the auction</button>
+    <button type="button" class="fs-link" id="fs-never">Don't show this again</button>
+  </div>
+  <div class="fs-arrow bot">Share is down here<br>&#9660;</div>
+  <div class="fs-arrow top">&#9650;<br>Share is up here</div>
+</div>
+<script>
+(function () {
+  var d = document.documentElement;
+  function close(never) {
+    d.classList.remove('fsp-on');
+    try { sessionStorage.setItem('fs_prompt_s', '1'); if (never) localStorage.setItem('fs_prompt_v1', '1'); } catch (e) {}
+  }
+  document.getElementById('fs-continue').onclick = function () { close(false); };
+  document.getElementById('fs-never').onclick = function () { close(true); };
+  var go = document.getElementById('fs-go');
+  if (go) go.onclick = function () {
+    var r = d.requestFullscreen ? d.requestFullscreen() : d.webkitRequestFullscreen ? d.webkitRequestFullscreen() : null;
+    if (!r) { go.textContent = 'Use the browser menu: Add to Home screen'; return; }
+    Promise.resolve(r).catch(function () {}).then(function () { close(true); });
+  };
+})();
+</script>
 <div id="app-loader" role="status" aria-live="polite">
   <div class="ld-mark">Welcome to the SBS Silent Auction</div>
   <div class="ld-spin" aria-hidden="true"></div>
@@ -565,16 +649,6 @@ window.__ld = [
     </div>
   </div>
 </section>
-
-<div id="fs-prompt" role="dialog" aria-modal="true" aria-labelledby="fs-title">
-  <div class="fs-card">
-    <div class="fs-icon" aria-hidden="true"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3B2A4A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></div>
-    <h2 id="fs-title" class="serif">Best on full screen</h2>
-    <p id="fs-text">For the smoothest bidding, view the auction in full screen. It hides the browser bars so you see more of every item.</p>
-    <button type="button" class="fs-go" id="fs-go">Go full screen</button>
-    <button type="button" class="fs-skip" id="fs-skip">Not now</button>
-  </div>
-</div>
 
 <div id="storage-notice" role="region" aria-label="Storage notice">
   <span>This site stores a few things on your phone, such as your sign-in and form details, so bidding works, and your browser keeps copies of images and site files so pages load faster. No ads, no tracking. <a href="legal.html#cookies">Details</a></span>
@@ -833,7 +907,7 @@ window.__ld = [
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="firebase-init.js?v=202610071142"></script>
+<script src="firebase-init.js?v=202610071143"></script>
 <script>
 // -----------------------------------------------------------------
 // Icons — small inline SVGs, stroke = currentColor
@@ -995,38 +1069,6 @@ document.getElementById('splash-explore').onclick = () => {
   showView(seen ? 'home' : 'cause');
 };
 // One-time notice about browser storage (essential only, so informational, not a consent gate).
-// Phone-only "view in full screen" prompt, shown once per phone. Android Chrome can go full screen from
-// a button tap. iPhones cannot, so they are shown the Add to Home Screen steps instead, which opens the
-// site full screen like an app. Remembering "seen" uses the fs_prompt_v1 key (listed in the cookies policy).
-(function fullscreenPrompt() {
-  const box = document.getElementById('fs-prompt');
-  if (!box) return;
-  const de = document.documentElement;
-  const canFs = !!(de.requestFullscreen || de.webkitRequestFullscreen);
-  const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  const installed = (window.matchMedia && (matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches)) || navigator.standalone === true;
-  const phone = window.matchMedia && matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) <= 820;
-  let seen = false;
-  try { seen = !!localStorage.getItem('fs_prompt_v1'); } catch (_) {}
-  if (!phone || installed || seen || document.fullscreenElement) return;
-  const remember = () => { try { localStorage.setItem('fs_prompt_v1', '1'); } catch (_) {} };
-  const close = () => { box.classList.remove('show'); remember(); };
-  const go = document.getElementById('fs-go');
-  if (!canFs) {
-    document.getElementById('fs-text').textContent = isIos
-      ? 'Tap the Share button in Safari, then "Add to Home Screen". Open the auction from that icon and it fills the whole screen, like an app.'
-      : 'Open your browser menu and choose "Add to Home screen" or "Install app". Open the auction from that icon and it fills the whole screen.';
-    go.textContent = 'Got it';
-    go.onclick = close;
-  } else {
-    go.onclick = () => {
-      const req = de.requestFullscreen ? de.requestFullscreen() : de.webkitRequestFullscreen();
-      Promise.resolve(req).catch(() => {}).finally(close);
-    };
-  }
-  document.getElementById('fs-skip').onclick = close;
-  setTimeout(() => box.classList.add('show'), 1200);
-})();
 (function storageNotice() {
   const box = document.getElementById('storage-notice');
   let seen = false;
@@ -1916,7 +1958,7 @@ document.getElementById('sheet-confirm').onclick = async () => {
 // GitHub Pages lets browsers keep index.html for a while, so a phone can sit on an old page.
 // version.json is fetched fresh (never cached); if it differs from this page's version, reload once
 // with a new web address so the browser fetches the new page. Waits while a bid is being made.
-const SITE_VERSION = '202610071142';
+const SITE_VERSION = '202610071143';
 document.getElementById('site-version').textContent = SITE_VERSION;
 async function checkForNewVersion() {
   try {

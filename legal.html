@@ -160,13 +160,14 @@
       <tr><th>Name</th><th>Purpose</th><th>Lasts</th></tr>
       <tr><td><code>guide_seen</code></td><td>Remembers you have read &ldquo;how it works&rdquo;, so you go straight to the items next time</td><td>Until cleared</td></tr>
       <tr><td><code>storage_notice_v1</code>, <code>terms_ok_v1</code></td><td>Remembers you closed the storage notice and ticked the terms box</td><td>Until cleared</td></tr>
-      <tr><td><code>fs_prompt_v1</code></td><td>Remembers you have seen the &ldquo;best on full screen&rdquo; tip on a phone, so it is not shown again</td><td>Until cleared</td></tr>
+      <tr><td><code>fs_prompt_v1</code></td><td>Remembers you chose &ldquo;Don't show this again&rdquo; on the &ldquo;best experience: full screen&rdquo; tip</td><td>Until cleared</td></tr>
       <tr><td><code>auction_device_id</code></td><td>Random ID for this device, used for fraud and abuse limits</td><td>Until cleared</td></tr>
       <tr><td><code>my_bids</code></td><td>Your list of bids, for the My Bids tab</td><td>Until cleared</td></tr>
       <tr><td><code>auction_name</code>, <code>auction_phone</code>, <code>auction_child_name</code>, <code>auction_class_section</code>, <code>auction_guest_email</code></td><td>Pre-fill the bid form so you do not retype it</td><td>Until cleared</td></tr>
       <tr><td><code>auction_announce_&hellip;</code></td><td>Remembers your choice about announcing your name</td><td>Until cleared</td></tr>
       <tr><td>Firebase sign-in data (IndexedDB / local storage)</td><td>Keeps you signed in</td><td>Until you sign out</td></tr>
       <tr><td>Saved copies of site files (your browser's cache)</td><td>Images, fonts, scripts and page files are saved by your browser so the site loads faster on later visits. See &ldquo;Cached copies&rdquo; below</td><td>Images: up to 1 day. Pages and scripts: checked again on every visit</td></tr>
+      <tr><td><code>fs_prompt_s</code> (session storage)</td><td>Remembers you have seen the full-screen tip in this visit, so it is not shown again until you reopen the site</td><td>Until you close the tab</td></tr>
       <tr><td><code>reloaded_for</code> (session storage)</td><td>Stops the page reloading in a loop when a new version of the site is published</td><td>Until you close the tab</td></tr>
     </table>
 

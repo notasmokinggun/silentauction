@@ -1708,6 +1708,13 @@ function refreshUndoUI() {
 async function undoMyBid() {
   if (!undoActive() || !googleUser) return;
   const { itemId, bidId } = undoInfo;
+  const undoLot = lots.find(l => l.id === itemId);
+  const sure = confirm(undoLot
+    ? `Are you sure you want to undo your bid of ${money(undoLot.currentBid)} on ${undoLot.title}?`
+    : 'Are you sure you want to undo your bid?');
+  if (!sure) return;
+  // The dialog can sit open past the 1 minute window, so check again before sending anything.
+  if (!undoActive()) { alert("It's too late to undo this bid. You can only undo within 1 minute."); refreshUndoUI(); return; }
   const itemRef = db.collection('items').doc(itemId);
   const bidRef = itemRef.collection('bids').doc(bidId);
   document.querySelectorAll('#success-undo, #item-undo-btn').forEach(b => b.disabled = true);

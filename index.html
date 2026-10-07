@@ -6,7 +6,12 @@
 <title>Welcome to the SBS Silent Auction</title>
 <meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="icon" href="images/jashn-logo.png">
-<link rel="apple-touch-icon" href="images/jashn-logo.png">
+<link rel="apple-touch-icon" href="images/icon-192.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#FFF1E6">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Silent Auction">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
@@ -144,6 +149,17 @@
   .terms-opt{display:flex;gap:12px;align-items:flex-start;font-size:15.5px;line-height:1.45;margin:0 0 14px;cursor:pointer;}
   .terms-opt input{width:24px;height:24px;flex:none;margin:0;}
   .terms-opt a{color:inherit;text-decoration:underline;}
+  #fs-prompt{position:fixed;inset:0;z-index:8800;display:none;align-items:flex-end;justify-content:center;background:rgba(30,20,30,.5);
+    padding:16px calc(14px + env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) calc(14px + env(safe-area-inset-left,0px));}
+  #fs-prompt.show{display:flex;}
+  #fs-prompt .fs-card{width:100%;max-width:440px;background:#FFF9F2;color:#3B2A4A;border-radius:24px;padding:22px 20px 18px;
+    box-shadow:0 18px 50px rgba(60,30,60,.4);text-align:center;}
+  #fs-prompt .fs-icon{width:54px;height:54px;border-radius:16px;background:#FFE3C2;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;}
+  #fs-prompt h2{margin:0 0 8px;font-size:22px;line-height:1.2;}
+  #fs-prompt p{margin:0 0 16px;font-size:16px;line-height:1.5;color:#4A3858;}
+  #fs-prompt .fs-go{width:100%;border:none;border-radius:14px;background:#FFB84D;color:#3B2A4A;font-weight:800;font-size:17px;padding:15px;cursor:pointer;
+    box-shadow:0 6px 18px rgba(255,150,60,.35);}
+  #fs-prompt .fs-skip{width:100%;border:none;background:none;color:#6B5A78;font-weight:600;font-size:15px;padding:12px 0 2px;cursor:pointer;}
   #storage-notice{position:fixed;left:10px;right:10px;top:calc(10px + env(safe-area-inset-top,0px));z-index:9000;display:none;
     background:#fff;color:#3B2A4A;border-radius:14px;padding:12px 14px;box-shadow:0 8px 28px rgba(60,30,60,.3);font-size:14.5px;line-height:1.45;
     max-width:560px;margin:0 auto;gap:12px;align-items:center;}
@@ -550,6 +566,16 @@ window.__ld = [
   </div>
 </section>
 
+<div id="fs-prompt" role="dialog" aria-modal="true" aria-labelledby="fs-title">
+  <div class="fs-card">
+    <div class="fs-icon" aria-hidden="true"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3B2A4A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></div>
+    <h2 id="fs-title" class="serif">Best on full screen</h2>
+    <p id="fs-text">For the smoothest bidding, view the auction in full screen. It hides the browser bars so you see more of every item.</p>
+    <button type="button" class="fs-go" id="fs-go">Go full screen</button>
+    <button type="button" class="fs-skip" id="fs-skip">Not now</button>
+  </div>
+</div>
+
 <div id="storage-notice" role="region" aria-label="Storage notice">
   <span>This site stores a few things on your phone, such as your sign-in and form details, so bidding works, and your browser keeps copies of images and site files so pages load faster. No ads, no tracking. <a href="legal.html#cookies">Details</a></span>
   <button type="button" id="storage-notice-ok">Got it</button>
@@ -807,7 +833,7 @@ window.__ld = [
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="firebase-init.js?v=202610070842"></script>
+<script src="firebase-init.js?v=202610071142"></script>
 <script>
 // -----------------------------------------------------------------
 // Icons — small inline SVGs, stroke = currentColor
@@ -969,6 +995,38 @@ document.getElementById('splash-explore').onclick = () => {
   showView(seen ? 'home' : 'cause');
 };
 // One-time notice about browser storage (essential only, so informational, not a consent gate).
+// Phone-only "view in full screen" prompt, shown once per phone. Android Chrome can go full screen from
+// a button tap. iPhones cannot, so they are shown the Add to Home Screen steps instead, which opens the
+// site full screen like an app. Remembering "seen" uses the fs_prompt_v1 key (listed in the cookies policy).
+(function fullscreenPrompt() {
+  const box = document.getElementById('fs-prompt');
+  if (!box) return;
+  const de = document.documentElement;
+  const canFs = !!(de.requestFullscreen || de.webkitRequestFullscreen);
+  const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const installed = (window.matchMedia && (matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches)) || navigator.standalone === true;
+  const phone = window.matchMedia && matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) <= 820;
+  let seen = false;
+  try { seen = !!localStorage.getItem('fs_prompt_v1'); } catch (_) {}
+  if (!phone || installed || seen || document.fullscreenElement) return;
+  const remember = () => { try { localStorage.setItem('fs_prompt_v1', '1'); } catch (_) {} };
+  const close = () => { box.classList.remove('show'); remember(); };
+  const go = document.getElementById('fs-go');
+  if (!canFs) {
+    document.getElementById('fs-text').textContent = isIos
+      ? 'Tap the Share button in Safari, then "Add to Home Screen". Open the auction from that icon and it fills the whole screen, like an app.'
+      : 'Open your browser menu and choose "Add to Home screen" or "Install app". Open the auction from that icon and it fills the whole screen.';
+    go.textContent = 'Got it';
+    go.onclick = close;
+  } else {
+    go.onclick = () => {
+      const req = de.requestFullscreen ? de.requestFullscreen() : de.webkitRequestFullscreen();
+      Promise.resolve(req).catch(() => {}).finally(close);
+    };
+  }
+  document.getElementById('fs-skip').onclick = close;
+  setTimeout(() => box.classList.add('show'), 1200);
+})();
 (function storageNotice() {
   const box = document.getElementById('storage-notice');
   let seen = false;
@@ -1858,7 +1916,7 @@ document.getElementById('sheet-confirm').onclick = async () => {
 // GitHub Pages lets browsers keep index.html for a while, so a phone can sit on an old page.
 // version.json is fetched fresh (never cached); if it differs from this page's version, reload once
 // with a new web address so the browser fetches the new page. Waits while a bid is being made.
-const SITE_VERSION = '202610070842';
+const SITE_VERSION = '202610071142';
 document.getElementById('site-version').textContent = SITE_VERSION;
 async function checkForNewVersion() {
   try {

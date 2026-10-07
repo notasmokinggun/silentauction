@@ -703,7 +703,7 @@ function renderLots() {
       <div class="body">
         <div class="title">LOT ${String(it.lotNumber).padStart(3,'0')}: ${escapeHtml(it.title)}</div>
         <div class="meta">${money(it.currentBid)} · ${it.bidCount || 0} bid(s)${it.category ? ' · ' + escapeHtml(it.category) : ''}
-          ${it.winnerName ? ' · <span class="winner-tag">Winner: ' + escapeHtml(it.winnerName) + '</span>' : ''}
+          ${it.winnerName ? ' · <span class="winner-tag">Winner: ' + escapeHtml(it.winnerName) + '</span>' + winnerConsentTag(it) : ''}
           ${isClosed(it) ? ' · <span class="closed-tag">CLOSED</span>' : ''}</div>
         <div class="actions">
           <a class="btn-ghost" style="text-decoration:none;" href="index.html?id=${it.id}" target="_blank">View</a>
@@ -1012,7 +1012,7 @@ function renderBidsPanel() {
           <div class="title">LOT ${String(it.lotNumber).padStart(3,'0')}: ${escapeHtml(it.title)}</div>
           <div class="meta">${it.bidCount || 0} bid(s)
             ${allBids.some(b => b.itemId === it.id && b.status === 'pending') ? ' · <span class="tag-hold">ON HOLD</span>' : ''}
-            ${it.winnerName ? ' · <span class="winner-tag">Winner: ' + escapeHtml(it.winnerName) + ' (' + money(it.winnerAmount) + ')</span>' : ''}
+            ${it.winnerName ? ' · <span class="winner-tag">Winner: ' + escapeHtml(it.winnerName) + ' (' + money(it.winnerAmount) + ')</span>' + winnerConsentTag(it) : ''}
             ${it.active === false ? ' · <span class="closed-tag">CLOSED</span>' : ''}</div>
         </div>
         <button class="btn-ghost" data-toggle="${it.id}">${openBidLists.has(it.id) ? 'Hide' : 'View bids'}</button>
@@ -1036,6 +1036,8 @@ function renderBidRows(itemId) {
   const holds = all.filter(b => b.status === 'pending').sort((a, b) => bidMillis(a) - bidMillis(b));
   const revoked = all.filter(b => b.status === 'revoked');
   if (!all.length) { container.innerHTML = '<p class="empty">No bids on this lot yet.</p>'; return; }
+  const consentOf = b => b.announceName === true ? '<span class="c">📢 OK to announce name</span>'
+    : (b.announceName === false ? '<span class="c">🔒 Do NOT announce. Call privately</span>' : '');
   const contactOf = b => [b.phone ? '📞 ' + escapeHtml(b.phone) : '', b.email ? escapeHtml(b.email) : '']
     .filter(Boolean).join(' · ');
   const childOf = b => {
@@ -1047,7 +1049,7 @@ function renderBidRows(itemId) {
   const holdRows = holds.map(b => `<div class="bidrow onhold">
       <span class="rank tag-hold">HOLD</span>
       <span class="who">${escapeHtml(b.name)} <span class="g">· call to confirm</span>
-        <span class="c">${contactOf(b)}</span>${childOf(b)}${timeOf(b)}</span>
+        <span class="c">${contactOf(b)}</span>${childOf(b)}${consentOf(b)}${timeOf(b)}</span>
       <span class="amt">${money(b.amount)}</span>
       <button class="set" data-confirmhold="${b.id}">Confirm</button>
       <button class="btn-danger" data-revokehold="${b.id}">Revoke</button>
@@ -1058,7 +1060,7 @@ function renderBidRows(itemId) {
     return `<div class="bidrow ${isWinner ? 'iswinner' : ''}">
       <span class="rank">#${i + 1}</span>
       <span class="who">${escapeHtml(b.name)}${b.isGoogle ? ' <span class="g">· Google verified</span>' : ''}${b.status === 'confirmed' ? ' <span class="g">· confirmed by call</span>' : ''}
-        ${contact ? '<span class="c">' + contact + '</span>' : ''}${childOf(b)}${timeOf(b)}</span>
+        ${contact ? '<span class="c">' + contact + '</span>' : ''}${childOf(b)}${consentOf(b)}${timeOf(b)}</span>
       <span class="amt">${money(b.amount)}</span>
       <button class="${isWinner ? '' : 'set'}" data-set="${b.id}" ${isWinner ? 'disabled' : ''}>${isWinner ? 'Winner ✓' : 'Set winner'}</button>
       <button class="btn-danger" data-invalidate="${b.id}">Revoke bid</button>
@@ -1203,16 +1205,22 @@ const csvCell = c => {
   if (typeof c === 'string' && /^[=+\-@\t\r]/.test(v)) v = "'" + v;
   return `"${v.replace(/"/g, '""')}"`;
 };
+function announceText(b) { return b.announceName === true ? 'Yes' : (b.announceName === false ? 'No (call privately)' : ''); }
+function winnerConsentTag(it) {
+  const b = (typeof allBids !== 'undefined' ? allBids : []).find(x => x.id === it.winnerBidId);
+  if (!b || typeof b.announceName !== 'boolean') return '';
+  return b.announceName ? ' · <span class="winner-tag">📢 announce</span>' : ' · <span class="winner-tag">🔒 call privately, do not announce</span>';
+}
 function buildBidsCsv() {
-  const rows = [['Lot', 'Title', 'Rank', 'Bidder', 'Phone', 'Child name', 'Class & Section', 'Admission #', 'Amount', 'Bid time', 'Google verified', 'Status', 'Marked winner']];
+  const rows = [['Lot', 'Title', 'Rank', 'Bidder', 'Phone', 'Child name', 'Class & Section', 'Admission #', 'Amount', 'Bid time', 'Google verified', 'Status', 'Marked winner', 'Announce name?']];
   for (const it of lots) {
     const lotLabel = 'LOT ' + String(it.lotNumber).padStart(3, '0');
     const all = allBids.filter(b => b.itemId === it.id);
     const bids = all.filter(isLiveBid).sort((a, b) => b.amount - a.amount);
     const others = all.filter(b => !isLiveBid(b));
-    if (!all.length) { rows.push([lotLabel, it.title, '', '(no bids)', '', '', '', '', '', '', '', '', '']); continue; }
-    bids.forEach((b, i) => rows.push([lotLabel, it.title, i + 1, b.name, b.phone || '', b.childName || '', b.classSection || '', b.admissionNumber || '', b.amount, bidTimeText(b), b.isGoogle ? 'Yes' : 'No', b.status === 'confirmed' ? 'Confirmed by call' : 'Live', it.winnerBidId === b.id ? 'WINNER' : '']));
-    others.forEach(b => rows.push([lotLabel, it.title, '', b.name, b.phone || '', b.childName || '', b.classSection || '', b.admissionNumber || '', b.amount, bidTimeText(b), b.isGoogle ? 'Yes' : 'No', b.status === 'pending' ? 'ON HOLD (not counted)' : 'Hold revoked', '']));
+    if (!all.length) { rows.push([lotLabel, it.title, '', '(no bids)', '', '', '', '', '', '', '', '', '', '']); continue; }
+    bids.forEach((b, i) => rows.push([lotLabel, it.title, i + 1, b.name, b.phone || '', b.childName || '', b.classSection || '', b.admissionNumber || '', b.amount, bidTimeText(b), b.isGoogle ? 'Yes' : 'No', b.status === 'confirmed' ? 'Confirmed by call' : 'Live', it.winnerBidId === b.id ? 'WINNER' : '', announceText(b)]));
+    others.forEach(b => rows.push([lotLabel, it.title, '', b.name, b.phone || '', b.childName || '', b.classSection || '', b.admissionNumber || '', b.amount, bidTimeText(b), b.isGoogle ? 'Yes' : 'No', b.status === 'pending' ? 'ON HOLD (not counted)' : 'Hold revoked', '', announceText(b)]));
   }
   return rows.map(r => r.map(csvCell).join(',')).join('\n');
 }

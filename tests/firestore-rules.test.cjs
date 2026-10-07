@@ -326,3 +326,25 @@ test('undo is refused for someone who is not the leader, or without deleting the
   const g = bidder('u2', 'u2@example.com');
   await assertFails(setDoc(doc(g, 'items/undo2'), { currentBid: 100, currentBidderName: '', currentBidderUid: null, bidCount: 0, prevKnown: false }, { merge: true }));
 });
+
+// ── Announce-my-name choice on a bid (optional bool; older pages omit it). Not run against the emulator yet:
+// run `npm run test:rules` before publishing the rules. ──
+const consentBid = (lot, uid, extra) => {
+  const g = bidder(uid, uid + '@example.com');
+  const b = writeBatch(g);
+  const bidRef = doc(collection(g, 'items/' + lot + '/bids'));
+  b.update(doc(g, 'items/' + lot), { currentBid: 110, currentBidderName: 'A', currentBidderUid: uid, bidCount: 1,
+    prevBid: 100, prevBidderName: '', prevBidderUid: null, prevKnown: true, lastBidId: bidRef.id });
+  b.set(bidRef, { name: 'A', phone: '9876543210', email: uid + '@example.com', amount: 110, uid, isGoogle: true, deviceId: 'dev_c',
+    childName: 'Kid', classSection: '8-A', admissionNumber: '', timestamp: serverTimestamp(), ...extra });
+  b.set(doc(g, 'bidLimits/' + uid), { lastBidAt: serverTimestamp() });
+  return b.commit();
+};
+test('a bid may say announceName true or false, or omit it (older pages)', async () => {
+  await seedLot('cons1'); await assertSucceeds(consentBid('cons1', 'c1', { announceName: true }));
+  await seedLot('cons2'); await assertSucceeds(consentBid('cons2', 'c2', { announceName: false }));
+  await seedLot('cons3'); await assertSucceeds(consentBid('cons3', 'c3', {}));
+});
+test('announceName must be a real boolean', async () => {
+  await seedLot('cons4'); await assertFails(consentBid('cons4', 'c4', { announceName: 'yes' }));
+});

@@ -281,6 +281,11 @@
   .contact-block input,.contact-block select{width:100%;padding:11px 12px;border-radius:9px;border:1px solid var(--border);
     background:var(--surface2);color:var(--text);font-size:17px;}
   .contact-hint{font-size:16px;line-height:1.5;color:#E0D7C6;margin-top:7px;}
+  .consent-block{margin:0 0 16px;border:1px solid var(--border);border-radius:12px;padding:12px 14px;background:var(--surface);}
+  .consent-h{font-size:17px;font-weight:600;margin:0 0 4px;}
+  .consent-h .req{color:var(--red);}
+  .consent-opt{display:flex;gap:12px;align-items:flex-start;font-size:17px;line-height:1.4;padding:9px 0;cursor:pointer;}
+  .consent-opt input{width:24px;height:24px;flex:none;margin:0;}
   .sheet-err{color:var(--red);font-size:16px;margin-top:10px;min-height:16px;}
   #sheet-amount:disabled,.quick-btn:disabled{opacity:.4;pointer-events:none;}
 
@@ -655,6 +660,11 @@ window.__ld = [
       <label for="sheet-admission-input">Admission number</label>
       <input id="sheet-admission-input" maxlength="4" inputmode="numeric" placeholder="4-digit admission number" autocomplete="off">
       <p class="contact-hint">Please fill in at least one: Class &amp; Section, or Admission number. Only our team can see this. It is never shown to others.</p>
+    </div>
+    <div class="consent-block" role="group" aria-labelledby="sheet-consent-h">
+      <p class="consent-h" id="sheet-consent-h">If you win <span class="req">*</span></p>
+      <label class="consent-opt"><input type="checkbox" id="sheet-consent-yes"><span>Yes, you may announce my name out loud</span></label>
+      <label class="consent-opt"><input type="checkbox" id="sheet-consent-no"><span>No, please do not announce my name. Contact me privately on my phone number</span></label>
     </div>
     <button class="cta cta-cream" id="sheet-confirm">Confirm Bid</button>
   </div>
@@ -1379,6 +1389,11 @@ function updateHoldNote() {
   note.style.display = Number.isFinite(amt) && amt > 0 && isHoldAmount(sheetItem, amt) ? 'block' : 'none';
 }
 document.getElementById('sheet-amount').addEventListener('input', updateHoldNote);
+// Announce-my-name choice: two ticks, only one at a time, and neither is pre-ticked.
+const consentYes = document.getElementById('sheet-consent-yes');
+const consentNo = document.getElementById('sheet-consent-no');
+consentYes.addEventListener('change', () => { if (consentYes.checked) consentNo.checked = false; });
+consentNo.addEventListener('change', () => { if (consentNo.checked) consentYes.checked = false; });
 function openBidSheet(it) {
   sheetItem = it;
   document.getElementById('sheet-img').src = it.imageUrl || '';
@@ -1402,6 +1417,7 @@ function openBidSheet(it) {
   document.getElementById('sheet-child-input').value = localStorage.getItem('auction_child_name') || '';
   document.getElementById('sheet-class-input').value = localStorage.getItem('auction_class_section') || '';
   document.getElementById('sheet-admission-input').value = localStorage.getItem('auction_admission_number') || '';
+  consentYes.checked = false; consentNo.checked = false; // asked fresh on every bid
   document.getElementById('sheet-err').textContent = '';
   updateSheetAuthGate();
 
@@ -1518,6 +1534,8 @@ document.getElementById('sheet-confirm').onclick = async () => {
     errEl.textContent = 'The admission number should be 4 digits.';
     return;
   }
+  if (!consentYes.checked && !consentNo.checked) { errEl.textContent = 'Please choose whether we may announce your name if you win.'; return; }
+  const announceName = consentYes.checked;
   if (!Number.isInteger(amount) || amount <= 0) { errEl.textContent = 'Please enter the amount in whole rupees, like 5000.'; return; }
 
   // ₹1,00,000 or more: rejected outright (firestore.rules enforces this too,
@@ -1564,7 +1582,7 @@ document.getElementById('sheet-confirm').onclick = async () => {
       held = isHoldAmount(it, amount);
       const fields = {
         name, phone, childName, classSection, admissionNumber, email: userEmail(), amount, uid: googleUser.uid,
-        isGoogle: !googleUser.isAnonymous, deviceId: getDeviceId(),
+        isGoogle: !googleUser.isAnonymous, deviceId: getDeviceId(), announceName,
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
       };
       if (held) {
@@ -1605,7 +1623,7 @@ document.getElementById('sheet-confirm').onclick = async () => {
     document.getElementById('success-title').textContent = firstName ? `Thank you, ${firstName}!` : 'Thank you!';
     document.getElementById('success-msg').textContent = held
       ? `Your bid of ${money(amount)} on ${sheetItem.title} is on hold. Our team will call you on ${phone} to confirm it. It won't count as the highest bid until you do. Thank you so much for your generosity.`
-      : `Your bid of ${money(amount)} on ${sheetItem.title} has been placed. Thank you for being here and for supporting us.`;
+      : `Your bid of ${money(amount)} on ${sheetItem.title} has been placed. Thank you for being here and for supporting us.${announceName ? '' : ` If you win, we will contact you privately on ${phone}.`}`;
     document.getElementById('success-overlay').classList.add('open');
     openOverlay(closeSuccess);
     refreshUndoUI();

@@ -262,7 +262,7 @@ service cloud.firestore {
                     'prevBid', 'prevBidderName', 'prevBidderUid', 'prevKnown', 'lastBidId']) &&
         request.resource.data.prevBid == resource.data.currentBid &&
         request.resource.data.prevBidderName == resource.data.get('currentBidderName', '') &&
-        request.resource.data.prevBidderUid == resource.data.get('currentBidderUid', '') &&
+        request.resource.data.prevBidderUid == resource.data.get('currentBidderUid', null) &&
         request.resource.data.prevKnown == true &&
         request.resource.data.lastBidId is string &&
         existsAfter(/databases/$(database)/documents/items/$(itemId)/bids/$(request.resource.data.lastBidId)) &&

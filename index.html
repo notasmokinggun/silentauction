@@ -1573,8 +1573,8 @@ document.getElementById('sheet-confirm').onclick = async () => {
           currentBidderUid: googleUser.uid,
           bidCount: (it.bidCount || 0) + 1,
           // Remember the previous leader so this bid can be undone for 1 minute.
-          prevBid: it.currentBid, prevBidderName: it.currentBidderName || '',
-          prevBidderUid: it.currentBidderUid || '', prevKnown: true, lastBidId: bidRef.id,
+          prevBid: it.currentBid, prevBidderName: it.currentBidderName ?? '',
+          prevBidderUid: it.currentBidderUid ?? null, prevKnown: true, lastBidId: bidRef.id,
         });
         tx.set(bidRef, fields);
       }
@@ -1640,8 +1640,8 @@ async function undoMyBid() {
         throw new Error("Someone has bid higher, so this bid can't be undone now.");
       }
       tx.update(itemRef, {
-        currentBid: it.prevBid, currentBidderName: it.prevBidderName || '',
-        currentBidderUid: it.prevBidderUid || '', bidCount: Math.max(0, (it.bidCount || 1) - 1),
+        currentBid: it.prevBid, currentBidderName: it.prevBidderName ?? '',
+        currentBidderUid: it.prevBidderUid ?? null, bidCount: Math.max(0, (it.bidCount || 1) - 1),
         prevKnown: false,
       });
       tx.delete(bidRef);

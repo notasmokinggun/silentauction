@@ -474,12 +474,13 @@
   }
   /* ---------- Logo (also the way back to Home) ---------- */
   .brand{display:inline-flex;align-items:center;text-decoration:none;color:inherit;-webkit-tap-highlight-color:transparent;}
-  .brand-img{height:38px;width:auto;max-width:150px;display:block;}
+  .brand-img{height:60px;width:auto;max-width:220px;display:block;}
+  #view-results .brand-img, #view-mybids .brand-img, #view-profile .brand-img{height:52px;}
   .brand .wordmark{display:none;}
   .brand.nologo .brand-img{display:none;}
   .brand.nologo .wordmark{display:inline;}
   #view-results .brand.nologo, #view-mybids .brand.nologo, #view-profile .brand.nologo{display:none;}
-  #view-results .top, #view-mybids .top, #view-profile .top{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+  #view-results .top, #view-mybids .top, #view-profile .top{display:flex;align-items:center;justify-content:flex-start;gap:16px;}
   /* ---------- First-load screen ---------- */
   #app-loader{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;flex-direction:column;align-items:center;
     justify-content:center;text-align:center;padding:24px;transition:opacity .3s ease;}
@@ -643,7 +644,7 @@ window.__ld = [
 
 <!-- ============ RESULTS (leaderboard) ============ -->
 <section class="view" id="view-results">
-  <div class="top"><h1 class="serif">Results</h1><a class="brand" href="index.html" aria-label="Back to home"><img class="brand-img" src="images/jashn-logo.png" alt="JASHN" onerror="this.parentNode.classList.add('nologo')"></a></div>
+  <div class="top"><a class="brand" href="index.html" aria-label="Back to home"><img class="brand-img" src="images/jashn-logo.png" alt="JASHN" onerror="this.parentNode.classList.add('nologo')"></a><h1 class="serif">Results</h1></div>
   <p class="results-note">The highest bid on each item, updated live. When an item closes, its winner is shown here.</p>
   <div id="results-list"></div>
   <div class="empty-state" id="results-empty" style="display:none;">No items yet. Please check back soon.</div>
@@ -651,7 +652,7 @@ window.__ld = [
 
 <!-- ============ MY BIDS ============ -->
 <section class="view" id="view-mybids">
-  <div class="top"><h1 class="serif">My Bids</h1><a class="brand" href="index.html" aria-label="Back to home"><img class="brand-img" src="images/jashn-logo.png" alt="JASHN" onerror="this.parentNode.classList.add('nologo')"></a></div>
+  <div class="top"><a class="brand" href="index.html" aria-label="Back to home"><img class="brand-img" src="images/jashn-logo.png" alt="JASHN" onerror="this.parentNode.classList.add('nologo')"></a><h1 class="serif">My Bids</h1></div>
   <div class="tabs" id="mybids-tabs">
     <button class="tab on" data-tab="active">Active</button>
     <button class="tab" data-tab="won">Won</button>
@@ -663,7 +664,7 @@ window.__ld = [
 
 <!-- ============ PROFILE ============ -->
 <section class="view" id="view-profile">
-  <div class="top"><h1 class="serif">Profile</h1><a class="brand" href="index.html" aria-label="Back to home"><img class="brand-img" src="images/jashn-logo.png" alt="JASHN" onerror="this.parentNode.classList.add('nologo')"></a></div>
+  <div class="top"><a class="brand" href="index.html" aria-label="Back to home"><img class="brand-img" src="images/jashn-logo.png" alt="JASHN" onerror="this.parentNode.classList.add('nologo')"></a><h1 class="serif">Profile</h1></div>
   <div class="profile-card">
     <label class="k" style="font-size:15px;color:var(--muted);">Your name (used on bids)</label>
     <div class="input-with-confirm" style="margin-top:6px;">

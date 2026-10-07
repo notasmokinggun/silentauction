@@ -676,7 +676,7 @@ window.__ld = [
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="firebase-init.js?v=20261007c"></script>
+<script src="firebase-init.js?v=20261007d"></script>
 <script>
 // -----------------------------------------------------------------
 // Icons — small inline SVGs, stroke = currentColor
@@ -1573,12 +1573,6 @@ document.getElementById('sheet-confirm').onclick = async () => {
           currentBid: amount, currentBidderName: name,
           currentBidderUid: googleUser.uid,
           bidCount: (it.bidCount || 0) + 1,
-          // Remember the previous leader so this bid can be undone for 1 minute.
-          // Left out on the fallback attempt below (older published rules).
-          ...(withUndo ? {
-            prevBid: it.currentBid, prevBidderName: it.currentBidderName ?? '',
-            prevBidderUid: it.currentBidderUid ?? null, prevKnown: true, lastBidId: bidRef.id,
-          } : {}),
         });
         tx.set(bidRef, fields);
       }
@@ -1587,11 +1581,8 @@ document.getElementById('sheet-confirm').onclick = async () => {
       // transaction) gets rejected atomically.
       tx.set(limitRef, { lastBidAt: firebase.firestore.FieldValue.serverTimestamp() });
     });
-    // If the server turns down the bid with the undo details, try once without them, so
-    // bidding still works while the newest rules are not published yet (undo is skipped then).
-    let undoOk = true;
-    try { await runBid(true); }
-    catch (e) { if (e.code === 'permission-denied') { undoOk = false; await runBid(false); } else throw e; }
+    const undoOk = false; // undo is switched off (older rules)
+    await runBid(false);
     recordMyBid(sheetItem.id, bidRef.id, amount, held ? 'pending' : null, googleUser.uid);
     undoInfo = (held || !undoOk) ? null : { itemId: sheetItem.id, bidId: bidRef.id, until: Date.now() + UNDO_SECONDS * 1000 };
     closeOverlaySilently(closeBidSheet);
@@ -1603,7 +1594,8 @@ document.getElementById('sheet-confirm').onclick = async () => {
     refreshUndoUI();
   } catch (e) {
     if (e.code === 'permission-denied') {
-      errEl.textContent = "Your bid didn't go through. Please wait a few seconds and try again. If it keeps happening, ask an organizer for help.";
+      console.error('Bid rejected:', e.code, e.message);
+      errEl.textContent = "Your bid didn't go through (permission-denied). Please wait a few seconds and try again. If it keeps happening, ask an organizer for help.";
     } else {
       errEl.textContent = e.message || 'Could not place that bid. Try again.';
     }

@@ -208,6 +208,12 @@ body:not(:has(#view-home.active,#view-results.active,#view-mybids.active)) #fs-f
   .legal-links{margin:4px 0 0;font-size:14px;text-align:center;}
   .legal-links a{color:inherit;opacity:.9;text-decoration:underline;display:inline-block;padding:10px 6px;}
   #view-splash .legal-links{text-align:left;}
+  #view-splash .legal-links{display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px;max-width:100%;min-width:0;}
+  #view-splash .legal-links .ll-text{white-space:nowrap;min-width:0;}
+  #fs-link-wrap[hidden]{display:none;}
+  #fs-link-wrap{display:inline-flex;flex:none;max-width:100%;}
+  .fs-pill{display:inline-flex;align-items:center;gap:6px;border:none;border-radius:999px;background:#FFB84D;color:#3B2A4A;
+    font:800 13px Nunito,system-ui,sans-serif;padding:8px 13px;box-shadow:0 3px 10px rgba(255,150,60,.3);cursor:pointer;white-space:nowrap;max-width:100%;}
   .terms-opt{display:flex;gap:12px;align-items:flex-start;font-size:15.5px;line-height:1.45;margin:0 0 14px;cursor:pointer;}
   .terms-opt input{width:24px;height:24px;flex:none;margin:0;}
   .terms-opt a{color:inherit;text-decoration:underline;}
@@ -692,7 +698,7 @@ window.__ld = [
       <h1 class="splash-title serif">BID, SUPPORT,<br>MAKE A CHANGE</h1>
       <button class="splash-cta" id="splash-explore">See all items <span>&#8594;</span></button>
       <button class="splash-cta splash-cta-alt" id="splash-cause" style="display:none;">The Cause <span>&#8594;</span></button>
-      <p class="legal-links"><a href="legal.html#terms">Terms</a> &middot; <a href="legal.html#privacy">Privacy</a> &middot; <a href="legal.html#cookies">Cookies</a> <span id="fs-link-wrap" hidden>&middot; <a href="#" id="fs-link">Full screen</a></span></p>
+      <p class="legal-links"><span class="ll-text"><a href="legal.html#terms">Terms</a> &middot; <a href="legal.html#privacy">Privacy</a> &middot; <a href="legal.html#cookies">Cookies</a></span><span id="fs-link-wrap" hidden><button type="button" class="fs-pill" id="fs-link"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3B2A4A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>Full screen</button></span></p>
     </div>
   </div>
 </section>
@@ -954,7 +960,7 @@ window.__ld = [
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="firebase-init.js?v=202610071306"></script>
+<script src="firebase-init.js?v=202610071307"></script>
 <script>
 // -----------------------------------------------------------------
 // Icons — small inline SVGs, stroke = currentColor
@@ -2005,7 +2011,7 @@ document.getElementById('sheet-confirm').onclick = async () => {
 // GitHub Pages lets browsers keep index.html for a while, so a phone can sit on an old page.
 // version.json is fetched fresh (never cached); if it differs from this page's version, reload once
 // with a new web address so the browser fetches the new page. Waits while a bid is being made.
-const SITE_VERSION = '202610071306';
+const SITE_VERSION = '202610071307';
 document.getElementById('site-version').textContent = SITE_VERSION;
 async function checkForNewVersion() {
   try {

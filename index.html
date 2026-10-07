@@ -126,6 +126,9 @@
   .cause-images{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
   .cause-img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:14px;background:var(--surface2);}
   .cause-img:not([src]),.cause-img[src=""]{visibility:hidden;}
+  #cause-img-3{grid-column:1 / -1;aspect-ratio:16/9;}
+  .cause-link{display:inline-flex;align-items:center;gap:6px;margin:0 0 4px;padding:0;border:none;background:none;
+    font:inherit;font-size:16px;font-weight:700;color:#E0685A;cursor:pointer;text-decoration:underline;text-underline-offset:3px;}
 
   /* ---------- Results (leaderboard) ---------- */
   #view-results .top{padding:calc(20px + env(safe-area-inset-top,0px)) 20px 4px;}
@@ -516,6 +519,7 @@ window.__ld = [
     <p class="guide-eyebrow">WELCOME</p>
     <h1 class="serif">Here's how it works</h1>
     <p class="guide-lead">Every bid supports a good cause. This takes one minute to read. You can open it again any time from the Profile tab.</p>
+    <button type="button" class="cause-link" id="guide-see-cause">See where your bid goes <span>&#8594;</span></button>
 
     <div class="guide-h">HOW TO BID</div>
     <div class="step"><div class="dot" style="background:#FFC9DE;">1</div><div><b>Choose an item</b>
@@ -878,15 +882,16 @@ document.getElementById('guide-start').onclick = () => {
   showView('home');
 };
 document.getElementById('open-guide').onclick = (e) => { e.preventDefault(); showView('guide'); };
+document.getElementById('guide-see-cause').onclick = () => showView('cause');
 document.getElementById('open-cause').onclick = (e) => { e.preventDefault(); showView('cause'); };
 
-// "The Cause" photos — drop images/cause/1.jpg and images/cause/2.jpg (also
+// "The Cause" photos — drop images/cause/1.jpg, 2.jpg and 3.jpg (also
 // .jpeg/.png/.webp) into the repo; each <img> just stays invisible until a
 // matching file exists, same probing idea as the welcome gallery above.
 (function causePhotos() {
   const exts = ['jpg', 'jpeg', 'png', 'webp'];
   const probe = src => new Promise(r => { const i = new Image(); i.onload = () => r(true); i.onerror = () => r(false); i.src = src; });
-  ['cause-img-1', 'cause-img-2'].forEach(async (id, i) => {
+  ['cause-img-1', 'cause-img-2', 'cause-img-3'].forEach(async (id, i) => {
     const el = document.getElementById(id);
     for (const e of exts) {
       const src = `images/cause/${i + 1}.${e}`;

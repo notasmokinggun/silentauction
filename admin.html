@@ -9,16 +9,17 @@
 <link rel="apple-touch-icon" href="images/jashn-logo.png">
 <title>Auction Admin</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
+    --display:'Nunito','IBM Plex Sans',system-ui,sans-serif;
     --bg:#0E0C0A; --bg2:#151210; --surface:#1B1815; --surface2:#221E19;
     --border:#2E2820; --cream:#F3EBDA; --text:#F3EBDA; --muted:#9C9086;
     --gold:#E3B75C; --green:#7FBF8E; --red:#D9836E;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;}
-  .serif{font-family:'Newsreader',serif;}
+  .serif,h1,h2,h3{font-family:var(--display);}
   h1,h2{font-weight:600;}
   a{color:inherit;}
   button{font-family:inherit;cursor:pointer;}
@@ -146,7 +147,7 @@
   .bs{font-family:'IBM Plex Sans',Arial,sans-serif;color:#000;font-size:12.5pt;line-height:1.35;}
   .bs-head{display:flex;align-items:center;gap:14px;border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:10px;}
   .bs-head img{height:56px;width:auto;}
-  .bs-head h1{font-family:'Newsreader',Georgia,serif;font-size:21pt;margin:0;font-weight:600;color:#000;}
+  .bs-head h1{font-family:'Nunito','IBM Plex Sans',Arial,sans-serif;font-size:21pt;margin:0;font-weight:600;color:#000;}
   .bs-head p{margin:2px 0 0;font-size:11pt;}
   .bs h2{font-size:11pt;letter-spacing:.08em;text-transform:uppercase;margin:14px 0 4px;border-bottom:1px solid #000;padding-bottom:2px;color:#000;}
   .bs-row{display:flex;align-items:flex-end;gap:10px;margin:11px 0;}

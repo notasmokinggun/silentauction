@@ -8,15 +8,16 @@
 <link rel="icon" href="images/jashn-logo.png">
 <title>Paper bid desk</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
+    --display:'Nunito','IBM Plex Sans',system-ui,sans-serif;
     --bg:#0E0C0A; --surface:#1B1815; --surface2:#221E19; --border:#4D4538;
     --cream:#F3EBDA; --text:#F3EBDA; --muted:#CBC0AF; --gold:#E3B75C; --green:#7FBF8E; --red:#D9836E;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:17px;line-height:1.45;}
-  .serif{font-family:'Newsreader',serif;}
+  .serif,h1,h2,h3{font-family:var(--display);}
   button{font-family:inherit;cursor:pointer;}
   input,select{font-family:inherit;font-size:17px;width:100%;padding:13px 14px;border-radius:10px;
     border:1px solid var(--border);background:var(--surface);color:var(--text);}

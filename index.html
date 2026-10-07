@@ -1605,7 +1605,7 @@ document.getElementById('sheet-confirm').onclick = async () => {
     document.getElementById('success-title').textContent = firstName ? `Thank you, ${firstName}!` : 'Thank you!';
     document.getElementById('success-msg').textContent = held
       ? `Your bid of ${money(amount)} on ${sheetItem.title} is on hold. Our team will call you on ${phone} to confirm it. It won't count as the highest bid until you do. Thank you so much for your generosity.`
-      : `Your bid of ${money(amount)} on ${sheetItem.title} has been placed. Thank you for being here and for supporting us. It truly means a lot.`;
+      : `Your bid of ${money(amount)} on ${sheetItem.title} has been placed. Thank you for being here and for supporting us.`;
     document.getElementById('success-overlay').classList.add('open');
     openOverlay(closeSuccess);
     refreshUndoUI();

@@ -206,3 +206,24 @@ permissions issue, not a missing index — check the browser console.
 5. The site stores only essential data in the browser (see the Cookies & storage section of
    `legal.html`). If you add analytics, ads or any new storage key, update that page and add
    a consent step first.
+
+## Paper bids and desk helpers
+
+For guests who bid on paper. In **Admin → Bids**, pick a lot in the dropdown next to
+**Print A4 bid details sheet** to print a sheet with that lot's number, name, highest bid and
+minimum next bid filled in (leave it on "Blank sheet" for a generic one). The guest fills in the rest
+by hand, including whether their name may be announced.
+
+To key those sheets in, create a **desk helper** under **Admin → Settings → Desk helpers**: give a
+name, a login email (it can be made up, no email is ever sent) and a password. Send them
+`desk.html` and the login. A helper can only choose a lot and enter a paper bid. They cannot see any
+bids, phone numbers, users or payments, and cannot open the admin page. Switch a helper off or remove
+them in the same place and the login stops working immediately.
+
+- Paper bids behave like online ones: same phone, class and increment checks; they show in the admin
+  Bids list tagged "Paper bid" and in the CSV (Source column).
+- Bids of ₹10,000 or more are **held** until you confirm by phone, exactly like online ones. Bids of
+  ₹50,000 or more cannot be entered by a helper.
+- A helper cannot edit or undo a bid. Fix a mistake with **Revoke** in the admin Bids list.
+- Publish the updated `firestore.rules` before using this (it adds the `desks` collection and the paper-bid
+  rules), and run `npm run test:rules` first.

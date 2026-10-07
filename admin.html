@@ -152,6 +152,7 @@
   .bs-row{display:flex;align-items:flex-end;gap:10px;margin:11px 0;}
   .bs-row label{flex:none;font-weight:600;}
   .bs-line{flex:1;border-bottom:1px solid #000;min-height:22px;}
+  .bs-fill{font-weight:600;padding:0 4px;}
   .bs-boxes{display:flex;gap:4px;}
   .bs-boxes span{width:24px;height:28px;border:1px solid #000;display:block;}
   .bs-sq{display:inline-block;width:16px;height:16px;border:1.5px solid #000;vertical-align:-3px;margin:0 6px 0 14px;}
@@ -351,6 +352,7 @@
       <h1>Bids &amp; winners</h1>
       <p class="sub">Rank bids per lot and mark the winner. See exactly who placed what, and revoke any bid you don't trust. It's removed for good and the leading bid recalculates automatically.</p>
       <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+        <select id="printLot" title="Lot to print the sheet for" style="max-width:260px;"><option value="">Blank sheet (no lot)</option></select>
         <button class="btn-ghost" id="printBidSheet">Print A4 bid details sheet</button>
         <button class="btn-ghost" id="exportCsvBids">Export bids as CSV</button>
       </div>
@@ -393,6 +395,26 @@
           separate invite step.
         </p>
         <a class="btn-ghost" href="admin-access.html" style="display:inline-block;text-decoration:none;">Open Admin Access →</a>
+      </div>
+      <div class="block" style="margin-bottom:16px;">
+        <h2>Desk helpers (paper bids)</h2>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">
+          A helper signs in at <code>desk.html</code> and can only type in paper bids. They cannot see any
+          bids, phone numbers, users or payments, and cannot open this admin page. Switch one off or remove
+          them at any time and their login stops working straight away.
+        </p>
+        <div id="desk-list"></div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;">
+          <input id="desk-label" placeholder="Name or role, e.g. Front desk" maxlength="59" style="flex:1 1 180px;">
+          <input id="desk-email" type="email" placeholder="Login email (can be made up)" style="flex:1 1 200px;">
+          <input id="desk-pass" type="text" placeholder="Password (8+ characters)" style="flex:1 1 150px;">
+        </div>
+        <div class="form-actions" style="margin-top:10px;">
+          <button class="btn-ghost" id="desk-gen" type="button">Generate password</button>
+          <button class="btn-primary" id="desk-create" type="button">Create helper login</button>
+        </div>
+        <p id="desk-msg" style="font-size:13px;margin-top:10px;"></p>
+        <div id="desk-creds" class="uid" style="display:none;margin-top:10px;white-space:pre-wrap;"></div>
       </div>
       <div class="block" style="margin-bottom:16px;">
         <h2>Bootstrap admin</h2>
@@ -517,8 +539,74 @@ document.querySelectorAll('.navitem[data-panel]').forEach(nav => nav.onclick = (
   document.getElementById('sidebar').classList.remove('open');
   if (nav.dataset.panel === 'bids') renderBidsPanel();
   if (nav.dataset.panel === 'users') renderUsersPanel();
+  if (nav.dataset.panel === 'settings') loadDeskHelpers();
 });
 document.getElementById('menu-toggle').onclick = () => document.getElementById('sidebar').classList.toggle('open');
+
+// -----------------------------------------------------------------
+// Desk helpers: logins that can ONLY key in paper bids (desk.html).
+// The account is created here, on a second, throwaway Firebase connection, so this
+// admin stays signed in. The helper's powers come from desks/{uid} (see firestore.rules),
+// not from the email, so nobody can claim them by typing a particular address.
+// -----------------------------------------------------------------
+let deskUnsub = null;
+let deskApp = null;
+function loadDeskHelpers() {
+  if (deskUnsub) return;
+  deskUnsub = db.collection('desks').onSnapshot(snap => {
+    const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    document.getElementById('desk-list').innerHTML = rows.length ? rows.map(r => `
+      <div class="bidrow" style="gap:10px;">
+        <span class="who" style="flex:1;min-width:0;">${escapeHtml(r.label)}
+          <span class="g">&middot; ${escapeHtml(r.email || '')} &middot; ${r.active ? 'on' : 'switched off'}</span></span>
+        <button class="btn-ghost" data-desk-toggle="${r.id}" data-active="${r.active ? '1' : '0'}">${r.active ? 'Switch off' : 'Switch on'}</button>
+        <button class="btn-ghost" data-desk-remove="${r.id}" data-label="${escapeHtml(r.label)}">Remove</button>
+      </div>`).join('') : '<p style="font-size:13px;color:var(--muted);">No helpers yet.</p>';
+    document.querySelectorAll('[data-desk-toggle]').forEach(b => b.onclick = () =>
+      db.collection('desks').doc(b.dataset.deskToggle).update({ active: b.dataset.active !== '1' })
+        .catch(e => alert('Could not change that helper: ' + e.message)));
+    document.querySelectorAll('[data-desk-remove]').forEach(b => b.onclick = () => {
+      if (!confirm('Remove ' + b.dataset.label + '? Their login stops working immediately.')) return;
+      db.collection('desks').doc(b.dataset.deskRemove).delete().catch(e => alert('Could not remove: ' + e.message));
+    });
+  }, e => { document.getElementById('desk-list').textContent = 'Could not load helpers: ' + e.message; deskUnsub = null; });
+}
+document.getElementById('desk-gen').onclick = () => {
+  const chars = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const buf = new Uint32Array(12); crypto.getRandomValues(buf);
+  document.getElementById('desk-pass').value = [...buf].map(n => chars[n % chars.length]).join('');
+};
+document.getElementById('desk-create').onclick = async () => {
+  const msg = document.getElementById('desk-msg'), creds = document.getElementById('desk-creds'), btn = document.getElementById('desk-create');
+  const label = document.getElementById('desk-label').value.trim();
+  const email = document.getElementById('desk-email').value.trim().toLowerCase();
+  const pass = document.getElementById('desk-pass').value;
+  msg.style.color = 'var(--red)'; creds.style.display = 'none';
+  if (!label) { msg.textContent = 'Give the helper a name or role.'; return; }
+  if (!/^[^ @]+@[^ @]+[.][^ @]+$/.test(email)) { msg.textContent = 'Enter a login email. It does not have to be a real inbox.'; return; }
+  if (pass.length < 8) { msg.textContent = 'The password needs at least 8 characters. Tap Generate password for a strong one.'; return; }
+  btn.disabled = true; msg.textContent = '';
+  try {
+    if (!deskApp) deskApp = firebase.initializeApp(firebaseConfig, 'deskHelperCreator');
+    const other = deskApp.auth();
+    const cred = await other.createUserWithEmailAndPassword(email, pass);
+    const uid = cred.user.uid;
+    await other.signOut();
+    await db.collection('desks').doc(uid).set({
+      label, email, active: true, createdBy: auth.currentUser.uid,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+    msg.style.color = 'var(--green)';
+    msg.textContent = 'Helper created. Copy these details now; the password is not shown again.';
+    creds.style.display = 'block';
+    creds.textContent = 'Page:     ' + location.origin + location.pathname.replace('admin.html', 'desk.html') + '\nEmail:    ' + email + '\nPassword: ' + pass;
+    ['desk-label', 'desk-email', 'desk-pass'].forEach(id => { document.getElementById(id).value = ''; });
+  } catch (e) {
+    msg.textContent = e.code === 'auth/email-already-in-use'
+      ? 'That email already has a login. Use a different one; it does not have to be a real inbox.'
+      : (e.code === 'permission-denied' ? 'The login was made but could not be switched on. Publish the latest firestore.rules, then try a different email.' : (e.message || 'Could not create the helper.'));
+  } finally { btn.disabled = false; }
+};
 
 let itemsSearchTerm = '';
 document.getElementById('global-search').addEventListener('input', (e) => {
@@ -551,6 +639,7 @@ function loadLots() {
     showAdminError('');
     lots = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     renderLots();
+    fillPrintLotSelect();
     renderDashboardStats();
     if (document.getElementById('panel-bids').classList.contains('active')) renderBidsPanel();
     resyncEditFormDeadline();
@@ -566,6 +655,7 @@ function loadLots() {
 // bidder phone numbers don't linger after sign-out or a failed admin check.
 function teardownAdmin() {
   if (itemsUnsub) { itemsUnsub(); itemsUnsub = null; }
+  if (deskUnsub) { deskUnsub(); deskUnsub = null; }
   Object.keys(bidListeners).forEach(id => { bidListeners[id](); delete bidListeners[id]; });
   lots = []; allBids = [];
   ['lots', 'bids-lots', 'recent-bids-body', 'users-body'].forEach(id => {
@@ -1043,8 +1133,27 @@ document.getElementById('lotForm').addEventListener('submit', async (e) => {
 // it, hand it out. Thresholds come from firebase-init.js so the printed
 // rules always match the live ones.
 // -----------------------------------------------------------------
+// Lot dropdown next to the print button. Choose a lot and the sheet comes out with that
+// lot's number, name, highest bid and minimum next bid filled in; everything else stays blank.
+function fillPrintLotSelect() {
+  const sel = document.getElementById('printLot');
+  if (!sel) return;
+  const keep = sel.value;
+  sel.innerHTML = '<option value="">Blank sheet (no lot)</option>' + [...lots]
+    .sort((x, y) => (x.lotNumber || 0) - (y.lotNumber || 0))
+    .map(l => `<option value="${l.id}">Lot ${String(l.lotNumber).padStart(3, '0')} - ${escapeHtml(l.title || '')}</option>`).join('');
+  if (keep && lots.some(l => l.id === keep)) sel.value = keep;
+}
 function printBidSheet() {
   const inr = n => '\u20B9' + Number(n).toLocaleString('en-IN');
+  const lot = lots.find(l => l.id === document.getElementById('printLot').value);
+  const stamp = new Date().toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+  const lotNumHtml = lot ? String(lot.lotNumber).padStart(3, '0') : '';
+  const lotNameHtml = lot ? escapeHtml(lot.title || '') : '';
+  const lotInfoHtml = lot
+    ? `<p class="bs-note"><strong>${lot.bidCount ? 'Highest bid when this sheet was printed (' + stamp + '): ' + inr(lot.currentBid) : 'No bids yet when printed (' + stamp + '). Starting bid: ' + inr(lot.currentBid)}.</strong>
+        Your bid must be at least <strong>${inr((lot.currentBid || 0) + (lot.increment || 0))}</strong>. Bids may have come in since, so the organizers will confirm the latest highest bid.</p>`
+    : '';
   const phoneBoxes = '<span></span>'.repeat(10);
   document.getElementById('bidsheet').innerHTML = `
     <div class="bs">
@@ -1057,8 +1166,9 @@ function printBidSheet() {
       </div>
 
       <h2>The item</h2>
-      <div class="bs-row"><label>Lot number</label><div class="bs-line" style="max-width:150px;"></div>
-        <label>Item name</label><div class="bs-line"></div></div>
+      <div class="bs-row"><label>Lot number</label><div class="bs-line bs-fill" style="max-width:150px;">${lotNumHtml}</div>
+        <label>Item name</label><div class="bs-line bs-fill">${lotNameHtml}</div></div>
+      ${lotInfoHtml}
 
       <h2>Your details</h2>
       <div class="bs-row"><label>Your name</label><div class="bs-line"></div></div>
@@ -1158,6 +1268,7 @@ function renderBidRows(itemId) {
   const holds = all.filter(b => b.status === 'pending').sort((a, b) => bidMillis(a) - bidMillis(b));
   const revoked = all.filter(b => b.status === 'revoked');
   if (!all.length) { container.innerHTML = '<p class="empty">No bids on this lot yet.</p>'; return; }
+  const paperOf = b => b.source === 'paper' ? '<span class="c">Paper bid</span>' : '';
   const consentOf = b => b.announceName === true ? '<span class="c">Name may be announced</span>'
     : (b.announceName === false ? '<span class="c">Do NOT announce. Call privately</span>' : '');
   const contactOf = b => [b.phone ? 'Phone: ' + escapeHtml(b.phone) : '', b.email ? escapeHtml(b.email) : '']
@@ -1171,7 +1282,7 @@ function renderBidRows(itemId) {
   const holdRows = holds.map(b => `<div class="bidrow onhold">
       <span class="rank tag-hold">HOLD</span>
       <span class="who">${escapeHtml(b.name)} <span class="g">· call to confirm</span>
-        <span class="c">${contactOf(b)}</span>${childOf(b)}${consentOf(b)}${timeOf(b)}</span>
+        <span class="c">${contactOf(b)}</span>${childOf(b)}${paperOf(b)}${consentOf(b)}${timeOf(b)}</span>
       <span class="amt">${money(b.amount)}</span>
       <button class="set" data-confirmhold="${b.id}">Confirm</button>
       <button class="btn-danger" data-revokehold="${b.id}">Revoke</button>
@@ -1182,7 +1293,7 @@ function renderBidRows(itemId) {
     return `<div class="bidrow ${isWinner ? 'iswinner' : ''}">
       <span class="rank">#${i + 1}</span>
       <span class="who">${escapeHtml(b.name)}${b.isGoogle ? ' <span class="g">· Google verified</span>' : ''}${b.status === 'confirmed' ? ' <span class="g">· confirmed by call</span>' : ''}
-        ${contact ? '<span class="c">' + contact + '</span>' : ''}${childOf(b)}${consentOf(b)}${timeOf(b)}</span>
+        ${contact ? '<span class="c">' + contact + '</span>' : ''}${childOf(b)}${paperOf(b)}${consentOf(b)}${timeOf(b)}</span>
       <span class="amt">${money(b.amount)}</span>
       <button class="${isWinner ? '' : 'set'}" data-set="${b.id}" ${isWinner ? 'disabled' : ''}>${isWinner ? 'Winner ✓' : 'Set winner'}</button>
       <button class="btn-danger" data-invalidate="${b.id}">Revoke bid</button>
@@ -1335,15 +1446,15 @@ function winnerConsentTag(it) {
   return b.announceName ? ' · <span class="winner-tag">announce name</span>' : ' · <span class="winner-tag">call privately, do not announce</span>';
 }
 function buildBidsCsv() {
-  const rows = [['Lot', 'Title', 'Rank', 'Bidder', 'Phone', 'Child name', 'Class & Section', 'Amount', 'Bid time', 'Google verified', 'Status', 'Marked winner', 'Announce name?']];
+  const rows = [['Lot', 'Title', 'Rank', 'Bidder', 'Phone', 'Child name', 'Class & Section', 'Amount', 'Bid time', 'Google verified', 'Status', 'Marked winner', 'Announce name?', 'Source']];
   for (const it of lots) {
     const lotLabel = 'LOT ' + String(it.lotNumber).padStart(3, '0');
     const all = allBids.filter(b => b.itemId === it.id);
     const bids = all.filter(isLiveBid).sort((a, b) => b.amount - a.amount);
     const others = all.filter(b => !isLiveBid(b));
-    if (!all.length) { rows.push([lotLabel, it.title, '', '(no bids)', '', '', '', '', '', '', '', '', '', '']); continue; }
-    bids.forEach((b, i) => rows.push([lotLabel, it.title, i + 1, b.name, b.phone || '', b.childName || '', b.classSection || '', b.amount, bidTimeText(b), b.isGoogle ? 'Yes' : 'No', b.status === 'confirmed' ? 'Confirmed by call' : 'Live', it.winnerBidId === b.id ? 'WINNER' : '', announceText(b)]));
-    others.forEach(b => rows.push([lotLabel, it.title, '', b.name, b.phone || '', b.childName || '', b.classSection || '', b.amount, bidTimeText(b), b.isGoogle ? 'Yes' : 'No', b.status === 'pending' ? 'ON HOLD (not counted)' : 'Hold revoked', '', announceText(b)]));
+    if (!all.length) { rows.push([lotLabel, it.title, '', '(no bids)', '', '', '', '', '', '', '', '', '', '', '']); continue; }
+    bids.forEach((b, i) => rows.push([lotLabel, it.title, i + 1, b.name, b.phone || '', b.childName || '', b.classSection || '', b.amount, bidTimeText(b), b.isGoogle ? 'Yes' : 'No', b.status === 'confirmed' ? 'Confirmed by call' : 'Live', it.winnerBidId === b.id ? 'WINNER' : '', announceText(b), b.source === 'paper' ? 'Paper' : 'Online']));
+    others.forEach(b => rows.push([lotLabel, it.title, '', b.name, b.phone || '', b.childName || '', b.classSection || '', b.amount, bidTimeText(b), b.isGoogle ? 'Yes' : 'No', b.status === 'pending' ? 'ON HOLD (not counted)' : 'Hold revoked', '', announceText(b), b.source === 'paper' ? 'Paper' : 'Online']));
   }
   return rows.map(r => r.map(csvCell).join(',')).join('\n');
 }

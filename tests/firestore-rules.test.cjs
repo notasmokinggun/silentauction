@@ -381,3 +381,80 @@ test('bidBlocks cannot be listed by a bidder, and a device block cannot be short
   await assertFails(setDoc(doc(g, 'bidBlocks/dev_h4'), { bannedUntil: new Date(Date.now() + 5000) }));
 });
 function updateDocViaBatch(db, path, data) { const b = writeBatch(db); b.update(doc(db, path), data); return b.commit(); }
+
+// ── Desk helpers (paper bids). Not run against the emulator yet: run `npm run test:rules` before publishing. ──
+const deskHelper = async (uid, active = true) => {
+  await env.withSecurityRulesDisabled(ctx => setDoc(doc(ctx.firestore(), 'desks/' + uid),
+    { label: 'Front desk', email: uid + '@desk.test', active, createdBy: 'admin', createdAt: new Date() }));
+  return account(uid, uid + '@desk.test');
+};
+const paperDoc = (uid, phone, over = {}) => ({
+  name: 'Priya', phone, email: '', amount: 110, uid: 'paper:' + phone, isGoogle: false, deviceId: 'paper',
+  timestamp: serverTimestamp(), childName: 'Kid', classSection: '8-A', announceName: true,
+  source: 'paper', enteredBy: uid, ...over,
+});
+const paperBid = (db, lot, uid, phone, bidOver = {}, itemOver = {}) => {
+  const b = writeBatch(db);
+  const ref = doc(collection(db, 'items/' + lot + '/bids'));
+  b.update(doc(db, 'items/' + lot), { currentBid: 110, currentBidderName: 'Priya', currentBidderUid: 'paper:' + phone,
+    bidCount: 1, prevKnown: false, lastBidId: ref.id, ...itemOver });
+  b.set(ref, paperDoc(uid, phone, bidOver));
+  return b.commit();
+};
+const paperHold = (db, lot, uid, phone, over = {}) => {
+  const b = writeBatch(db);
+  b.set(doc(collection(db, 'items/' + lot + '/bids')), paperDoc(uid, phone, { amount: 12000, status: 'pending', ...over }));
+  return b.commit();
+};
+test('an active desk helper can place a paper bid, and it lands on the lot', async () => {
+  const d = await deskHelper('dh1'); await seedLot('pp1');
+  await assertSucceeds(paperBid(d, 'pp1', 'dh1', '9876543210'));
+});
+test('a switched-off or unknown helper cannot place paper bids', async () => {
+  const off = await deskHelper('dh2', false); await seedLot('pp2');
+  await assertFails(paperBid(off, 'pp2', 'dh2', '9876543210'));
+  await assertFails(paperBid(account('nobody', 'nobody@desk.test'), 'pp2', 'nobody', '9876543210'));
+});
+test('a helper has no access to bids, users, admin lists or other helpers', async () => {
+  const d = await deskHelper('dh3'); await seedLot('pp3');
+  await assertSucceeds(getDoc(doc(d, 'items/pp3')));
+  await assertSucceeds(getDoc(doc(d, 'desks/dh3')));
+  await assertFails(getDocs(collection(d, 'items/pp3/bids')));
+  await assertFails(getDocs(collectionGroup(d, 'bids')));
+  await assertFails(getDocs(collection(d, 'users')));
+  await assertFails(getDocs(collection(d, 'adminEmails')));
+  await assertFails(getDocs(collection(d, 'desks')));
+  await assertFails(setDoc(doc(d, 'desks/dh3'), { label: 'x', email: 'x@y.zz', active: true, createdBy: 'dh3', createdAt: serverTimestamp() }));
+});
+test('a helper cannot edit lots beyond a paper raise, or delete anything', async () => {
+  const d = await deskHelper('dh4'); await seedLot('pp4');
+  await assertFails(updateDocViaBatch(d, 'items/pp4', { title: 'Hacked' }));
+  await assertFails(updateDocViaBatch(d, 'items/pp4', { currentBid: 110, currentBidderName: 'X', currentBidderUid: 'paper:9876543210', bidCount: 1, prevKnown: false, lastBidId: 'nope' }));
+  await assertFails(deleteDoc(doc(d, 'items/pp4')));
+});
+test('paper bids must be well-formed, honest about who entered them, and clear the increment', async () => {
+  const d = await deskHelper('dh5');
+  await seedLot('pp5a'); await assertFails(paperBid(d, 'pp5a', 'dh5', '9876543210', { enteredBy: 'someoneelse' }));
+  await seedLot('pp5b'); await assertFails(paperBid(d, 'pp5b', 'dh5', '9876543210', { uid: 'realuser123' }, { currentBidderUid: 'realuser123' }));
+  await seedLot('pp5c'); await assertFails(paperBid(d, 'pp5c', 'dh5', '1234567890'));
+  await seedLot('pp5d'); await assertFails(paperBid(d, 'pp5d', 'dh5', '9876543210', { announceName: 'yes' }));
+  await seedLot('pp5e'); await assertFails(paperBid(d, 'pp5e', 'dh5', '9876543210', { amount: 105 }, { currentBid: 105 }));
+});
+test('paper bids honour the hold and ceiling limits, and closed lots', async () => {
+  const d = await deskHelper('dh6');
+  await seedLot('pp6a'); await assertSucceeds(paperHold(d, 'pp6a', 'dh6', '9876543210'));
+  await seedLot('pp6b'); await assertFails(paperBid(d, 'pp6b', 'dh6', '9876543210', { amount: 12000 }, { currentBid: 12000 })); // must be held, not applied
+  await seedLot('pp6c'); await assertFails(paperHold(d, 'pp6c', 'dh6', '9876543210', { amount: 50000 }));
+  await seedLot('pp6d'); await assertFails(paperHold(d, 'pp6d', 'dh6', '9876543210', { amount: 5000 })); // small bids can't be 'held'
+  await seedLot('pp6e', { endsAt: new Date(Date.now() - 60000) }); await assertFails(paperBid(d, 'pp6e', 'dh6', '9876543210'));
+  await seedLot('pp6f', { active: false }); await assertFails(paperHold(d, 'pp6f', 'dh6', '9876543210'));
+});
+test('an ordinary guest cannot post a paper bid, and only admins manage helpers', async () => {
+  await seedLot('pp7');
+  const g = bidder('g7', 'g7@example.com');
+  await assertFails(paperBid(g, 'pp7', 'g7', '9876543210'));
+  const a = account('admin', 'admin@example.com');
+  await assertSucceeds(setDoc(doc(a, 'desks/newhelper'), { label: 'Back desk', email: 'back@desk.test', active: true, createdBy: 'admin', createdAt: serverTimestamp() }));
+  await assertSucceeds(updateDocViaBatch(a, 'desks/newhelper', { active: false }));
+  await assertSucceeds(getDocs(collection(a, 'desks')));
+});

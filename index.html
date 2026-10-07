@@ -1626,7 +1626,7 @@ async function undoMyBid() {
       const snap = await tx.get(itemRef);
       const it = snap.data();
       if (!it || it.lastBidId !== bidId || it.currentBidderUid !== googleUser.uid || it.prevKnown !== true) {
-        throw new Error('Someone has bid higher, so this bid can't be undone now.');
+        throw new Error("Someone has bid higher, so this bid can't be undone now.");
       }
       tx.update(itemRef, {
         currentBid: it.prevBid, currentBidderName: it.prevBidderName || '',

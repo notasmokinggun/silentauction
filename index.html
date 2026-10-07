@@ -286,6 +286,14 @@
   .consent-h .req{color:var(--red);}
   .consent-opt{display:flex;gap:12px;align-items:flex-start;font-size:17px;line-height:1.4;padding:9px 0;cursor:pointer;}
   .consent-opt input{width:24px;height:24px;flex:none;margin:0;}
+  .toast{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom,0px));transform:translate(-50%,12px);
+    max-width:min(92vw,420px);padding:13px 18px;border-radius:12px;background:var(--surface2);color:var(--text);
+    border:1px solid var(--border);font-size:17px;line-height:1.4;text-align:center;z-index:90;
+    opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;}
+  .toast.show{opacity:1;transform:translate(-50%,0);}
+  .toast.ok{border-color:var(--green);}
+  .toast.error{border-color:var(--red);}
+  @media (prefers-reduced-motion:reduce){.toast{transition:none;}}
   .sheet-err{color:var(--red);font-size:16px;margin-top:10px;min-height:16px;}
   #sheet-amount:disabled,.quick-btn:disabled{opacity:.4;pointer-events:none;}
 
@@ -1674,6 +1682,25 @@ document.getElementById('sheet-confirm').onclick = async () => {
   }
 };
 
+// A small message that fades away by itself (used instead of alert pop-ups).
+let toastTimer = null;
+function showToast(msg, kind) {
+  let el = document.getElementById('toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'toast';
+    el.setAttribute('role', 'status');
+    el.setAttribute('aria-live', 'polite');
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.className = 'toast ' + (kind || '');
+  void el.offsetWidth; // restart the fade-in if one is already showing
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 4000);
+}
+
 // ---- Undo a bid for 1 minute (only while it is still the highest bid) ----
 // Keep in sync with the 60 seconds in firestore.rules (bidderUndo).
 function closesWithinTenMin(it) {
@@ -1714,7 +1741,7 @@ async function undoMyBid() {
     : 'Are you sure you want to undo your bid?');
   if (!sure) return;
   // The dialog can sit open past the 1 minute window, so check again before sending anything.
-  if (!undoActive()) { alert("It's too late to undo this bid. You can only undo within 1 minute."); refreshUndoUI(); return; }
+  if (!undoActive()) { showToast("It's too late to undo this bid. You can only undo within 1 minute.", 'error'); refreshUndoUI(); return; }
   const itemRef = db.collection('items').doc(itemId);
   const bidRef = itemRef.collection('bids').doc(bidId);
   document.querySelectorAll('#success-undo, #item-undo-btn').forEach(b => b.disabled = true);
@@ -1738,12 +1765,12 @@ async function undoMyBid() {
     refreshUndoUI();
     if (document.getElementById('success-overlay').classList.contains('open')) closeOverlay(closeSuccess);
     renderMyBids();
-    alert('Your bid has been undone.');
+    showToast('Your bid has been undone.', 'ok');
   } catch (e) {
     const msg = e && e.code === 'permission-denied'
       ? "It's too late to undo this bid. You can only undo within 1 minute, and only if nobody has bid higher."
       : (e.message || "Couldn't undo that bid. Try again.");
-    alert(msg);
+    showToast(msg, 'error');
   }
   document.querySelectorAll('#success-undo, #item-undo-btn').forEach(b => b.disabled = false);
 }

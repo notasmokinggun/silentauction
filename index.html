@@ -27,6 +27,7 @@ html.fsp-on body{overflow:hidden;}
 #fs-prompt .fs-n{flex:none;width:28px;height:28px;border-radius:50%;background:#FFB84D;color:#3B2A4A;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:15px;}
 #fs-prompt .fs-steps svg{flex:none;vertical-align:middle;}
 #fs-prompt .fs-btn{width:100%;border:none;border-radius:14px;background:#FFB84D;color:#3B2A4A;font:800 17px Nunito,system-ui,sans-serif;padding:15px;cursor:pointer;box-shadow:0 6px 18px rgba(255,150,60,.35);}
+#fs-prompt .fs-tip{font-size:14px;line-height:1.45;color:#6B5A78;margin:-4px 0 14px;text-align:left;}
 #fs-prompt .fs-link{display:block;width:100%;border:none;background:none;color:#6B5A78;font:600 15px Nunito,system-ui,sans-serif;padding:12px 0 2px;cursor:pointer;text-decoration:underline;}
 #fs-prompt .v-ios,#fs-prompt .v-android,#fs-prompt .v-inapp,#fs-prompt .fs-arrow{display:none;}
 html.fsp-ios #fs-prompt .v-ios{display:block;}
@@ -79,8 +80,11 @@ html.fsp-iosother #fs-prompt .fs-arrow.top{display:block;top:calc(6px + env(safe
   }
   *{box-sizing:border-box;}
   ::placeholder{color:#B3A794;opacity:1;}
-  html,body{margin:0;background:var(--bg);color:var(--text);height:100%;overflow-x:hidden;
+  html,body{margin:0;background:var(--bg);color:var(--text);min-height:100%;
     font-family:'IBM Plex Sans',sans-serif;-webkit-tap-highlight-color:transparent;}
+  /* overflow-x lives on body ONLY. With it on both html and body, the body becomes its own scroll box,
+     and Safari/Chrome on iPhone then never collapse their toolbars while the page scrolls. */
+  body{overflow-x:hidden;}
   .serif,h1,h2,h3,
   .card .title,.item-title{font-family:var(--display);}
   a{color:inherit;}
@@ -584,6 +588,7 @@ html.fsp-iosother #fs-prompt .fs-arrow.top{display:block;top:calc(6px + env(safe
         <li><span class="fs-n">2</span><span>Scroll down, tap <b>Add to Home Screen</b> <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3B2A4A" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M12 8v8M8 12h8"/></svg></span></li>
         <li><span class="fs-n">3</span><span>Tap <b>Add</b>, then open <b>Silent Auction</b> from your Home Screen</span></li>
       </ol>
+      <p class="fs-tip">Just want fewer bars? In Safari, tap the page menu (<b>aA</b>, or the icon at the left of the address), then <b>Hide Toolbar</b>. Tap the bottom of the screen to bring it back.</p>
     </div>
 
     <div class="v-inapp">
@@ -907,7 +912,7 @@ window.__ld = [
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="firebase-init.js?v=202610071144"></script>
+<script src="firebase-init.js?v=202610071147"></script>
 <script>
 // -----------------------------------------------------------------
 // Icons — small inline SVGs, stroke = currentColor
@@ -1958,7 +1963,7 @@ document.getElementById('sheet-confirm').onclick = async () => {
 // GitHub Pages lets browsers keep index.html for a while, so a phone can sit on an old page.
 // version.json is fetched fresh (never cached); if it differs from this page's version, reload once
 // with a new web address so the browser fetches the new page. Waits while a bid is being made.
-const SITE_VERSION = '202610071144';
+const SITE_VERSION = '202610071147';
 document.getElementById('site-version').textContent = SITE_VERSION;
 async function checkForNewVersion() {
   try {

@@ -307,16 +307,21 @@ async function syncMyBidsFromServer(uid) {
   try {
     const snap = await db.collectionGroup("bids").where("uid", "==", uid).get();
     const latest = new Map();
+    let newestConsent = null; // the announce-my-name choice on the account's most recent bid
     snap.forEach((d) => {
       const data = d.data();
       const itemId = d.ref.parent.parent.id;
       const ts = data.timestamp && data.timestamp.toDate ? data.timestamp.toDate().getTime() : 0;
+      if (typeof data.announceName === "boolean" && (!newestConsent || ts >= newestConsent.ts)) newestConsent = { ts, value: data.announceName };
       const prev = latest.get(itemId);
       if (!prev || ts >= prev.ts) {
         latest.set(itemId, { itemId, bidId: d.id, amount: data.amount, ts, status: data.status || null, uid });
       }
     });
     localStorage.setItem("my_bids", JSON.stringify([...latest.values()]));
+    if (newestConsent && localStorage.getItem("auction_announce_" + uid) === null) {
+      localStorage.setItem("auction_announce_" + uid, newestConsent.value ? "yes" : "no");
+    }
     return true;
   } catch (err) {
     console.warn("Could not sync My Bids from the server:", err.code || err.message);

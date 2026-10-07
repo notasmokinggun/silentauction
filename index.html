@@ -661,10 +661,14 @@ window.__ld = [
       <input id="sheet-admission-input" maxlength="4" inputmode="numeric" placeholder="4-digit admission number" autocomplete="off">
       <p class="contact-hint">Please fill in at least one: Class &amp; Section, or Admission number. Only our team can see this. It is never shown to others.</p>
     </div>
-    <div class="consent-block" role="group" aria-labelledby="sheet-consent-h">
+    <div class="consent-block" id="sheet-consent-block" role="group" aria-labelledby="sheet-consent-h">
       <p class="consent-h" id="sheet-consent-h">If you win <span class="req">*</span></p>
       <label class="consent-opt"><input type="checkbox" id="sheet-consent-yes"><span>Yes, you may announce my name out loud</span></label>
       <label class="consent-opt"><input type="checkbox" id="sheet-consent-no"><span>No, please do not announce my name. Contact me privately on my phone number</span></label>
+    </div>
+    <div class="biddername" id="sheet-consent-saved" style="display:none;">
+      <span id="sheet-consent-saved-text"></span>
+      <button type="button" id="sheet-consent-change">Change</button>
     </div>
     <button class="cta cta-cream" id="sheet-confirm">Confirm Bid</button>
   </div>
@@ -686,7 +690,7 @@ window.__ld = [
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="firebase-init.js?v=20261007e"></script>
+<script src="firebase-init.js?v=20261007f"></script>
 <script>
 // -----------------------------------------------------------------
 // Icons — small inline SVGs, stroke = currentColor
@@ -976,6 +980,7 @@ auth.onAuthStateChanged(u => {
   if (document.getElementById('view-mybids').classList.contains('active')) renderMyBids();
   if (googleUser) syncMyBidsFromServer(googleUser.uid).then(ok => {
     if (ok && document.getElementById('view-mybids').classList.contains('active')) renderMyBids();
+    if (ok && sheet && sheet.classList.contains('open')) renderConsent();
   });
 });
 
@@ -1060,6 +1065,7 @@ function updateSheetAuthGate() {
   else {
     document.getElementById('sheet-email-display').textContent = userEmail() || '-';
     fillSheetName(false); // just signed in: pull the name from the Google account
+    renderConsent();
   }
 }
 
@@ -1394,6 +1400,28 @@ const consentYes = document.getElementById('sheet-consent-yes');
 const consentNo = document.getElementById('sheet-consent-no');
 consentYes.addEventListener('change', () => { if (consentYes.checked) consentNo.checked = false; });
 consentNo.addEventListener('change', () => { if (consentNo.checked) consentYes.checked = false; });
+// Asked only once: the choice is remembered for this account and shown as a short line with a Change button.
+let consentEditing = false;
+function consentKey() { return googleUser ? 'auction_announce_' + googleUser.uid : null; }
+function savedAnnounce() {
+  const k = consentKey(); const v = k ? localStorage.getItem(k) : null;
+  return v === 'yes' ? true : (v === 'no' ? false : null);
+}
+function renderConsent() {
+  const saved = savedAnnounce();
+  const showTicks = saved === null || consentEditing;
+  document.getElementById('sheet-consent-block').style.display = showTicks ? '' : 'none';
+  document.getElementById('sheet-consent-saved').style.display = showTicks ? 'none' : '';
+  if (!showTicks) document.getElementById('sheet-consent-saved-text').textContent = saved
+    ? 'If you win, we may announce your name out loud.'
+    : 'If you win, we will not announce your name. We will contact you privately.';
+}
+document.getElementById('sheet-consent-change').onclick = () => {
+  const saved = savedAnnounce();
+  consentEditing = true;
+  consentYes.checked = saved === true; consentNo.checked = saved === false;
+  renderConsent();
+};
 function openBidSheet(it) {
   sheetItem = it;
   document.getElementById('sheet-img').src = it.imageUrl || '';
@@ -1417,7 +1445,7 @@ function openBidSheet(it) {
   document.getElementById('sheet-child-input').value = localStorage.getItem('auction_child_name') || '';
   document.getElementById('sheet-class-input').value = localStorage.getItem('auction_class_section') || '';
   document.getElementById('sheet-admission-input').value = localStorage.getItem('auction_admission_number') || '';
-  consentYes.checked = false; consentNo.checked = false; // asked fresh on every bid
+  consentYes.checked = false; consentNo.checked = false; consentEditing = false;
   document.getElementById('sheet-err').textContent = '';
   updateSheetAuthGate();
 
@@ -1534,8 +1562,13 @@ document.getElementById('sheet-confirm').onclick = async () => {
     errEl.textContent = 'The admission number should be 4 digits.';
     return;
   }
-  if (!consentYes.checked && !consentNo.checked) { errEl.textContent = 'Please choose whether we may announce your name if you win.'; return; }
-  const announceName = consentYes.checked;
+  const savedChoice = savedAnnounce();
+  let announceName;
+  if (savedChoice !== null && !consentEditing) announceName = savedChoice;
+  else {
+    if (!consentYes.checked && !consentNo.checked) { errEl.textContent = 'Please choose whether we may announce your name if you win.'; return; }
+    announceName = consentYes.checked;
+  }
   if (!Number.isInteger(amount) || amount <= 0) { errEl.textContent = 'Please enter the amount in whole rupees, like 5000.'; return; }
 
   // ₹1,00,000 or more: rejected outright (firestore.rules enforces this too,
@@ -1558,6 +1591,8 @@ document.getElementById('sheet-confirm').onclick = async () => {
   const btn = document.getElementById('sheet-confirm');
   btn.disabled = true;
   localStorage.setItem('auction_name', name);
+  localStorage.setItem(consentKey(), announceName ? 'yes' : 'no');
+  consentEditing = false;
   localStorage.setItem('auction_phone', phone);
   localStorage.setItem('auction_child_name', childName);
   localStorage.setItem('auction_class_section', classSection);

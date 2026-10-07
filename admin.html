@@ -1036,16 +1036,16 @@ function renderBidRows(itemId) {
   const holds = all.filter(b => b.status === 'pending').sort((a, b) => bidMillis(a) - bidMillis(b));
   const revoked = all.filter(b => b.status === 'revoked');
   if (!all.length) { container.innerHTML = '<p class="empty">No bids on this lot yet.</p>'; return; }
-  const consentOf = b => b.announceName === true ? '<span class="c">📢 OK to announce name</span>'
-    : (b.announceName === false ? '<span class="c">🔒 Do NOT announce. Call privately</span>' : '');
-  const contactOf = b => [b.phone ? '📞 ' + escapeHtml(b.phone) : '', b.email ? escapeHtml(b.email) : '']
+  const consentOf = b => b.announceName === true ? '<span class="c">Name may be announced</span>'
+    : (b.announceName === false ? '<span class="c">Do NOT announce. Call privately</span>' : '');
+  const contactOf = b => [b.phone ? 'Phone: ' + escapeHtml(b.phone) : '', b.email ? escapeHtml(b.email) : '']
     .filter(Boolean).join(' · ');
   const childOf = b => {
     if (!b.childName) return '';
     const bits = [b.classSection, b.admissionNumber ? ('Adm# ' + b.admissionNumber) : ''].filter(Boolean).join(', ');
     return `<span class="c">Child: ${escapeHtml(b.childName)}${bits ? ', ' + escapeHtml(bits) : ''}</span>`;
   };
-  const timeOf = b => bidTimeText(b) ? `<span class="c">🕒 ${escapeHtml(bidTimeText(b))}</span>` : '';
+  const timeOf = b => bidTimeText(b) ? `<span class="c">Bid time: ${escapeHtml(bidTimeText(b))}</span>` : '';
   const holdRows = holds.map(b => `<div class="bidrow onhold">
       <span class="rank tag-hold">HOLD</span>
       <span class="who">${escapeHtml(b.name)} <span class="g">· call to confirm</span>
@@ -1209,7 +1209,7 @@ function announceText(b) { return b.announceName === true ? 'Yes' : (b.announceN
 function winnerConsentTag(it) {
   const b = (typeof allBids !== 'undefined' ? allBids : []).find(x => x.id === it.winnerBidId);
   if (!b || typeof b.announceName !== 'boolean') return '';
-  return b.announceName ? ' · <span class="winner-tag">📢 announce</span>' : ' · <span class="winner-tag">🔒 call privately, do not announce</span>';
+  return b.announceName ? ' · <span class="winner-tag">announce name</span>' : ' · <span class="winner-tag">call privately, do not announce</span>';
 }
 function buildBidsCsv() {
   const rows = [['Lot', 'Title', 'Rank', 'Bidder', 'Phone', 'Child name', 'Class & Section', 'Admission #', 'Amount', 'Bid time', 'Google verified', 'Status', 'Marked winner', 'Announce name?']];

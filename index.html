@@ -613,7 +613,7 @@ window.__ld = [
   <div class="profile-card" id="profile-google"></div>
   <a class="adminlink" href="#" id="open-guide" style="margin-top:22px;">How bidding works</a>
   <a class="adminlink admin-secondary" id="open-admin" href="admin.html">Auction organizer? Open admin</a>
-  <p style="text-align:center;font-size:14px;color:var(--muted);margin:18px 0 0;">Site version 20261007c</p>
+  <p style="text-align:center;font-size:14px;color:var(--muted);margin:18px 0 0;">Site version <span id="site-version"></span></p>
 </section>
 
 <!-- ============ Bottom nav ============ -->
@@ -698,7 +698,7 @@ window.__ld = [
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="firebase-init.js?v=20261007f"></script>
+<script src="firebase-init.js?v=202610070332"></script>
 <script>
 // -----------------------------------------------------------------
 // Icons — small inline SVGs, stroke = currentColor
@@ -1681,6 +1681,31 @@ document.getElementById('sheet-confirm').onclick = async () => {
     btn.disabled = false;
   }
 };
+
+// ---- Always run the newest version ----
+// GitHub Pages lets browsers keep index.html for a while, so a phone can sit on an old page.
+// version.json is fetched fresh (never cached); if it differs from this page's version, reload once
+// with a new web address so the browser fetches the new page. Waits while a bid is being made.
+const SITE_VERSION = '202610070332';
+document.getElementById('site-version').textContent = SITE_VERSION;
+async function checkForNewVersion() {
+  try {
+    const res = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) return;
+    const data = await res.json();
+    const version = data && data.version;
+    if (!version || version === SITE_VERSION) return;
+    if (sessionStorage.getItem('reloaded_for') === version) return; // tried once already, never loop
+    if (sheet.classList.contains('open') || document.getElementById('success-overlay').classList.contains('open')) return; // try again later
+    sessionStorage.setItem('reloaded_for', version);
+    const u = new URL(location.href);
+    u.searchParams.set('v', version);
+    location.replace(u.toString());
+  } catch (_) { /* offline or blocked: just keep running */ }
+}
+checkForNewVersion();
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkForNewVersion(); });
+setInterval(checkForNewVersion, 5 * 60 * 1000);
 
 // A small message that fades away by itself (used instead of alert pop-ups).
 let toastTimer = null;

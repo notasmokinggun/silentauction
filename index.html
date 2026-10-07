@@ -42,6 +42,7 @@ html.fsp-iosother #fs-prompt .fs-arrow.top{display:block;top:calc(6px + env(safe
 #fs-fab.show{display:inline-flex;}
 #fs-fab.pulse{animation:fsp 1.4s ease-in-out 1;}
 html.fsp-on #fs-fab{display:none;}
+body:not(:has(#view-home.active,#view-results.active,#view-mybids.active)) #fs-fab{display:none !important;}
 @keyframes fsp{0%,100%{transform:scale(1)}50%{transform:scale(1.09)}}
 @keyframes fsb{0%,100%{margin-bottom:0;margin-top:0}50%{margin-bottom:8px;margin-top:8px}}
 </style>
@@ -643,14 +644,19 @@ html.fsp-on #fs-fab{display:none;}
   if (!b || !can || !phone || installed) return;
   var inFs = function () { return !!(document.fullscreenElement || document.webkitFullscreenElement); };
   var sync = function (pulse) {
+    if (lw) lw.hidden = inFs();
     if (inFs()) { b.classList.remove('show', 'pulse'); return; }
     b.classList.add('show');
     if (pulse) { b.classList.remove('pulse'); void b.offsetWidth; b.classList.add('pulse'); }
   };
-  b.onclick = function () {
+  var lw = document.getElementById('fs-link-wrap'), ll = document.getElementById('fs-link');
+  var enter = function (e) {
+    if (e) e.preventDefault();
     var r = de.requestFullscreen ? de.requestFullscreen() : de.webkitRequestFullscreen();
     Promise.resolve(r).catch(function () {});
   };
+  b.onclick = enter;
+  if (ll) ll.onclick = enter;
   document.addEventListener('fullscreenchange', function () { sync(false); });
   document.addEventListener('webkitfullscreenchange', function () { sync(false); });
   var seen = false;
@@ -685,7 +691,7 @@ window.__ld = [
       <h1 class="splash-title serif">BID, SUPPORT,<br>MAKE A CHANGE</h1>
       <button class="splash-cta" id="splash-explore">See all items <span>&#8594;</span></button>
       <button class="splash-cta splash-cta-alt" id="splash-cause" style="display:none;">The Cause <span>&#8594;</span></button>
-      <p class="legal-links"><a href="legal.html#terms">Terms</a> &middot; <a href="legal.html#privacy">Privacy</a> &middot; <a href="legal.html#cookies">Cookies</a></p>
+      <p class="legal-links"><a href="legal.html#terms">Terms</a> &middot; <a href="legal.html#privacy">Privacy</a> &middot; <a href="legal.html#cookies">Cookies</a> <span id="fs-link-wrap" hidden>&middot; <a href="#" id="fs-link">Full screen</a></span></p>
     </div>
   </div>
 </section>
@@ -947,7 +953,7 @@ window.__ld = [
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="firebase-init.js?v=202610071236"></script>
+<script src="firebase-init.js?v=202610071243"></script>
 <script>
 // -----------------------------------------------------------------
 // Icons — small inline SVGs, stroke = currentColor
@@ -1998,7 +2004,7 @@ document.getElementById('sheet-confirm').onclick = async () => {
 // GitHub Pages lets browsers keep index.html for a while, so a phone can sit on an old page.
 // version.json is fetched fresh (never cached); if it differs from this page's version, reload once
 // with a new web address so the browser fetches the new page. Waits while a bid is being made.
-const SITE_VERSION = '202610071236';
+const SITE_VERSION = '202610071243';
 document.getElementById('site-version').textContent = SITE_VERSION;
 async function checkForNewVersion() {
   try {

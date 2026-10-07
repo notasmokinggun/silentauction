@@ -145,7 +145,7 @@ const placeBid = (db, lotId, uid, email, amount, bidCount = 0, over = {}) => {
     prevBid: 100, prevBidderName: '', prevBidderUid: null, prevKnown: true, lastBidId: bidRef.id });
   b.set(bidRef, {
     name: 'A', phone: '9876543210', email, amount, uid, isGoogle: true, deviceId: 'dev_x',
-    childName: 'Kid', classSection: '8-A', admissionNumber: '', timestamp: serverTimestamp(), ...over,
+    childName: 'Kid', classSection: '8-A', timestamp: serverTimestamp(), ...over,
   });
   b.set(doc(db, 'bidLimits/' + uid), { lastBidAt: serverTimestamp() });
   return b.commit();
@@ -194,7 +194,7 @@ test('nobody can write another uid\'s bidLimits, and bidBlocks are closed', asyn
 // ── 5x review hold ──
 const holdFields = (uid, email, amount, over = {}) => ({
   name: 'A', phone: '9876543210', email, amount, uid, isGoogle: true, deviceId: 'dev_x',
-  childName: 'Kid', classSection: '8-A', admissionNumber: '', timestamp: serverTimestamp(), status: 'pending', ...over,
+  childName: 'Kid', classSection: '8-A', timestamp: serverTimestamp(), status: 'pending', ...over,
 });
 const placeHold = (db, lotId, uid, email, amount, over = {}, id = 'hold_' + uid) => {
   const b = writeBatch(db);
@@ -258,13 +258,13 @@ test('itemImages: anyone can get one by id, nobody can list, only admins write',
 });
 
 // ── Child's name and grade ──
-test('a bid needs a child name and a class-section or a 4-digit admission number', async () => {
+test('a bid needs a child name and a class-section', async () => {
   await seedLot('k1');
   const g = bidder('k1u', 'k1u@example.com');
   await assertFails(placeBid(g, 'k1', 'k1u', 'k1u@example.com', 110, 0, { classSection: '10B' }));
-  await assertFails(placeBid(g, 'k1', 'k1u', 'k1u@example.com', 110, 0, { classSection: '', admissionNumber: '' }));
+  await assertFails(placeBid(g, 'k1', 'k1u', 'k1u@example.com', 110, 0, { classSection: '' }));
   await assertFails(placeBid(g, 'k1', 'k1u', 'k1u@example.com', 110, 0, { childName: '' }));
-  await assertSucceeds(placeBid(g, 'k1', 'k1u', 'k1u@example.com', 110, 0, { classSection: '', admissionNumber: '1234' }));
+  await assertSucceeds(placeBid(g, 'k1', 'k1u', 'k1u@example.com', 110, 0, { classSection: '10-B' }));
 });
 
 // ── Email-only (anonymous) guests. Not run against the emulator yet: run
@@ -272,7 +272,7 @@ test('a bid needs a child name and a class-section or a 4-digit admission number
 const guest = uid => env.authenticatedContext(uid, { firebase: { sign_in_provider: 'anonymous' } }).firestore();
 const guestFields = (uid, over = {}) => ({
   name: 'A', phone: '9876543210', email: 'a@example.com', amount: 110, uid, isGoogle: false, deviceId: 'dev_guest',
-  childName: 'Kid', classSection: '8-A', admissionNumber: '', timestamp: serverTimestamp(), ...over,
+  childName: 'Kid', classSection: '8-A', timestamp: serverTimestamp(), ...over,
 });
 const guestBid = (db, lotId, uid, over = {}) => {
   const b = writeBatch(db);
@@ -314,7 +314,7 @@ test('the leader can undo their bid within 60s: lot rolls back and the bid is de
   b.update(doc(g, 'items/undo1'), { currentBid: 110, currentBidderName: 'A', currentBidderUid: 'u1', bidCount: 1,
     prevBid: 100, prevBidderName: '', prevBidderUid: null, prevKnown: true, lastBidId: bidRef.id });
   b.set(bidRef, { name: 'A', phone: '9876543210', email: 'u1@example.com', amount: 110, uid: 'u1', isGoogle: true, deviceId: 'dev_u',
-    childName: 'Kid', classSection: '8-A', admissionNumber: '', timestamp: serverTimestamp() });
+    childName: 'Kid', classSection: '8-A', timestamp: serverTimestamp() });
   b.set(doc(g, 'bidLimits/u1'), { lastBidAt: serverTimestamp() });
   await assertSucceeds(b.commit());
   const u = writeBatch(g);
@@ -338,7 +338,7 @@ const consentBid = (lot, uid, extra) => {
   b.update(doc(g, 'items/' + lot), { currentBid: 110, currentBidderName: 'A', currentBidderUid: uid, bidCount: 1,
     prevBid: 100, prevBidderName: '', prevBidderUid: null, prevKnown: true, lastBidId: bidRef.id });
   b.set(bidRef, { name: 'A', phone: '9876543210', email: uid + '@example.com', amount: 110, uid, isGoogle: true, deviceId: 'dev_c',
-    childName: 'Kid', classSection: '8-A', admissionNumber: '', timestamp: serverTimestamp(), ...extra });
+    childName: 'Kid', classSection: '8-A', timestamp: serverTimestamp(), ...extra });
   b.set(doc(g, 'bidLimits/' + uid), { lastBidAt: serverTimestamp() });
   return b.commit();
 };

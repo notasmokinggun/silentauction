@@ -80,7 +80,7 @@ function money(n) {
 // ─────────────────────────────────────────────────────────────
 // Bid guardrails. Two flat, absolute thresholds (not relative to the
 // current price — easy for anyone to reason about):
-//   - Above HOLD_THRESHOLD (₹20,000): the bid is held, not applied to the
+//   - Above HOLD_THRESHOLD (₹10,000): the bid is held, not applied to the
 //     lot, until our team calls to confirm it.
 //   - At or above BAN_THRESHOLD (₹1,00,000): rejected outright, and the
 //     bidder's account (uid, not device — can't be dodged by clearing
@@ -88,7 +88,7 @@ function money(n) {
 // Enforced here (for a fast, friendly message) AND in firestore.rules,
 // so a tampered client can't bypass either check.
 // ─────────────────────────────────────────────────────────────
-const HOLD_THRESHOLD = 20000; // ₹20,000
+const HOLD_THRESHOLD = 10000; // ₹10,000
 const BAN_THRESHOLD = 100000; // ₹1,00,000
 const BAN_MINUTES = 5;
 const MAX_BID_AMOUNT = 100000000; // ₹10,00,00,000 — absolute ceiling, same as firestore.rules
@@ -176,16 +176,13 @@ function normalizePhoneInput(raw) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Class & Section — one of two ways (alongside admission number) a
-// family can be identified. A space or a dash is REQUIRED between the
+// Class & Section — how a family is identified. A space or a dash is REQUIRED between the
 // class number and the section, deliberately, so the two parts can be
 // read back apart and tracked separately ("10-B" / "10 B") rather than
 // landing as one unparseable string ("10B").
 // ─────────────────────────────────────────────────────────────
 const CLASS_SECTION_REGEX = /^[0-9]{1,2}[ -][A-Za-z0-9]{1,4}$/;
 
-// Admission number — the other option, a plain 4-digit number.
-const ADMISSION_NUMBER_REGEX = /^[0-9]{4}$/;
 
 // Fast, sync, bootstrap-only check — use for an instant UI decision.
 function isAdminEmail(email) {

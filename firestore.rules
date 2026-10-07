@@ -291,10 +291,10 @@ service cloud.firestore {
         underMaxBid(request.resource.data.currentBid) &&
         request.resource.data.currentBid >= resource.data.currentBid + resource.data.increment &&
         request.resource.data.bidCount == resource.data.get('bidCount', 0) + 1 &&
-        // Bids above HOLD_THRESHOLD (₹20,000) must go through the review
+        // Bids above HOLD_THRESHOLD (₹10,000) must go through the review
         // hold (see bids below), never straight onto the lot. Keep this
         // number in sync with HOLD_THRESHOLD in firebase-init.js.
-        request.resource.data.currentBid <= 20000 &&
+        request.resource.data.currentBid <= 10000 &&
         request.resource.data.currentBidderName is string &&
         request.resource.data.currentBidderName.size() > 0 &&
         request.resource.data.currentBidderName.size() < 80 &&
@@ -337,29 +337,17 @@ service cloud.firestore {
             request.resource.data.name.size() < 80 &&
             request.resource.data.phone is string &&
             request.resource.data.phone.matches('^[6789][0-9]{9}$') &&
-            // The child the family is bidding for: name, plus EITHER a
-            // class & section OR an admission number (or both) — never
-            // neither. Admin-only (bids are never public), used to
-            // identify the family.
+            // The child the family is bidding for: name plus class & section.
+            // Admin-only (bids are never public), used to identify the family.
             request.resource.data.childName is string &&
             request.resource.data.childName.size() > 0 &&
             request.resource.data.childName.size() < 80 &&
-            // Class & section: a space or dash is REQUIRED between the
-            // class number and the section (e.g. "10-B" / "10 B"), so the
-            // two parts can be read back apart and tracked separately —
-            // matches CLASS_SECTION_REGEX in firebase-init.js. Empty
-            // string is allowed here (the admission-number half of the
-            // "either/or" can cover it instead); the "at least one"
-            // requirement is enforced two lines down.
+            // Class & section is required. A space or dash is REQUIRED between
+            // the class number and the section (e.g. "10-B" / "10 B") so the
+            // two parts can be read back apart and tracked separately.
+            // Matches CLASS_SECTION_REGEX in firebase-init.js.
             request.resource.data.classSection is string &&
-            (request.resource.data.classSection == '' ||
-             request.resource.data.classSection.matches('^[0-9]{1,2}[ -][A-Za-z0-9]{1,4}$')) &&
-            // Admission number: exactly 4 digits, or empty (same either/or
-            // as above) — matches ADMISSION_NUMBER_REGEX in firebase-init.js.
-            request.resource.data.admissionNumber is string &&
-            (request.resource.data.admissionNumber == '' ||
-             request.resource.data.admissionNumber.matches('^[0-9]{4}$')) &&
-            (request.resource.data.classSection != '' || request.resource.data.admissionNumber != '') &&
+            request.resource.data.classSection.matches('^[0-9]{1,2}[ -][A-Za-z0-9]{1,4}$') &&
             request.resource.data.email is string &&
             request.resource.data.email.size() <= 254 &&
             ((isGuest() && request.resource.data.email.matches('^[^ @]+@[^ @]+[.][^ @]+$')) ||
@@ -378,13 +366,13 @@ service cloud.firestore {
             !isBanned(request.auth.uid) &&
             getAfter(/databases/$(database)/documents/bidLimits/$(request.auth.uid)).data.lastBidAt == request.time;
         }
-        // A normal bid: at or below HOLD_THRESHOLD (₹20,000), tied to the
+        // A normal bid: at or below HOLD_THRESHOLD (₹10,000), tied to the
         // item update in the same transaction (same amount, same bidder,
         // bidCount + 1).
         function normalBid() {
           return request.resource.data.keys().hasOnly(
-              ['name', 'phone', 'email', 'amount', 'uid', 'isGoogle', 'deviceId', 'timestamp', 'childName', 'classSection', 'admissionNumber', 'announceName']) &&
-            request.resource.data.amount <= 20000 &&
+              ['name', 'phone', 'email', 'amount', 'uid', 'isGoogle', 'deviceId', 'timestamp', 'childName', 'classSection', 'announceName']) &&
+            request.resource.data.amount <= 10000 &&
             getAfter(/databases/$(database)/documents/items/$(itemId)).data.currentBid == request.resource.data.amount &&
             getAfter(/databases/$(database)/documents/items/$(itemId)).data.currentBidderUid == request.auth.uid &&
             getAfter(/databases/$(database)/documents/items/$(itemId)).data.bidCount ==
@@ -396,9 +384,9 @@ service cloud.firestore {
         function heldBid() {
           return bidId == 'hold_' + request.auth.uid &&
             request.resource.data.keys().hasOnly(
-              ['name', 'phone', 'email', 'amount', 'uid', 'isGoogle', 'deviceId', 'timestamp', 'childName', 'classSection', 'admissionNumber', 'announceName', 'status']) &&
+              ['name', 'phone', 'email', 'amount', 'uid', 'isGoogle', 'deviceId', 'timestamp', 'childName', 'classSection', 'announceName', 'status']) &&
             request.resource.data.status == 'pending' &&
-            request.resource.data.amount > 20000 &&
+            request.resource.data.amount > 10000 &&
             get(/databases/$(database)/documents/items/$(itemId)).data.active == true &&
             (get(/databases/$(database)/documents/items/$(itemId)).data.get('endsAt', null) == null ||
              request.time < get(/databases/$(database)/documents/items/$(itemId)).data.endsAt);

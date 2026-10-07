@@ -5,6 +5,8 @@
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="images/jashn-logo.png">
+<link rel="apple-touch-icon" href="images/jashn-logo.png">
 <title>Auction Admin</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -137,6 +139,31 @@
     background:var(--surface2);color:var(--text);border-radius:6px;}
   .bidrow button.set{background:var(--gold);border-color:var(--gold);color:#1B140A;}
   .bidlist .empty{font-size:13px;color:var(--muted);padding:6px 0;}
+
+  /* ---------- A4 bid details sheet (handwritten bids) ---------- */
+  @page{size:A4;margin:12mm;}
+  #bidsheet{display:none;}
+  .bs{font-family:'IBM Plex Sans',Arial,sans-serif;color:#000;font-size:12.5pt;line-height:1.35;}
+  .bs-head{display:flex;align-items:center;gap:14px;border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:10px;}
+  .bs-head img{height:56px;width:auto;}
+  .bs-head h1{font-family:'Newsreader',Georgia,serif;font-size:21pt;margin:0;font-weight:600;color:#000;}
+  .bs-head p{margin:2px 0 0;font-size:11pt;}
+  .bs h2{font-size:11pt;letter-spacing:.08em;text-transform:uppercase;margin:14px 0 4px;border-bottom:1px solid #000;padding-bottom:2px;color:#000;}
+  .bs-row{display:flex;align-items:flex-end;gap:10px;margin:11px 0;}
+  .bs-row label{flex:none;font-weight:600;}
+  .bs-line{flex:1;border-bottom:1px solid #000;min-height:22px;}
+  .bs-boxes{display:flex;gap:4px;}
+  .bs-boxes span{width:24px;height:28px;border:1px solid #000;display:block;}
+  .bs-sq{display:inline-block;width:16px;height:16px;border:1.5px solid #000;vertical-align:-3px;margin:0 6px 0 14px;}
+  .bs-note{font-size:10.5pt;margin:4px 0 0;}
+  .bs-office{margin-top:16px;border:1.5px dashed #000;padding:8px 12px 10px;}
+  .bs-office h3{margin:0 0 4px;font-size:10.5pt;letter-spacing:.08em;text-transform:uppercase;color:#000;}
+  body.print-bidsheet #qrsheet{display:none !important;}
+  @media print{
+    body.print-bidsheet *{visibility:hidden;}
+    body.print-bidsheet #bidsheet, body.print-bidsheet #bidsheet *{visibility:visible;}
+    body.print-bidsheet #bidsheet{display:block !important;position:absolute;top:0;left:0;width:100%;}
+  }
 
   #qrsheet{display:none;}
   @media print{
@@ -323,7 +350,8 @@
     <div class="panel" id="panel-bids">
       <h1>Bids &amp; winners</h1>
       <p class="sub">Rank bids per lot and mark the winner. See exactly who placed what, and revoke any bid you don't trust. It's removed for good and the leading bid recalculates automatically.</p>
-      <div style="display:flex;justify-content:flex-end;margin-bottom:14px;">
+      <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+        <button class="btn-ghost" id="printBidSheet">Print A4 bid details sheet</button>
         <button class="btn-ghost" id="exportCsvBids">Export bids as CSV</button>
       </div>
       <div id="bids-lots"></div>
@@ -380,6 +408,7 @@
 </div>
 
 <div id="qrsheet"></div>
+<div id="bidsheet"></div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -1007,6 +1036,69 @@ document.getElementById('lotForm').addEventListener('submit', async (e) => {
   }
 });
 
+
+// -----------------------------------------------------------------
+// A4 bid details sheet, for guests who want to handwrite their bid.
+// Blank fields for everything the online form asks for. Print it, copy
+// it, hand it out. Thresholds come from firebase-init.js so the printed
+// rules always match the live ones.
+// -----------------------------------------------------------------
+function printBidSheet() {
+  const inr = n => '\u20B9' + Number(n).toLocaleString('en-IN');
+  const phoneBoxes = '<span></span>'.repeat(10);
+  document.getElementById('bidsheet').innerHTML = `
+    <div class="bs">
+      <div class="bs-head">
+        <img src="images/jashn-logo.png" alt="" onerror="this.style.display='none'">
+        <div>
+          <h1>Welcome to the SBS Silent Auction</h1>
+          <p>Bid details sheet. Please write clearly in capital letters.</p>
+        </div>
+      </div>
+
+      <h2>The item</h2>
+      <div class="bs-row"><label>Lot number</label><div class="bs-line" style="max-width:150px;"></div>
+        <label>Item name</label><div class="bs-line"></div></div>
+
+      <h2>Your details</h2>
+      <div class="bs-row"><label>Your name</label><div class="bs-line"></div></div>
+      <div class="bs-row"><label>Mobile number</label><div class="bs-boxes">${phoneBoxes}</div></div>
+      <p class="bs-note">We will call this number to confirm your bid if needed. Please check it is correct.</p>
+      <div class="bs-row"><label>Child's name</label><div class="bs-line"></div></div>
+      <div class="bs-row"><label>Class &amp; Section</label><div class="bs-line" style="max-width:160px;"></div>
+        <span class="bs-note" style="margin:0;">e.g. 10-B</span></div>
+
+      <h2>Your bid</h2>
+      <div class="bs-row"><label>Bid amount (\u20B9) in figures</label><div class="bs-line" style="max-width:200px;"></div></div>
+      <div class="bs-row"><label>In words</label><div class="bs-line"></div></div>
+      <p class="bs-note">Your bid must be higher than the highest bid shown on the item, by at least the minimum raise.
+        Bids above ${inr(HOLD_THRESHOLD)} will be confirmed by a phone call first. Bids of ${inr(BAN_THRESHOLD)} or more are not accepted.</p>
+
+      <h2>If you win</h2>
+      <div class="bs-row"><label>May we announce your name out loud?</label>
+        <span><span class="bs-sq"></span>Yes<span class="bs-sq"></span>No</span></div>
+
+      <h2>Confirmation</h2>
+      <p class="bs-note" style="margin-bottom:8px;"><span class="bs-sq" style="margin-left:0;"></span>I am 18 or older. I understand my bid is a promise to pay if I win.</p>
+      <div class="bs-row"><label>Signature</label><div class="bs-line"></div>
+        <label>Date</label><div class="bs-line" style="max-width:130px;"></div></div>
+
+      <div class="bs-office">
+        <h3>For the organisers only</h3>
+        <div class="bs-row" style="margin:8px 0 2px;"><label>Received by</label><div class="bs-line"></div>
+          <label>Time</label><div class="bs-line" style="max-width:110px;"></div></div>
+        <div class="bs-row" style="margin:8px 0 0;">
+          <span><span class="bs-sq" style="margin-left:0;"></span>Confirmed by call</span>
+          <span><span class="bs-sq"></span>Entered online</span></div>
+      </div>
+    </div>`;
+  document.body.classList.add('print-bidsheet');
+  const done = () => { document.body.classList.remove('print-bidsheet'); window.removeEventListener('afterprint', done); };
+  window.addEventListener('afterprint', done);
+  setTimeout(() => window.print(), 200);
+}
+document.getElementById('printBidSheet').onclick = printBidSheet;
+
 document.getElementById('printQr').onclick = () => {
   const sheet = document.getElementById('qrsheet');
   sheet.innerHTML = '';
@@ -1020,6 +1112,7 @@ document.getElementById('printQr').onclick = () => {
       width: 140, height: 140,
     });
   });
+  document.body.classList.remove('print-bidsheet');
   setTimeout(() => window.print(), 300);
 };
 
@@ -1071,7 +1164,7 @@ function renderBidRows(itemId) {
     .filter(Boolean).join(' · ');
   const childOf = b => {
     if (!b.childName) return '';
-    const bits = [b.classSection, b.admissionNumber ? ('Adm# ' + b.admissionNumber) : ''].filter(Boolean).join(', ');
+    const bits = b.classSection || '';
     return `<span class="c">Child: ${escapeHtml(b.childName)}${bits ? ', ' + escapeHtml(bits) : ''}</span>`;
   };
   const timeOf = b => bidTimeText(b) ? `<span class="c">Bid time: ${escapeHtml(bidTimeText(b))}</span>` : '';
@@ -1242,15 +1335,15 @@ function winnerConsentTag(it) {
   return b.announceName ? ' · <span class="winner-tag">announce name</span>' : ' · <span class="winner-tag">call privately, do not announce</span>';
 }
 function buildBidsCsv() {
-  const rows = [['Lot', 'Title', 'Rank', 'Bidder', 'Phone', 'Child name', 'Class & Section', 'Admission #', 'Amount', 'Bid time', 'Google verified', 'Status', 'Marked winner', 'Announce name?']];
+  const rows = [['Lot', 'Title', 'Rank', 'Bidder', 'Phone', 'Child name', 'Class & Section', 'Amount', 'Bid time', 'Google verified', 'Status', 'Marked winner', 'Announce name?']];
   for (const it of lots) {
     const lotLabel = 'LOT ' + String(it.lotNumber).padStart(3, '0');
     const all = allBids.filter(b => b.itemId === it.id);
     const bids = all.filter(isLiveBid).sort((a, b) => b.amount - a.amount);
     const others = all.filter(b => !isLiveBid(b));
     if (!all.length) { rows.push([lotLabel, it.title, '', '(no bids)', '', '', '', '', '', '', '', '', '', '']); continue; }
-    bids.forEach((b, i) => rows.push([lotLabel, it.title, i + 1, b.name, b.phone || '', b.childName || '', b.classSection || '', b.admissionNumber || '', b.amount, bidTimeText(b), b.isGoogle ? 'Yes' : 'No', b.status === 'confirmed' ? 'Confirmed by call' : 'Live', it.winnerBidId === b.id ? 'WINNER' : '', announceText(b)]));
-    others.forEach(b => rows.push([lotLabel, it.title, '', b.name, b.phone || '', b.childName || '', b.classSection || '', b.admissionNumber || '', b.amount, bidTimeText(b), b.isGoogle ? 'Yes' : 'No', b.status === 'pending' ? 'ON HOLD (not counted)' : 'Hold revoked', '', announceText(b)]));
+    bids.forEach((b, i) => rows.push([lotLabel, it.title, i + 1, b.name, b.phone || '', b.childName || '', b.classSection || '', b.amount, bidTimeText(b), b.isGoogle ? 'Yes' : 'No', b.status === 'confirmed' ? 'Confirmed by call' : 'Live', it.winnerBidId === b.id ? 'WINNER' : '', announceText(b)]));
+    others.forEach(b => rows.push([lotLabel, it.title, '', b.name, b.phone || '', b.childName || '', b.classSection || '', b.amount, bidTimeText(b), b.isGoogle ? 'Yes' : 'No', b.status === 'pending' ? 'ON HOLD (not counted)' : 'Hold revoked', '', announceText(b)]));
   }
   return rows.map(r => r.map(csvCell).join(',')).join('\n');
 }

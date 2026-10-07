@@ -5,7 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="no-referrer">
-<title>Terms, Privacy and Cookies · Silent Auction</title>
+<link rel="icon" href="images/jashn-logo.png">
+<link rel="apple-touch-icon" href="images/jashn-logo.png">
+<title>Terms, Privacy and Cookies · SBS Silent Auction</title>
 <style>
   :root{--ink:#3B2A4A;--body:#4A3858;--accent:#E0685A;--card:#fff;--line:#EADFE6;}
   *{box-sizing:border-box;}
@@ -38,6 +40,7 @@
 </head>
 <body>
 <header><div class="bar">
+  <a class="logo-home" href="index.html" aria-label="Back to home"><img src="images/jashn-logo.png" alt="JASHN" style="height:30px;width:auto;display:block;" onerror="this.parentNode.style.display='none'"></a>
   <a class="back" href="index.html">&larr; Back to the auction</a>
   <a href="#terms">Terms</a><a href="#privacy">Privacy</a><a href="#cookies">Cookies &amp; storage</a>
 </div></header>
@@ -53,13 +56,13 @@
     <p>This is a charity silent auction run by <span data-org="name">the organising team of this event</span> (&ldquo;we&rdquo;, &ldquo;us&rdquo;, &ldquo;the organisers&rdquo;). Bids support the cause shown on the <em>The Cause</em> page: Divyatarang Educare Foundation. By placing a bid you agree to these terms.</p>
 
     <h3>1. Who can bid</h3>
-    <p>You must be 18 or older, and able to make a binding commitment to pay. Children may not bid. If you give details about a child (name, class, admission number), you confirm that you are that child's parent or legal guardian, or are authorised by them.</p>
+    <p>You must be 18 or older, and able to make a binding commitment to pay. Children may not bid. If you give details about a child (name, class and section), you confirm that you are that child's parent or legal guardian, or are authorised by them.</p>
 
     <h3>2. Your bid is a promise</h3>
     <ul>
       <li>A bid is a binding offer to buy the item at that price. The highest valid bid when a lot closes wins, once the organisers confirm it.</li>
       <li>Each bid must beat the current highest bid by at least the minimum increase shown on the item.</li>
-      <li>Bids above &#8377;20,000 are held. Our team will call you on the number you gave to confirm the bid. A held bid does not count as the highest bid until it is confirmed.</li>
+      <li>Bids above &#8377;10,000 are held. Our team will call you on the number you gave to confirm the bid. A held bid does not count as the highest bid until it is confirmed.</li>
       <li>Bids of &#8377;1,00,000 or more are not accepted, and bidding is paused on that account and phone for a few minutes.</li>
       <li>You can undo your latest bid within 1 minute of placing it, but not in the last 10 minutes before a lot closes. After that, a bid cannot be withdrawn.</li>
       <li>The time shown by our servers decides whether a bid was placed before a lot closed.</li>
@@ -101,7 +104,7 @@
       <tr><td>Your name (as you type it)</td><td>When you place a bid</td></tr>
       <tr><td>Mobile number</td><td>When you place a bid</td></tr>
       <tr><td>Email address, and your Google account name if you use Google sign-in</td><td>When you sign in</td></tr>
-      <tr><td>Your child's name, and class &amp; section or admission number</td><td>When you place a bid</td></tr>
+      <tr><td>Your child's name, and class &amp; section</td><td>When you place a bid</td></tr>
       <tr><td>Bid amount, lot, time, and whether we may announce your name if you win</td><td>When you place a bid</td></tr>
       <tr><td>A sign-in ID created for you (Firebase user ID) and a random device ID kept on your phone</td><td>When you sign in or bid</td></tr>
       <tr><td>Technical data such as IP address and browser type</td><td>Automatically, held by the services listed below</td></tr>
@@ -155,7 +158,7 @@
       <tr><td><code>storage_notice_v1</code>, <code>terms_ok_v1</code></td><td>Remembers you closed the storage notice and ticked the terms box</td><td>Until cleared</td></tr>
       <tr><td><code>auction_device_id</code></td><td>Random ID for this device, used for fraud and abuse limits</td><td>Until cleared</td></tr>
       <tr><td><code>my_bids</code></td><td>Your list of bids, for the My Bids tab</td><td>Until cleared</td></tr>
-      <tr><td><code>auction_name</code>, <code>auction_phone</code>, <code>auction_child_name</code>, <code>auction_class_section</code>, <code>auction_admission_number</code>, <code>auction_guest_email</code></td><td>Pre-fill the bid form so you do not retype it</td><td>Until cleared</td></tr>
+      <tr><td><code>auction_name</code>, <code>auction_phone</code>, <code>auction_child_name</code>, <code>auction_class_section</code>, <code>auction_guest_email</code></td><td>Pre-fill the bid form so you do not retype it</td><td>Until cleared</td></tr>
       <tr><td><code>auction_announce_&hellip;</code></td><td>Remembers your choice about announcing your name</td><td>Until cleared</td></tr>
       <tr><td>Firebase sign-in data (IndexedDB / local storage)</td><td>Keeps you signed in</td><td>Until you sign out</td></tr>
       <tr><td><code>reloaded_for</code> (session storage)</td><td>Stops the page reloading in a loop when a new version of the site is published</td><td>Until you close the tab</td></tr>

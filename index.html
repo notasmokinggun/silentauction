@@ -3,9 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Silent Auction</title>
+<title>Welcome to the SBS Silent Auction</title>
 <meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'; form-action 'self'">
-<link rel="icon" href="data:,">
+<link rel="icon" href="images/jashn-logo.png">
+<link rel="apple-touch-icon" href="images/jashn-logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
@@ -471,6 +472,14 @@
     .grid{grid-template-columns:1fr;}
     .stat-row{grid-template-columns:1fr 1fr;row-gap:12px;}
   }
+  /* ---------- Logo (also the way back to Home) ---------- */
+  .brand{display:inline-flex;align-items:center;text-decoration:none;color:inherit;-webkit-tap-highlight-color:transparent;}
+  .brand-img{height:38px;width:auto;max-width:150px;display:block;}
+  .brand .wordmark{display:none;}
+  .brand.nologo .brand-img{display:none;}
+  .brand.nologo .wordmark{display:inline;}
+  #view-results .brand.nologo, #view-mybids .brand.nologo, #view-profile .brand.nologo{display:none;}
+  #view-results .top, #view-mybids .top, #view-profile .top{display:flex;align-items:center;justify-content:space-between;gap:12px;}
   /* ---------- First-load screen ---------- */
   #app-loader{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;flex-direction:column;align-items:center;
     justify-content:center;text-align:center;padding:24px;transition:opacity .3s ease;}
@@ -485,7 +494,7 @@
 </head>
 <body>
 <div id="app-loader" role="status" aria-live="polite">
-  <div class="ld-mark">Silent Auction</div>
+  <div class="ld-mark">Welcome to the SBS Silent Auction</div>
   <div class="ld-spin" aria-hidden="true"></div>
   <p id="ld-msg">Getting things ready. Please wait a moment.</p>
   <button id="ld-reload" type="button" hidden onclick="location.reload()">Reload the page</button>
@@ -504,7 +513,7 @@ window.__ld = [
 <section class="view active" id="view-splash">
   <div class="splash-photo">
     <div class="splash-gallery" id="splash-gallery" aria-hidden="true"></div>
-    <div class="splash-wordmark serif" id="splash-wordmark">Welcome to Silent Auction</div>
+    <div class="splash-wordmark serif" id="splash-wordmark">Welcome to the SBS Silent Auction</div>
     <div class="splash-content">
       <p class="splash-hello">Thank you for being here for us &#9829;</p>
       <h1 class="splash-title">BID, SUPPORT,<br>MAKE A CHANGE</h1>
@@ -549,9 +558,9 @@ window.__ld = [
     <div class="step"><div class="dot" style="background:#FFC9DE;">2</div><div><b>Sign in</b>
       <span>Use your Google account. If you don't have one, just type your email address. You do not need a password.</span></div></div>
     <div class="step"><div class="dot" style="background:#FFC9DE;">3</div><div><b>Add your details</b>
-      <span>We need your phone number, your child's name, and either their class and section or their admission number. This tells us which family placed the bid.</span></div></div>
+      <span>We need your phone number, your child's name, and their class and section. This tells us which family placed the bid.</span></div></div>
     <div class="step"><div class="dot" style="background:#FFC9DE;">4</div><div><b>Place your bid</b>
-      <span>Type the amount you want to bid and tap Confirm Bid. If your bid is above &#8377;20,000, our team will call you to confirm it first. Made a mistake? You can undo your bid within 1 minute.</span></div></div>
+      <span>Type the amount you want to bid and tap Confirm Bid. If your bid is above &#8377;10,000, our team will call you to confirm it first. Made a mistake? You can undo your bid within 1 minute.</span></div></div>
 
     <div class="guide-h">THE BASICS</div>
     <div class="fact"><div class="dot" style="background:#FFD6A5;">&#8377;</div><div><b>Highest bid</b>
@@ -571,7 +580,7 @@ window.__ld = [
 <!-- ============ HOME ============ -->
 <section class="view" id="view-home">
   <div class="top">
-    <div class="wordmark serif" id="event-name">JASHN</div>
+    <a class="brand" href="index.html" aria-label="Back to home"><img class="brand-img" src="images/jashn-logo.png" alt="JASHN" onerror="this.parentNode.classList.add('nologo')"><span class="wordmark serif" id="event-name">JASHN</span></a>
     <button class="icon-btn" id="search-toggle"></button>
   </div>
   <div class="searchbar" id="searchbar"><input id="search-input" placeholder="Search items…"></div>
@@ -634,7 +643,7 @@ window.__ld = [
 
 <!-- ============ RESULTS (leaderboard) ============ -->
 <section class="view" id="view-results">
-  <div class="top"><h1 class="serif">Results</h1></div>
+  <div class="top"><h1 class="serif">Results</h1><a class="brand" href="index.html" aria-label="Back to home"><img class="brand-img" src="images/jashn-logo.png" alt="JASHN" onerror="this.parentNode.classList.add('nologo')"></a></div>
   <p class="results-note">The highest bid on each item, updated live. When an item closes, its winner is shown here.</p>
   <div id="results-list"></div>
   <div class="empty-state" id="results-empty" style="display:none;">No items yet. Please check back soon.</div>
@@ -642,7 +651,7 @@ window.__ld = [
 
 <!-- ============ MY BIDS ============ -->
 <section class="view" id="view-mybids">
-  <div class="top"><h1 class="serif">My Bids</h1></div>
+  <div class="top"><h1 class="serif">My Bids</h1><a class="brand" href="index.html" aria-label="Back to home"><img class="brand-img" src="images/jashn-logo.png" alt="JASHN" onerror="this.parentNode.classList.add('nologo')"></a></div>
   <div class="tabs" id="mybids-tabs">
     <button class="tab on" data-tab="active">Active</button>
     <button class="tab" data-tab="won">Won</button>
@@ -654,7 +663,7 @@ window.__ld = [
 
 <!-- ============ PROFILE ============ -->
 <section class="view" id="view-profile">
-  <div class="top"><h1 class="serif">Profile</h1></div>
+  <div class="top"><h1 class="serif">Profile</h1><a class="brand" href="index.html" aria-label="Back to home"><img class="brand-img" src="images/jashn-logo.png" alt="JASHN" onerror="this.parentNode.classList.add('nologo')"></a></div>
   <div class="profile-card">
     <label class="k" style="font-size:15px;color:var(--muted);">Your name (used on bids)</label>
     <div class="input-with-confirm" style="margin-top:6px;">
@@ -699,7 +708,7 @@ window.__ld = [
   <div id="sheet-bidform">
     <div class="amount-field"><span>₹</span><input id="sheet-amount" type="number" inputmode="numeric" min="1" max="100000000"></div>
     <div class="quick-row" id="sheet-quick"></div>
-    <p class="sheet-hold-note" id="sheet-hold-note" style="display:none;font-size:15px;color:var(--muted);margin:8px 0 0;line-height:1.45;">If your bid is above ₹20,000, our team will call you to confirm it. Until then, it will not show as the highest bid.</p>
+    <p class="sheet-hold-note" id="sheet-hold-note" style="display:none;font-size:15px;color:var(--muted);margin:8px 0 0;line-height:1.45;">If your bid is above ₹10,000, our team will call you to confirm it. Until then, it will not show as the highest bid.</p>
     <div class="biddername">
       <span>Bidding as <strong id="sheet-name-display"></strong></span>
       <button id="sheet-name-change">Change</button>
@@ -717,11 +726,9 @@ window.__ld = [
       <p class="contact-hint">We use this to call you about your bid. No code will be sent. Please check that the number is correct.</p>
       <label for="sheet-child-input">Child's name <span class="req">*</span></label>
       <input id="sheet-child-input" maxlength="79" placeholder="Your child's name" autocomplete="off">
-      <label for="sheet-class-input">Class &amp; Section</label>
+      <label for="sheet-class-input">Class &amp; Section <span class="req">*</span></label>
       <input id="sheet-class-input" maxlength="19" placeholder="e.g. 10-B or 10 B" autocomplete="off">
-      <label for="sheet-admission-input">Admission number</label>
-      <input id="sheet-admission-input" maxlength="4" inputmode="numeric" placeholder="4-digit admission number" autocomplete="off">
-      <p class="contact-hint">Please fill in at least one: Class &amp; Section, or Admission number. Only our team can see this. It is never shown to others.</p>
+      <p class="contact-hint">Only our team can see this. It is never shown to others.</p>
     </div>
     <div class="consent-block" id="sheet-consent-block" role="group" aria-labelledby="sheet-consent-h">
       <p class="consent-h" id="sheet-consent-h">If you win <span class="req">*</span></p>
@@ -890,8 +897,9 @@ window.addEventListener('popstate', (e) => {
 // Splash / Welcome — shown on every load, every time, regardless of
 // sign-in state or whether they've seen it before. Tapping through just
 // takes them to the catalog; it doesn't set anything to remember that.
-document.getElementById('splash-wordmark').textContent = 'Welcome to Silent Auction';
+document.getElementById('splash-wordmark').textContent = 'Welcome to the SBS Silent Auction';
 // First time: show the instructions once. After that, straight to the items.
+document.querySelectorAll('a.brand').forEach(a => a.addEventListener('click', (e) => { e.preventDefault(); showView('home'); }));
 document.getElementById('open-admin').addEventListener('click', (e) => {
   if (!confirm('This page is only for the auction organizers. Open it anyway?')) e.preventDefault();
 });
@@ -1344,7 +1352,7 @@ document.getElementById('item-back').onclick = () => {
 };
 document.getElementById('item-share').onclick = async () => {
   const url = location.origin + location.pathname + '?id=' + currentItemId;
-  if (navigator.share) { navigator.share({ title: 'Silent Auction', url }).catch(() => {}); }
+  if (navigator.share) { navigator.share({ title: 'SBS Silent Auction', url }).catch(() => {}); }
   else { await navigator.clipboard.writeText(url); alert('Link copied.'); }
 };
 
@@ -1559,7 +1567,6 @@ function openBidSheet(it) {
   document.getElementById('sheet-phone-input').value = localStorage.getItem('auction_phone') || '';
   document.getElementById('sheet-child-input').value = localStorage.getItem('auction_child_name') || '';
   document.getElementById('sheet-class-input').value = localStorage.getItem('auction_class_section') || '';
-  document.getElementById('sheet-admission-input').value = localStorage.getItem('auction_admission_number') || '';
   consentYes.checked = false; consentNo.checked = false; consentEditing = false;
   try { document.getElementById('sheet-terms').checked = localStorage.getItem('terms_ok_v1') === '1'; } catch (_) {}
   document.getElementById('sheet-err').textContent = '';
@@ -1656,7 +1663,6 @@ document.getElementById('sheet-confirm').onclick = async () => {
   const phone = normalizePhoneInput(document.getElementById('sheet-phone-input').value);
   const childName = document.getElementById('sheet-child-input').value.trim();
   const classSection = document.getElementById('sheet-class-input').value.trim();
-  const admissionNumber = document.getElementById('sheet-admission-input').value.trim();
   const amount = Number(document.getElementById('sheet-amount').value);
   if (!googleUser) { errEl.textContent = 'Please sign in to place a bid.'; return; }
   if (!name) {
@@ -1666,16 +1672,12 @@ document.getElementById('sheet-confirm').onclick = async () => {
   }
   if (!isValidPhone(phone)) { errEl.textContent = 'Please enter a 10-digit mobile number that starts with 6, 7, 8 or 9.'; return; }
   if (!childName) { errEl.textContent = "Please enter your child's name."; return; }
-  if (!classSection && !admissionNumber) { errEl.textContent = "Please enter your child's Class & Section, or their admission number."; return; }
+  if (!classSection) { errEl.textContent = "Please enter your child's Class & Section."; return; }
   // A space or a dash between the class number and section (e.g. "10-B" or
   // "10 B") is required so the two parts can actually be read back apart
   // and tracked separately, instead of landing as one unparseable blob.
   if (classSection && !CLASS_SECTION_REGEX.test(classSection)) {
     errEl.textContent = 'Please write Class & Section like this: 10-B or 10 B.';
-    return;
-  }
-  if (admissionNumber && !ADMISSION_NUMBER_REGEX.test(admissionNumber)) {
-    errEl.textContent = 'The admission number should be 4 digits.';
     return;
   }
   const savedChoice = savedAnnounce();
@@ -1714,7 +1716,7 @@ document.getElementById('sheet-confirm').onclick = async () => {
   localStorage.setItem('auction_phone', phone);
   localStorage.setItem('auction_child_name', childName);
   localStorage.setItem('auction_class_section', classSection);
-  localStorage.setItem('auction_admission_number', admissionNumber);
+  try { localStorage.removeItem('auction_admission_number'); } catch (_) {}
 
   const itemRef = db.collection('items').doc(sheetItem.id);
   const limitRef = db.collection('bidLimits').doc(googleUser.uid);
@@ -1734,7 +1736,7 @@ document.getElementById('sheet-confirm').onclick = async () => {
       if (amount < minNext) throw new Error(`Someone just bid higher. Please bid at least ${money(minNext)}.`);
       held = isHoldAmount(it, amount);
       const fields = {
-        name, phone, childName, classSection, admissionNumber, email: userEmail(), amount, uid: googleUser.uid,
+        name, phone, childName, classSection, email: userEmail(), amount, uid: googleUser.uid,
         isGoogle: !googleUser.isAnonymous, deviceId: getDeviceId(), announceName,
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
       };

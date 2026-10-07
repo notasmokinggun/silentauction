@@ -291,9 +291,9 @@ function removeMyBid(itemId, bidId) {
   const list = getMyBids().filter((b) => !(b.itemId === itemId && (!bidId || b.bidId === bidId)));
   localStorage.setItem("my_bids", JSON.stringify(list));
 }
-function recordMyBid(itemId, bidId, amount, status) {
+function recordMyBid(itemId, bidId, amount, status, uid) {
   const list = getMyBids().filter((b) => b.itemId !== itemId);
-  list.push({ itemId, bidId, amount, ts: Date.now(), status: status || null });
+  list.push({ itemId, bidId, amount, ts: Date.now(), status: status || null, uid: uid || null });
   localStorage.setItem("my_bids", JSON.stringify(list));
 }
 
@@ -313,7 +313,7 @@ async function syncMyBidsFromServer(uid) {
       const ts = data.timestamp && data.timestamp.toDate ? data.timestamp.toDate().getTime() : 0;
       const prev = latest.get(itemId);
       if (!prev || ts >= prev.ts) {
-        latest.set(itemId, { itemId, bidId: d.id, amount: data.amount, ts, status: data.status || null });
+        latest.set(itemId, { itemId, bidId: d.id, amount: data.amount, ts, status: data.status || null, uid });
       }
     });
     localStorage.setItem("my_bids", JSON.stringify([...latest.values()]));

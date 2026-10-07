@@ -600,7 +600,7 @@ window.__ld = [
   <div class="profile-card" id="profile-google"></div>
   <a class="adminlink" href="#" id="open-guide" style="margin-top:22px;">How bidding works</a>
   <a class="adminlink admin-secondary" id="open-admin" href="admin.html">Auction organizer? Open admin</a>
-  <p style="text-align:center;font-size:14px;color:var(--muted);margin:18px 0 0;">Site version 20261007b</p>
+  <p style="text-align:center;font-size:14px;color:var(--muted);margin:18px 0 0;">Site version 20261007c</p>
 </section>
 
 <!-- ============ Bottom nav ============ -->
@@ -676,7 +676,7 @@ window.__ld = [
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="firebase-init.js?v=20261007b"></script>
+<script src="firebase-init.js?v=20261007c"></script>
 <script>
 // -----------------------------------------------------------------
 // Icons — small inline SVGs, stroke = currentColor
@@ -1592,7 +1592,7 @@ document.getElementById('sheet-confirm').onclick = async () => {
     let undoOk = true;
     try { await runBid(true); }
     catch (e) { if (e.code === 'permission-denied') { undoOk = false; await runBid(false); } else throw e; }
-    recordMyBid(sheetItem.id, bidRef.id, amount, held ? 'pending' : null);
+    recordMyBid(sheetItem.id, bidRef.id, amount, held ? 'pending' : null, googleUser.uid);
     undoInfo = (held || !undoOk) ? null : { itemId: sheetItem.id, bidId: bidRef.id, until: Date.now() + UNDO_SECONDS * 1000 };
     closeOverlaySilently(closeBidSheet);
     document.getElementById('success-msg').textContent = held
@@ -1690,7 +1690,8 @@ document.querySelectorAll('#mybids-tabs .tab').forEach(t => t.onclick = () => {
 });
 
 function renderMyBids() {
-  const mine = getMyBids();
+  // Only this account's bids (entries saved before accounts were tracked have no uid and stay).
+  const mine = getMyBids().filter(m => !m.uid || !googleUser || m.uid === googleUser.uid);
   const rows = mine.map(m => {
     const it = lots.find(l => l.id === m.itemId);
     if (!it) return null;
@@ -1710,7 +1711,11 @@ function renderMyBids() {
       }
     } else if (!googleUser) {
       statusText = 'Sign in to see your status';
-    } else if (it.currentBidderUid === googleUser.uid) {
+    } else if (
+      it.currentBidderUid === googleUser.uid ||            // the lot says you lead
+      (it.lastBidId && it.lastBidId === m.bidId) ||        // your bid was the latest raise
+      (m.amount != null && it.currentBid === m.amount)     // the price is exactly your bid, so nobody is above you
+    ) {
       statusText = "You're the highest bidder"; statusClass = 'won';
     } else {
       statusText = 'Outbid'; statusClass = 'lost';

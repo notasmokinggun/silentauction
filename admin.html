@@ -169,9 +169,10 @@
   .pb-hint{font-size:12px;color:var(--muted);margin:10px 0 0;}
   .pb-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;}
   /* ---------- A4 bid details sheet (handwritten bids) ---------- */
-  @page{size:A4;margin:12mm;}
+  @page{size:A4;margin:0;} /* margin 0 = the browser has nowhere to print its date/time/title/address header and footer */
   #bidsheet{display:none;}
-  .bs{font-family:'IBM Plex Sans',Arial,sans-serif;color:#000;font-size:12.5pt;line-height:1.35;}
+  .bs,.bs-info{box-sizing:border-box;}
+  .bs{font-family:'IBM Plex Sans',Arial,sans-serif;color:#000;font-size:12.5pt;line-height:1.35;padding:12mm;}
   .bs-head{display:flex;align-items:center;gap:14px;border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:10px;}
   .bs-head img{height:56px;width:auto;}
   .bs-head h1{font-family:'Nunito','IBM Plex Sans',Arial,sans-serif;font-size:21pt;margin:0;font-weight:600;color:#000;}
@@ -186,7 +187,7 @@
   .bs-sq{display:inline-block;width:16px;height:16px;border:1.5px solid #000;vertical-align:-3px;margin:0 6px 0 14px;}
   .bs-note{font-size:10.5pt;margin:4px 0 0;}
   /* Page 1 of a lot: photo + summary. Exactly one A4 page, so the bid sheet always lands on page 2 (double-sided friendly). */
-  .bs-info{font-family:'IBM Plex Sans',Arial,sans-serif;color:#000;height:272mm;max-height:272mm;overflow:hidden;display:flex;flex-direction:column;
+  .bs-info{font-family:'IBM Plex Sans',Arial,sans-serif;color:#000;height:296mm;max-height:296mm;padding:12mm;overflow:hidden;display:flex;flex-direction:column;
     break-after:page;page-break-after:always;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
   .bs-info .bs-head{flex:none;}
   .bs-lotline{flex:none;display:flex;align-items:baseline;gap:14px;margin:4px 0 8px;}
@@ -409,30 +410,17 @@
           <label>Lot
             <select id="printLot" title="Lot to print the sheet for"><option value="">Blank sheet (no lot)</option></select>
           </label>
-          <label>What gets pre-printed
-            <select id="printMode">
-              <option value="manual">Lot + minimum raise (write highest bid by hand)</option>
-              <option value="system">Lot + minimum raise + current highest bid from system</option>
-              <option value="lotonly">Lot only (write everything else by hand)</option>
-            </select>
-          </label>
           <label>Pages per lot
             <select id="printPages">
               <option value="two">2 pages: photo + summary, then the bid sheet</option>
               <option value="one">1 page: bid sheet only</option>
             </select>
           </label>
-          <label>Highest bid, optional
-            <input id="printHigh" type="number" min="0" inputmode="numeric" placeholder="type to pre-fill">
-          </label>
-          <label>Minimum raise, optional
-            <input id="printInc" type="number" min="0" inputmode="numeric" placeholder="type to override">
-          </label>
           <label>Copies per lot
             <input id="printCopies" type="number" min="1" max="50" value="1">
           </label>
         </div>
-        <p class="pb-hint" id="printHint"></p>
+        <p class="pb-hint" id="printHint">Each sheet is pre-printed with the lot number and name only. Everything else is written by hand. Nothing else is printed: no dates, times or page headers.</p>
         <div class="pb-actions">
           <button class="btn-ghost" id="printBidSheet">Print A4 bid sheet(s)</button>
           <button class="btn-ghost" id="exportCsvBids">Export bids as CSV</button>
@@ -1257,16 +1245,7 @@ function fillPrintLotSelect() {
   if (keep && (keep === '__all__' || lots.some(l => l.id === keep))) sel.value = keep;
   syncPrintControls();
 }
-function syncPrintControls() {
-  const v = document.getElementById('printLot').value;
-  const single = v !== '__all__';
-  document.getElementById('printHigh').disabled = !single;
-  document.getElementById('printInc').disabled = !single;
-  document.getElementById('printHint').textContent = single
-    ? 'Anything you type in the two optional boxes is printed on the sheet and overrides the system value.'
-    : 'All lots: each sheet gets its own lot number, name and minimum raise. The optional boxes are ignored.';
-}
-document.getElementById('printLot').addEventListener('change', syncPrintControls);
+function syncPrintControls() { /* nothing to switch any more: every sheet is lot number + name, rest by hand */ }
 
 function bidSheetHtml(lot, mode, ovHigh, ovInc) {
   const inr = n => '\u20B9' + Number(n).toLocaleString('en-IN');
@@ -1360,11 +1339,10 @@ function imagesReady(root, timeoutMs) {
 }
 async function printBidSheet() {
   const v = document.getElementById('printLot').value;
-  const mode = document.getElementById('printMode').value;
+  const mode = 'lotonly'; // lot number and name only; everything else is written by hand
   const twoPage = document.getElementById('printPages').value === 'two';
   const copies = Math.min(50, Math.max(1, parseInt(document.getElementById('printCopies').value, 10) || 1));
-  const ovHigh = v === '__all__' ? '' : document.getElementById('printHigh').value.trim();
-  const ovInc = v === '__all__' ? '' : document.getElementById('printInc').value.trim();
+  const ovHigh = '', ovInc = '';
   const targets = v === '__all__'
     ? [...lots].sort((x, y) => (x.lotNumber || 0) - (y.lotNumber || 0))
     : [lots.find(l => l.id === v) || null];

@@ -1,6 +1,6 @@
 {
-  "name": "SBS Silent Auction",
-  "short_name": "Silent Auction",
+  "name": "SBS CAS Auction",
+  "short_name": "CAS Auction",
   "description": "Bid, support, make a change.",
   "start_url": "./index.html",
   "scope": "./",

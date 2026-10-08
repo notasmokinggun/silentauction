@@ -1214,7 +1214,7 @@ document.getElementById('lotForm').addEventListener('submit', async (e) => {
 
 // -----------------------------------------------------------------
 // A4 photo sheet: every lot on ONE page (photo, lot number, name),
-// headed "SBS Silent Auction". Grid size is worked out from the number
+// headed "SBS CAS Auction". Grid size is worked out from the number
 // of lots so the photos are as large as the page allows.
 // -----------------------------------------------------------------
 function photoSheetLayout(n) {
@@ -1242,7 +1242,7 @@ function photoSheetHtml(list) {
   return `<div class="ps">
     <div class="ps-head">
       <img src="images/jashn-logo.png" alt="" onerror="this.style.display='none'">
-      <div><h1>SBS Silent Auction</h1><p>All lots. Note the lot number you want and give it to the desk with your details.</p></div>
+      <div><h1>SBS CAS Auction</h1><p>All lots. Note the lot number you want and give it to the desk with your details.</p></div>
     </div>
     <div class="ps-grid" style="grid-template-columns:repeat(${L.c},1fr);grid-template-rows:repeat(${L.r},1fr);">${cells}</div>
   </div>`;
@@ -1253,7 +1253,7 @@ function bidFormHtml() {
   return `<div class="bs">
     <div class="ps-head">
       <img src="images/jashn-logo.png" alt="" onerror="this.style.display='none'">
-      <div><h1>SBS Silent Auction</h1><p>Bid details sheet. Please write clearly in CAPITAL LETTERS.</p></div>
+      <div><h1>SBS CAS Auction</h1><p>Bid details sheet. Please write clearly in CAPITAL LETTERS.</p></div>
     </div>
     ${sec(1, 'The item', `
       <div class="bs-row"><label>Lot number</label><div class="bs-line" style="max-width:38mm;"></div>
@@ -1276,7 +1276,7 @@ function bidFormHtml() {
     ${sec(5, 'Confirmation', `
       <p class="bs-note" style="font-size:10.5pt;color:#000;"><span class="bs-sq" style="margin-left:0;"></span>I am 18 or older. I understand my bid is a promise to pay if I win.</p>
       <div class="bs-row"><label>Signature</label><div class="bs-line"></div><label>Date</label><div class="bs-line" style="max-width:38mm;"></div></div>`)}
-    <p class="bs-thanks">Thank you for supporting the SBS Silent Auction.</p>
+    <p class="bs-thanks">Thank you for supporting the SBS CAS Auction.</p>
   </div>`;
 }
 function imagesReady(root, timeoutMs) {

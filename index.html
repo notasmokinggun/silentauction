@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Welcome to the SBS Silent Auction</title>
+<title>Welcome to the SBS CAS Auction</title>
 <meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="icon" href="images/jashn-logo.png">
 <link rel="apple-touch-icon" href="images/icon-192.png">
@@ -11,7 +11,7 @@
 <meta name="theme-color" content="#FFF1E6">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Silent Auction">
+<meta name="apple-mobile-web-app-title" content="CAS Auction">
 <style>
 html,body{overscroll-behavior-y:none;}
 </style>
@@ -617,7 +617,7 @@ html,body{overscroll-behavior-y:none;}
 })();
 </script>
 <div id="app-loader" role="status" aria-live="polite">
-  <div class="ld-mark">Welcome to the SBS Silent Auction</div>
+  <div class="ld-mark">Welcome to the SBS CAS Auction</div>
   <div class="ld-spin" aria-hidden="true"></div>
   <p id="ld-msg">Getting things ready. Please wait a moment.</p>
   <button id="ld-reload" type="button" hidden onclick="location.reload()">Reload the page</button>
@@ -637,7 +637,7 @@ window.__ld = [
   <div class="splash-photo">
     <div class="splash-head">
       <div class="splash-brand"><a class="brand" href="index.html" aria-label="Back to home"><img class="brand-img" src="images/jashn-logo.png" alt="JASHN" onerror="this.parentNode.classList.add('nologo')"></a></div>
-      <div class="splash-wordmark serif" id="splash-wordmark">Welcome to the SBS Silent Auction</div>
+      <div class="splash-wordmark serif" id="splash-wordmark">Welcome to the SBS CAS Auction</div>
     </div>
     <div class="splash-gallery" id="splash-gallery" aria-hidden="true"></div>
     <div class="splash-content">
@@ -1059,7 +1059,7 @@ window.addEventListener('popstate', (e) => {
 // Splash / Welcome — shown on every load, every time, regardless of
 // sign-in state or whether they've seen it before. Tapping through just
 // takes them to the catalog; it doesn't set anything to remember that.
-document.getElementById('splash-wordmark').textContent = 'Welcome to the SBS Silent Auction';
+document.getElementById('splash-wordmark').textContent = 'Welcome to the SBS CAS Auction';
 // First time: show the instructions once. After that, straight to the items.
 document.querySelectorAll('a.brand').forEach(a => a.addEventListener('click', (e) => { e.preventDefault(); showView('home'); }));
 document.getElementById('open-admin').addEventListener('click', async (e) => {
@@ -1519,7 +1519,7 @@ document.getElementById('item-back').onclick = () => {
 };
 document.getElementById('item-share').onclick = async () => {
   const url = location.origin + location.pathname + '?id=' + currentItemId;
-  if (navigator.share) { navigator.share({ title: 'SBS Silent Auction', url }).catch(() => {}); }
+  if (navigator.share) { navigator.share({ title: 'SBS CAS Auction', url }).catch(() => {}); }
   else { try { await navigator.clipboard.writeText(url); showToast('Link copied.', 'ok'); } catch (_) { showToast('Could not copy the link. Copy it from the address bar instead.', 'error'); } }
 };
 

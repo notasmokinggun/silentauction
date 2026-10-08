@@ -274,7 +274,7 @@ auth.onAuthStateChanged(async (u) => {
   if (lotsUnsub) { lotsUnsub(); lotsUnsub = null; }
   lots = []; entered.length = 0; renderLog();
   if (!u) { show('gate'); hideBoot(); return; }
-  $('desk-boot-text').textContent = 'Checking your access\u2026';
+  const bt = $('desk-boot-text'); if (bt) bt.textContent = 'Checking your access\u2026'; // overlay is removed after first load
   const label = await roleLabel(u);
   if (!label) { show('denied'); hideBoot(); return; }
   myLabel = label;

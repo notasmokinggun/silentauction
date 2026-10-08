@@ -5,6 +5,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0E0C0A">
+<meta name="color-scheme" content="dark">
 <link rel="icon" href="images/jashn-logo.png">
 <title>Paper bid desk</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,7 +17,10 @@
     --bg:#0E0C0A; --surface:#1B1815; --surface2:#221E19; --border:#4D4538;
     --cream:#F3EBDA; --text:#F3EBDA; --muted:#CBC0AF; --gold:#E3B75C; --green:#7FBF8E; --red:#D9836E;
   }
-  *{box-sizing:border-box;}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html{-webkit-text-size-adjust:100%;color-scheme:dark;}
+  button,select,input,label{touch-action:manipulation;}
+  body.modal-open{overflow:hidden;}
   html,body{margin:0;background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:17px;line-height:1.45;}
   body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-variant-numeric:tabular-nums;}
   h1,h2,h3{text-wrap:balance;}
@@ -33,23 +38,46 @@
   .head img{height:44px;width:auto;}
   .head h1{font-size:23px;margin:0;font-weight:600;}
   .who{display:flex;justify-content:space-between;align-items:center;gap:10px;color:var(--muted);font-size:15px;margin-bottom:8px;}
-  .linkbtn{background:none;border:none;color:var(--cream);text-decoration:underline;font-size:15px;padding:6px;}
+  .linkbtn{background:none;border:none;color:var(--cream);text-decoration:underline;font-size:15px;padding:10px 12px;min-height:44px;}
   .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px 16px;margin-top:12px;}
   .card b{color:var(--cream);}
   .btn{display:flex;align-items:center;justify-content:center;width:100%;padding:15px;border:none;border-radius:12px;
-    font-weight:600;font-size:17px;margin-top:18px;}
+    font-weight:600;font-size:17px;margin-top:18px;min-height:54px;}
   .btn.primary{background:var(--cream);color:#1B140A;}
   .btn.outline{background:transparent;border:1px solid var(--border);color:var(--text);}
   .btn[disabled]{opacity:.45;pointer-events:none;}
-  .opt{display:flex;gap:12px;align-items:flex-start;padding:9px 0;cursor:pointer;}
-  .opt input{width:24px;height:24px;flex:none;margin:0;padding:0;}
+  .opt{display:flex;gap:14px;align-items:center;padding:13px 14px;margin-top:8px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:12px;min-height:56px;}
+  .opt:has(input:checked){border-color:var(--gold);background:var(--surface2);}
+  .opt input{width:28px;height:28px;flex:none;margin:0;padding:0;accent-color:var(--gold);}
+  .lotrow{display:flex;gap:10px;}
+  .lotrow input{width:104px;flex:none;text-align:center;}
+  .lotrow select{flex:1;min-width:0;text-overflow:ellipsis;}
+  .actionbar{position:sticky;bottom:0;z-index:5;margin:20px -16px 0;padding:10px 16px calc(12px + env(safe-area-inset-bottom,0px));
+    background:linear-gradient(to top,var(--bg) 78%,rgba(14,12,10,0));}
+  .actionbar .btn{margin-top:0;}
+  .actionbar .err{margin:0 0 8px;min-height:0;}
+  #desk-boot{position:fixed;inset:0;z-index:200;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;transition:opacity .25s ease;}
+  #desk-boot.done{opacity:0;pointer-events:none;}
+  #desk-boot .db-spin{width:46px;height:46px;border-radius:50%;border:4px solid var(--border);border-top-color:var(--gold);animation:db-rot 1s linear infinite;}
+  #desk-boot p{margin:18px 0 0;font-size:17px;color:var(--muted);max-width:300px;}
+  #desk-boot button{display:none;margin-top:14px;padding:13px 24px;border:none;border-radius:12px;background:var(--cream);color:#1B140A;font-weight:700;font-size:16px;}
+  #desk-boot.slow button{display:inline-block;}
+  @keyframes db-rot{to{transform:rotate(360deg);}}
+  @media (prefers-reduced-motion:reduce){#desk-boot .db-spin{animation-duration:3s;}#desk-boot{transition:none;}}
+  @media (max-width:640px){
+    .modal{align-items:flex-end;padding:0;}
+    .modal .box{max-width:none;border-radius:20px 20px 0 0;max-height:92vh;max-height:92dvh;overscroll-behavior:contain;
+      padding:20px 18px calc(18px + env(safe-area-inset-bottom,0px));}
+    .modal .btn{min-height:56px;}
+  }
+  @media (max-width:360px){html,body{font-size:16px;}.head h1{font-size:20px;}}
   .err{color:var(--red);font-weight:600;margin:12px 0 0;min-height:1.2em;}
-  .gate{min-height:100vh;display:flex;flex-direction:column;justify-content:center;max-width:380px;margin:0 auto;padding:30px 18px;}
+  .gate{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;justify-content:center;max-width:380px;margin:0 auto;padding:30px 18px;}
   .gate h1{font-size:24px;margin:0 0 4px;}
   .modal{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;padding:16px;}
   .modal.open{display:flex;}
   .modal .box{background:var(--surface);border:1px solid var(--border);border-radius:16px;width:100%;max-width:420px;
-    max-height:92vh;overflow:auto;padding:20px 18px;}
+    max-height:92vh;max-height:92dvh;overflow:auto;padding:20px 18px;}
   .modal h2{margin:0 0 10px;font-size:21px;}
   dl.review{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 14px;}
   dl.review dt{color:var(--muted);}
@@ -65,6 +93,12 @@
 </style>
 </head>
 <body>
+
+<div id="desk-boot" role="status" aria-live="polite">
+  <div class="db-spin"></div>
+  <p id="desk-boot-text">Loading the desk&hellip;</p>
+  <button type="button" onclick="location.reload()">Reload</button>
+</div>
 
 <!-- Sign in -->
 <div id="gate" class="gate">
@@ -92,25 +126,29 @@
   <div class="head"><img src="images/jashn-logo.png" alt="" onerror="this.style.display='none'"><h1 class="serif">Paper bid desk</h1></div>
   <div class="who"><span id="who"></span><button class="linkbtn" id="signout" type="button">Sign out</button></div>
 
-  <label class="f" for="lot">Lot</label>
-  <select id="lot"><option value="">Loading lots...</option></select>
+  <label class="f" for="lotno">Lot</label>
+  <div class="lotrow">
+    <input id="lotno" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" enterkeyhint="go" placeholder="No." aria-label="Type the lot number" maxlength="4">
+    <select id="lot" aria-label="Or pick a lot from the list"><option value="">Loading lots...</option></select>
+  </div>
+  <p class="hint" id="lotno-hint">Type the lot number, or pick it from the list.</p>
   <div class="card" id="lotinfo" style="display:none;"></div>
 
   <label class="f" for="name">Bidder's name</label>
-  <input id="name" type="text" autocomplete="off" maxlength="79">
+  <input id="name" type="text" autocomplete="off" autocapitalize="words" autocorrect="off" spellcheck="false" enterkeyhint="next" maxlength="79">
 
   <label class="f" for="phone">Mobile number</label>
-  <input id="phone" type="tel" inputmode="numeric" autocomplete="off" placeholder="10 digits">
+  <input id="phone" type="tel" inputmode="numeric" autocomplete="off" enterkeyhint="next" maxlength="16" placeholder="10 digits">
   <p class="hint">Checked on the sheet? The organizers may call this number.</p>
 
   <label class="f" for="child">Child's name</label>
-  <input id="child" type="text" autocomplete="off" maxlength="79">
+  <input id="child" type="text" autocomplete="off" autocapitalize="words" autocorrect="off" spellcheck="false" enterkeyhint="next" maxlength="79">
 
   <label class="f" for="cls">Class and section</label>
-  <input id="cls" type="text" autocomplete="off" placeholder="e.g. 10-B" maxlength="8">
+  <input id="cls" type="text" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="next" placeholder="e.g. 10-B" maxlength="8">
 
   <label class="f" for="amount">Bid amount (&#8377;)</label>
-  <input id="amount" type="text" inputmode="numeric" autocomplete="off" placeholder="in figures">
+  <input id="amount" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" enterkeyhint="done" placeholder="in figures">
   <p class="hint" id="amount-hint"></p>
 
   <label class="f" id="announce-h">If they win</label>
@@ -120,8 +158,10 @@
   </div>
   <p class="hint">Tick whichever box they marked on the sheet.</p>
 
-  <p class="err" id="form-err" role="alert"></p>
-  <button class="btn primary" id="review-btn" type="button">Review bid</button>
+  <div class="actionbar">
+    <p class="err" id="form-err" role="alert"></p>
+    <button class="btn primary" id="review-btn" type="button">Review bid</button>
+  </div>
 
   <div class="card" id="logcard" style="display:none;margin-top:26px;">
     <b>Entered on this screen</b>
@@ -141,11 +181,11 @@
     <button class="btn outline" id="edit-btn" type="button">Go back and edit</button>
   </div>
 </div>
-<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="ui.js"></script>
 <script src="firebase-init.js"></script>
 <script>
 const $ = id => document.getElementById(id);
@@ -156,12 +196,29 @@ let pending = null;      // the details being reviewed
 const entered = [];      // this page only; never stored
 
 // ---------- Toast ----------
-let toastTimer = null;
-function toast(msg) {
-  const el = $('toast');
-  el.textContent = msg; el.classList.add('show');
-  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 4500);
+function toast(msg) { ui.toast(msg, 'ok', 5000); }
+
+// ---------- Loading screen until the first sign-in check finishes ----------
+const bootEl = $('desk-boot');
+const bootSlow = setTimeout(() => {
+  $('desk-boot-text').textContent = 'Taking longer than usual. Check the connection, or reload.';
+  bootEl.classList.add('slow');
+}, 12000);
+function hideBoot() {
+  clearTimeout(bootSlow);
+  bootEl.classList.add('done');
+  setTimeout(() => { if (bootEl.parentNode) bootEl.parentNode.removeChild(bootEl); }, 350);
 }
+
+// ---------- Keep the screen awake while the desk is open ----------
+let wakeLock = null;
+async function keepAwake() {
+  try { if ('wakeLock' in navigator && !wakeLock && $('desk').style.display !== 'none') {
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', () => { wakeLock = null; });
+  } } catch (_) { /* not supported or refused: fine */ }
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) keepAwake(); });
 
 // ---------- Sign in / role check ----------
 $('signin-form').onsubmit = async (e) => {
@@ -195,12 +252,15 @@ async function roleLabel(u) {
 auth.onAuthStateChanged(async (u) => {
   if (lotsUnsub) { lotsUnsub(); lotsUnsub = null; }
   lots = []; entered.length = 0; renderLog();
-  if (!u) { show('gate'); return; }
+  if (!u) { show('gate'); hideBoot(); return; }
+  $('desk-boot-text').textContent = 'Checking your access\u2026';
   const label = await roleLabel(u);
-  if (!label) { show('denied'); return; }
+  if (!label) { show('denied'); hideBoot(); return; }
   myLabel = label;
   $('who').textContent = 'Signed in: ' + label;
   show('desk');
+  hideBoot();
+  keepAwake();
   lotsUnsub = db.collection('items').orderBy('lotNumber').onSnapshot(snap => {
     lots = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     renderLots();
@@ -216,6 +276,7 @@ function renderLots() {
   sel.innerHTML = '<option value="">Choose a lot...</option>' +
     open.map(l => `<option value="${l.id}">Lot ${lotNo(l)} - ${escapeHtml(l.title || '')}</option>`).join('');
   if (keep && open.some(l => l.id === keep)) sel.value = keep;
+  else if (keep) { $('lotno').value = ''; }
   renderLotInfo();
 }
 function minNext(it) { return (it.currentBid || 0) + (it.increment || 0); }
@@ -228,7 +289,29 @@ function renderLotInfo() {
     : `No bids yet. Starting bid <b>${money(it.currentBid)}</b><br>First bid must be at least <b>${money(minNext(it))}</b>`;
   $('amount-hint').textContent = `At least ${money(minNext(it))}. Bids of ${money(HOLD_THRESHOLD)} or more are held until the organizers confirm by phone.`;
 }
-$('lot').onchange = renderLotInfo;
+$('lot').onchange = () => {
+  const it = currentLot();
+  $('lotno').value = it ? String(it.lotNumber) : '';
+  $('lotno-hint').textContent = 'Type the lot number, or pick it from the list.';
+  renderLotInfo();
+};
+$('lotno').oninput = () => {
+  const el = $('lotno'), hint = $('lotno-hint');
+  el.value = el.value.replace(/\D/g, '');
+  if (!el.value) { $('lot').value = ''; hint.textContent = 'Type the lot number, or pick it from the list.'; renderLotInfo(); return; }
+  const n = parseInt(el.value, 10);
+  const match = lots.find(l => Number(l.lotNumber) === n);
+  if (!match) { $('lot').value = ''; hint.textContent = 'No lot ' + n + '.'; renderLotInfo(); return; }
+  if (isClosed(match)) { $('lot').value = ''; hint.textContent = 'Lot ' + lotNo(match) + ' is closed.'; renderLotInfo(); return; }
+  $('lot').value = match.id;
+  hint.textContent = 'Lot ' + lotNo(match) + ': ' + (match.title || '');
+  renderLotInfo();
+};
+// Enter / Next on the phone keyboard moves to the next box; Done on the amount closes the keyboard.
+[['lotno', 'name'], ['name', 'phone'], ['phone', 'child'], ['child', 'cls'], ['cls', 'amount']].forEach(([from, to]) => {
+  $(from).addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $(to).focus(); } });
+});
+$('amount').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('amount').blur(); } });
 
 // ---------- Announce ticks (one at a time, neither pre-ticked) ----------
 $('ann-yes').onchange = () => { if ($('ann-yes').checked) $('ann-no').checked = false; };
@@ -277,9 +360,10 @@ $('review-btn').onclick = () => {
     ? `This is ${money(HOLD_THRESHOLD)} or more, so it is held and will not show on the lot until the organizers confirm it by phone.` : '';
   $('modal-err').textContent = '';
   $('modal').classList.add('open');
+  document.body.classList.add('modal-open');
   $('edit-btn').focus();
 };
-function closeModal() { $('modal').classList.remove('open'); }
+function closeModal() { $('modal').classList.remove('open'); document.body.classList.remove('modal-open'); }
 $('edit-btn').onclick = closeModal;
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
@@ -288,6 +372,7 @@ $('place-btn').onclick = async () => {
   if (!pending) return;
   const d = pending, btn = $('place-btn');
   btn.disabled = true; $('modal-err').textContent = '';
+  const doneBusy = ui.busy('Placing bid\u2026');
   const itemRef = db.collection('items').doc(d.it.id);
   const bidRef = itemRef.collection('bids').doc();
   const held = d.amount >= HOLD_THRESHOLD;
@@ -319,13 +404,15 @@ $('place-btn').onclick = async () => {
     closeModal(); pending = null;
     ['name', 'phone', 'child', 'cls', 'amount'].forEach(id => { $(id).value = ''; });
     $('ann-yes').checked = false; $('ann-no').checked = false;
+    window.scrollTo({ top: 0 });
+    $('lotno').value = String(d.it.lotNumber);
     toast(held ? `Held for a confirmation call: ${money(d.amount)} on Lot ${lotNo(d.it)}.` : `Placed: ${money(d.amount)} on Lot ${lotNo(d.it)} for ${d.name}.`);
     $('name').focus();
   } catch (e) {
     $('modal-err').textContent = e.code === 'permission-denied'
       ? 'The server refused this bid. The lot may have closed, the amount may be too low, or this login may have been switched off.'
       : (e.message || 'Could not place the bid. Try again.');
-  } finally { btn.disabled = false; }
+  } finally { btn.disabled = false; doneBusy(); }
 };
 function renderLog() {
   $('logcard').style.display = entered.length ? 'block' : 'none';

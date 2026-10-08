@@ -28,6 +28,10 @@
   a{color:inherit;}
   button{font-family:inherit;cursor:pointer;}
   input,textarea,select{font-family:inherit;}
+  /* Shared look for stand-alone text boxes (used by the Desk helpers form). */
+  .tbox{min-width:0;padding:11px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px;line-height:1.3;}
+  .tbox::placeholder{color:var(--muted);opacity:.85;}
+  .tbox:focus{outline:2px solid var(--gold);outline-offset:1px;border-color:var(--gold);}
 
   .gate{min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;
     text-align:center;padding:40px;}
@@ -442,9 +446,9 @@
         </p>
         <div id="desk-list"></div>
         <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;">
-          <input id="desk-label" placeholder="Name or role, e.g. Front desk" maxlength="59" style="flex:1 1 180px;">
-          <input id="desk-email" type="email" placeholder="Login email (can be made up)" style="flex:1 1 200px;">
-          <input id="desk-pass" type="text" placeholder="Password (8+ characters)" style="flex:1 1 150px;">
+          <input class="tbox" id="desk-label" placeholder="Name or role, e.g. Front desk" maxlength="59" style="flex:1 1 180px;">
+          <input class="tbox" id="desk-email" type="email" placeholder="Login email (can be made up)" style="flex:1 1 200px;">
+          <input class="tbox" id="desk-pass" type="text" placeholder="Password (8+ characters)" style="flex:1 1 150px;">
         </div>
         <div class="form-actions" style="margin-top:10px;">
           <button class="btn-ghost" id="desk-gen" type="button">Generate password</button>
@@ -473,6 +477,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="ui.js"></script>
 <script src="firebase-init.js"></script>
 <script>
 // -----------------------------------------------------------------
@@ -601,10 +606,12 @@ function loadDeskHelpers() {
       </div>`).join('') : '<p style="font-size:13px;color:var(--muted);">No helpers yet.</p>';
     document.querySelectorAll('[data-desk-toggle]').forEach(b => b.onclick = () =>
       db.collection('desks').doc(b.dataset.deskToggle).update({ active: b.dataset.active !== '1' })
-        .catch(e => alert('Could not change that helper: ' + e.message)));
-    document.querySelectorAll('[data-desk-remove]').forEach(b => b.onclick = () => {
-      if (!confirm('Remove ' + b.dataset.label + '? Their login stops working immediately.')) return;
-      db.collection('desks').doc(b.dataset.deskRemove).delete().catch(e => alert('Could not remove: ' + e.message));
+        .catch(e => ui.toast('Could not change that helper: ' + e.message, 'error')));
+    document.querySelectorAll('[data-desk-remove]').forEach(b => b.onclick = async () => {
+      if (!(await ui.confirm({ title: 'Remove this helper?', message: 'Remove ' + b.dataset.label + '? Their login stops working immediately.', yesText: 'Remove', danger: true }))) return;
+      db.collection('desks').doc(b.dataset.deskRemove).delete()
+        .then(() => ui.toast('Helper removed.', 'ok'))
+        .catch(e => ui.toast('Could not remove: ' + e.message, 'error'));
     });
   }, e => { document.getElementById('desk-list').textContent = 'Could not load helpers: ' + e.message; deskUnsub = null; });
 }
@@ -899,22 +906,32 @@ function renderLots() {
       </div>
     </div>`).join('');
   el.querySelectorAll('[data-act="edit"]').forEach(b => b.onclick = () => startEdit(b.dataset.id));
-  el.querySelectorAll('[data-act="toggle"]').forEach(b => b.onclick = () => {
+  el.querySelectorAll('[data-act="toggle"]').forEach(b => b.onclick = async () => {
     const it = lots.find(l => l.id === b.dataset.id);
     if (!it) return;
     const closing = it.active !== false;
-    if (!confirm(closing ? `Close LOT ${String(it.lotNumber).padStart(3, '0')}? Bidding stops immediately.` : `Reopen LOT ${String(it.lotNumber).padStart(3, '0')} for bidding?`)) return;
-    db.collection('items').doc(b.dataset.id).update({ active: !closing })
-      .catch(err => alert('Could not update lot: ' + err.message));
+    const lotNo = String(it.lotNumber).padStart(3, '0');
+    if (!(await ui.confirm({
+      title: closing ? `Close LOT ${lotNo}?` : `Reopen LOT ${lotNo}?`,
+      message: closing ? 'Bidding stops immediately.' : 'Bidding will open again right away.',
+      yesText: closing ? 'Close lot' : 'Reopen lot', danger: closing }))) return;
+    const done = ui.busy(closing ? 'Closing lot\u2026' : 'Reopening lot\u2026');
+    try {
+      await db.collection('items').doc(b.dataset.id).update({ active: !closing });
+      ui.toast(closing ? `LOT ${lotNo} closed.` : `LOT ${lotNo} reopened.`, 'ok');
+    } catch (err) { ui.toast('Could not update lot: ' + err.message, 'error'); }
+    finally { done(); }
   });
   el.querySelectorAll('[data-act="delete"]').forEach(b => b.onclick = async () => {
-    if (!confirm('Delete this lot and all its bids? This cannot be undone.')) return;
+    if (!(await ui.confirm({ title: 'Delete this lot?', message: 'This deletes the lot and all its bids. It cannot be undone.', yesText: 'Delete lot', danger: true }))) return;
+    const done = ui.busy('Deleting lot and its bids\u2026');
     try {
       await deleteLotWithBids(b.dataset.id);
       if (editingId === b.dataset.id) resetForm();
+      ui.toast('Lot deleted.', 'ok');
     } catch (err) {
-      alert('Could not delete lot: ' + err.message);
-    }
+      ui.toast('Could not delete lot: ' + err.message, 'error');
+    } finally { done(); }
   });
   el.querySelectorAll('[data-extend]').forEach(b => b.onclick = () => extendLotDeadline(b.dataset.extend, Number(b.dataset.secs)));
 }
@@ -944,8 +961,9 @@ async function extendLotDeadline(itemId, seconds) {
   const newEndsAt = firebase.firestore.Timestamp.fromDate(new Date(from + seconds * 1000));
   try {
     await db.collection('items').doc(itemId).update({ endsAt: newEndsAt });
+    ui.toast('Closing time extended.', 'ok');
   } catch (err) {
-    alert('Could not extend this lot: ' + err.message);
+    ui.toast('Could not extend this lot: ' + err.message, 'error');
   }
 }
 
@@ -1257,7 +1275,7 @@ function printBidSheet() {
   const targets = v === '__all__'
     ? [...lots].sort((x, y) => (x.lotNumber || 0) - (y.lotNumber || 0))
     : [lots.find(l => l.id === v) || null];
-  if (!targets.length) { alert('There are no lots to print yet.'); return; }
+  if (!targets.length) { ui.toast('There are no lots to print yet.', 'info'); return; }
   let html = '';
   targets.forEach(lot => { for (let i = 0; i < copies; i++) html += bidSheetHtml(lot, mode, ovHigh, ovInc); });
   document.getElementById('bidsheet').innerHTML = html;
@@ -1372,7 +1390,7 @@ function renderBidRows(itemId) {
       winnerUid: bid.uid || null, winnerIsGoogle: !!bid.isGoogle,
       winnerAnnounce: bid.announceName !== false, // false = bidder said do NOT announce my name; public pages then show "Anonymous bidder"
       winnerSetAt: firebase.firestore.FieldValue.serverTimestamp(),
-    }).catch(err => alert('Could not set the winner: ' + err.message));
+    }).then(() => ui.toast('Winner set.', 'ok')).catch(err => ui.toast('Could not set the winner: ' + err.message, 'error'));
   });
   container.querySelectorAll('[data-invalidate]').forEach(btn => btn.onclick = () => invalidateBid(itemId, btn.dataset.invalidate, bids.find(b => b.id === btn.dataset.invalidate)));
   container.querySelectorAll('[data-confirmhold]').forEach(btn => btn.onclick = () => confirmHold(itemId, holds.find(b => b.id === btn.dataset.confirmhold)));
@@ -1385,7 +1403,10 @@ function renderBidRows(itemId) {
 // arrives meanwhile can't be overwritten.
 async function confirmHold(itemId, bid) {
   if (!bid) return;
-  if (!confirm(`Confirm ${bid.name}'s bid of ${money(bid.amount)}${bid.phone ? ' (' + bid.phone + ')' : ''}? Only do this after they confirmed on the call.`)) return;
+  if (!(await ui.confirm({ title: 'Confirm this bid?',
+    message: `${bid.name}'s bid of ${money(bid.amount)}${bid.phone ? ' (' + bid.phone + ')' : ''}.\nOnly do this after they confirmed on the call.`,
+    yesText: 'Confirm bid' }))) return;
+  const done = ui.busy('Confirming bid\u2026');
   const itemRef = db.collection('items').doc(itemId);
   const bidRef = itemRef.collection('bids').doc(bid.id);
   try {
@@ -1405,23 +1426,26 @@ async function confirmHold(itemId, bid) {
       tx.update(bidRef, { status: 'confirmed', reviewedBy: currentAdminEmail || null,
         reviewedAt: firebase.firestore.FieldValue.serverTimestamp() });
     });
+    ui.toast('Bid confirmed.', 'ok');
   } catch (err) {
-    alert('Could not confirm this bid: ' + err.message);
-  }
+    ui.toast('Could not confirm this bid: ' + err.message, 'error');
+  } finally { done(); }
 }
 // The bidder said no (or couldn't be reached). The hold is kept as a
 // record, marked revoked, and never counts. The bidder can place a new bid.
 async function revokeHold(itemId, bid) {
   if (!bid) return;
-  if (!confirm(`Revoke ${bid.name}'s held bid of ${money(bid.amount)}? It will never count.`)) return;
+  if (!(await ui.confirm({ title: 'Revoke this held bid?', message: `${bid.name}'s held bid of ${money(bid.amount)} will never count.`, yesText: 'Revoke', danger: true }))) return;
+  const done = ui.busy('Revoking hold\u2026');
   try {
     await db.collection('items').doc(itemId).collection('bids').doc(bid.id).update({
       status: 'revoked', reviewedBy: currentAdminEmail || null,
       reviewedAt: firebase.firestore.FieldValue.serverTimestamp(),
     });
+    ui.toast('Held bid revoked.', 'ok');
   } catch (err) {
-    alert('Could not revoke this hold: ' + err.message);
-  }
+    ui.toast('Could not revoke this hold: ' + err.message, 'error');
+  } finally { done(); }
 }
 
 // Removes a bogus/joke bid entirely and recalculates the lot's leading
@@ -1429,7 +1453,8 @@ async function revokeHold(itemId, bid) {
 // does). Clears the marked winner too, if the invalidated bid held it.
 async function invalidateBid(itemId, bidId, bid) {
   const who = bid ? `${bid.name} (${money(bid.amount)}${bid.phone ? ', ' + bid.phone : ''})` : 'this bid';
-  if (!confirm(`Revoke ${who}? It is permanently removed and the leading bid is recalculated.`)) return;
+  if (!(await ui.confirm({ title: 'Revoke this bid?', message: `${who} is permanently removed and the leading bid is recalculated.`, yesText: 'Revoke bid', danger: true }))) return;
+  const done = ui.busy('Revoking bid\u2026');
   const itemRef = db.collection('items').doc(itemId);
   const bidRef = itemRef.collection('bids').doc(bidId);
   // Work out the new leader and count from what this admin is looking at,
@@ -1461,9 +1486,10 @@ async function invalidateBid(itemId, bidId, bid) {
       tx.delete(bidRef);
       tx.update(itemRef, patch);
     });
+    ui.toast('Bid revoked.', 'ok');
   } catch (err) {
-    alert('Could not revoke bid: ' + err.message);
-  }
+    ui.toast('Could not revoke bid: ' + err.message, 'error');
+  } finally { done(); }
 }
 
 // -----------------------------------------------------------------

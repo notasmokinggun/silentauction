@@ -909,7 +909,7 @@ window.__ld = [
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="firebase-init.js?v=202610080212"></script>
+<script src="firebase-init.js?v=202610080248"></script>
 <script>
 // -----------------------------------------------------------------
 // Icons — small inline SVGs, stroke = currentColor
@@ -1062,8 +1062,11 @@ window.addEventListener('popstate', (e) => {
 document.getElementById('splash-wordmark').textContent = 'Welcome to the SBS Silent Auction';
 // First time: show the instructions once. After that, straight to the items.
 document.querySelectorAll('a.brand').forEach(a => a.addEventListener('click', (e) => { e.preventDefault(); showView('home'); }));
-document.getElementById('open-admin').addEventListener('click', (e) => {
-  if (!confirm('This page is only for the auction organizers. Open it anyway?')) e.preventDefault();
+document.getElementById('open-admin').addEventListener('click', async (e) => {
+  e.preventDefault();
+  const link = e.currentTarget;
+  const ok = await askConfirm({ title: 'Organizers only', message: 'This page is only for the auction organizers. Open it anyway?', yesText: 'Open it', noText: 'Go back' });
+  if (ok) location.href = link.href;
 });
 document.getElementById('splash-explore').onclick = () => {
   let seen = false;
@@ -1517,7 +1520,7 @@ document.getElementById('item-back').onclick = () => {
 document.getElementById('item-share').onclick = async () => {
   const url = location.origin + location.pathname + '?id=' + currentItemId;
   if (navigator.share) { navigator.share({ title: 'SBS Silent Auction', url }).catch(() => {}); }
-  else { await navigator.clipboard.writeText(url); alert('Link copied.'); }
+  else { try { await navigator.clipboard.writeText(url); showToast('Link copied.', 'ok'); } catch (_) { showToast('Could not copy the link. Copy it from the address bar instead.', 'error'); } }
 };
 
 // The item doc carries only a small preview (imageUrl). The full photo lives
@@ -1967,7 +1970,7 @@ document.getElementById('sheet-confirm').onclick = async () => {
 // GitHub Pages lets browsers keep index.html for a while, so a phone can sit on an old page.
 // version.json is fetched fresh (never cached); if it differs from this page's version, reload once
 // with a new web address so the browser fetches the new page. Waits while a bid is being made.
-const SITE_VERSION = '202610080212';
+const SITE_VERSION = '202610080248';
 document.getElementById('site-version').textContent = SITE_VERSION;
 async function checkForNewVersion() {
   try {

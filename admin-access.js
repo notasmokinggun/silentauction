@@ -21,7 +21,7 @@ async function refreshAdmins() {
         remove.className = 'secondary';
         remove.textContent = 'Remove admin';
         remove.onclick = async () => {
-          if (!confirm('Remove admin access for ' + admin.email + '?')) return;
+          if (!(await ui.confirm({ title: 'Remove admin access?', message: 'Remove admin access for ' + admin.email + '?', yesText: 'Remove', danger: true }))) return;
           remove.disabled = true;
           try {
             await db.collection('adminEmails').doc(admin.email).delete();

@@ -1621,8 +1621,16 @@ function populateReadingOverlay(it) {
   document.getElementById('reading-lotnum').textContent = 'LOT ' + String(it.lotNumber).padStart(3, '0');
   document.getElementById('reading-title').textContent = it.title;
   document.getElementById('reading-badges').innerHTML = it.category ? `<span class="badge">${escapeHtml(it.category)}</span>` : '';
-  document.getElementById('reading-desc').textContent = it.description || '';
-  setupReadMore('reading-desc', 'reading-details', 'reading-readmore', it.details);
+  // Tap-the-photo view shows the full write-up only. The short summary stays on the lot page
+  // (below the photo, above the price). A lot with no write-up falls back to its summary.
+  const full = (it.details || '').trim();
+  const descEl = document.getElementById('reading-desc');
+  const detEl = document.getElementById('reading-details');
+  document.getElementById('reading-readmore').style.display = 'none';
+  descEl.textContent = full ? '' : (it.description || '');
+  descEl.style.display = full ? 'none' : 'block';
+  detEl.textContent = full;
+  detEl.style.display = full ? 'block' : 'none';
 
   const actions = document.getElementById('reading-actions');
   actions.innerHTML = closed

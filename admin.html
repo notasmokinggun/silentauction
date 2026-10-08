@@ -571,7 +571,14 @@ const bootSlowTimer = setTimeout(() => {
 function hideBoot() {
   clearTimeout(bootSlowTimer);
   bootEl.classList.add('done');
-  setTimeout(() => { if (bootEl.parentNode) bootEl.parentNode.removeChild(bootEl); }, 350);
+  setTimeout(() => { if (bootEl.classList.contains('done')) bootEl.style.display = 'none'; }, 350);
+}
+// The loading screen stays in the page so it can come back during a fresh sign-in (no reload needed).
+function showBoot(text) {
+  bootEl.style.display = '';
+  void bootEl.offsetWidth;
+  bootEl.classList.remove('done');
+  document.getElementById('admin-boot-text').textContent = text;
 }
 async function refreshGate(u) {
   try { await refreshGateInner(u); } finally { hideBoot(); }
@@ -579,7 +586,7 @@ async function refreshGate(u) {
 async function refreshGateInner(u) {
   gate.style.display = denied.style.display = shell.style.display = 'none';
   if (!u) { teardownAdmin(); gate.style.display = 'flex'; return; }
-  document.getElementById('admin-boot-text').textContent = 'Checking your access\u2026';
+  showBoot('Checking your access\u2026');
   const admin = await checkIsAdmin(u);
   if (!admin) {
     teardownAdmin();

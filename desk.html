@@ -228,7 +228,14 @@ const bootSlow = setTimeout(() => {
 function hideBoot() {
   clearTimeout(bootSlow);
   bootEl.classList.add('done');
-  setTimeout(() => { if (bootEl.parentNode) bootEl.parentNode.removeChild(bootEl); }, 350);
+  setTimeout(() => { if (bootEl.classList.contains('done')) bootEl.style.display = 'none'; }, 350);
+}
+// Stays in the page so the loading screen can come back during a fresh sign-in (no reload needed).
+function showBoot(text) {
+  bootEl.style.display = '';
+  void bootEl.offsetWidth;
+  bootEl.classList.remove('done');
+  $('desk-boot-text').textContent = text;
 }
 
 // ---------- Keep the screen awake while the desk is open ----------
@@ -274,7 +281,7 @@ auth.onAuthStateChanged(async (u) => {
   if (lotsUnsub) { lotsUnsub(); lotsUnsub = null; }
   lots = []; entered.length = 0; renderLog();
   if (!u) { show('gate'); hideBoot(); return; }
-  const bt = $('desk-boot-text'); if (bt) bt.textContent = 'Checking your access\u2026'; // overlay is removed after first load
+  showBoot('Checking your access\u2026');
   const label = await roleLabel(u);
   if (!label) { show('denied'); hideBoot(); return; }
   myLabel = label;

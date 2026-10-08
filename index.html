@@ -574,6 +574,13 @@ html,body{overscroll-behavior-y:none;}
   .hero-nav .brand{pointer-events:auto;}
   .hero-nav .brand-img{height:42px;}
   /* ---------- First-load screen ---------- */
+  #bid-loading{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;flex-direction:column;
+    text-align:center;padding:24px;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);}
+  #bid-loading.open{display:flex;}
+  #bid-loading .bl-spin{width:56px;height:56px;border-radius:50%;border:5px solid rgba(255,255,255,.25);border-top-color:var(--gold);animation:ld-spin .9s linear infinite;}
+  #bid-loading p{margin:22px 0 0;font-size:20px;font-weight:700;color:#fff;}
+  #bid-loading small{display:block;margin-top:8px;font-size:15px;color:rgba(255,255,255,.8);}
+  @media (prefers-reduced-motion:reduce){#bid-loading .bl-spin{animation-duration:3s;}}
   #app-loader{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;flex-direction:column;align-items:center;
     justify-content:center;text-align:center;padding:24px;transition:opacity .3s ease;}
   #app-loader.done{opacity:0;pointer-events:none;}
@@ -876,6 +883,8 @@ window.__ld = [
 </div>
 
 <!-- ============ Success ============ -->
+<div id="bid-loading" role="status" aria-live="assertive"><div class="bl-spin"></div><p>Placing your bid&hellip;</p><small>Please keep this page open</small></div>
+
 <div class="confirm-backdrop" id="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-text">
   <div class="confirm-card">
     <h2 class="serif" id="confirm-title"></h2>
@@ -900,7 +909,7 @@ window.__ld = [
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="firebase-init.js?v=202610071839"></script>
+<script src="firebase-init.js?v=202610080212"></script>
 <script>
 // -----------------------------------------------------------------
 // Icons — small inline SVGs, stroke = currentColor
@@ -1865,6 +1874,9 @@ document.getElementById('sheet-confirm').onclick = async () => {
 
   const btn = document.getElementById('sheet-confirm');
   btn.disabled = true;
+  const bidLoading = document.getElementById('bid-loading');
+  const bidLoadingSince = Date.now();
+  bidLoading.classList.add('open');
   localStorage.setItem('auction_name', name);
   localStorage.setItem(consentKey(), announceName ? 'yes' : 'no');
   consentEditing = false;
@@ -1946,6 +1958,8 @@ document.getElementById('sheet-confirm').onclick = async () => {
     }
   } finally {
     btn.disabled = false;
+    // keep the loading screen up for at least half a second so it never just flashes
+    setTimeout(() => bidLoading.classList.remove('open'), Math.max(0, 500 - (Date.now() - bidLoadingSince)));
   }
 };
 
@@ -1953,7 +1967,7 @@ document.getElementById('sheet-confirm').onclick = async () => {
 // GitHub Pages lets browsers keep index.html for a while, so a phone can sit on an old page.
 // version.json is fetched fresh (never cached); if it differs from this page's version, reload once
 // with a new web address so the browser fetches the new page. Waits while a bid is being made.
-const SITE_VERSION = '202610071839';
+const SITE_VERSION = '202610080212';
 document.getElementById('site-version').textContent = SITE_VERSION;
 async function checkForNewVersion() {
   try {

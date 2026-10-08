@@ -41,6 +41,7 @@ async function refreshAdmins() {
   }
 }
 auth.onAuthStateChanged(user => {
+  if (window.hidePageLoader) window.hidePageLoader();
   accessVersion++;
   if (stopAccess) stopAccess();
   manager.hidden = true;

@@ -9,7 +9,8 @@
 <title>Owner Setup · JASHN Admin</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap"></noscript>
 <style>
 :root{
   --bg:#0D0A08; --bg-2:#151110; --card:#191412; --card-2:#1E1815;
@@ -35,8 +36,19 @@ button:disabled{opacity:.5;cursor:default;}
 .panel{border:1px solid var(--line);background:var(--card);border-radius:14px;padding:22px;margin-top:24px;}
 #status{min-height:22px;font-size:13.5px;color:var(--gold-soft);}
 .err{color:var(--red);}
-</style></head>
-<body><main>
+</style><style>
+#page-loader{position:fixed;inset:0;z-index:99999;background:#0D0A08;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;transition:opacity .25s ease;}
+#page-loader.done{opacity:0;pointer-events:none;}
+#page-loader .pl-spin{width:46px;height:46px;border-radius:50%;border:4px solid #2E2820;border-top-color:#E3B75C;animation:pl-rot 1s linear infinite;}
+#page-loader p{margin:18px 0 0;font:500 17px system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#CBC0AF;}
+@keyframes pl-rot{to{transform:rotate(360deg);}}
+@media (prefers-reduced-motion:reduce){#page-loader .pl-spin{animation-duration:3s;}#page-loader{transition:none;}}
+</style>
+</head>
+<body>
+<div id="page-loader" role="status" aria-live="polite"><div class="pl-spin"></div><p>Loading&hellip;</p></div>
+<script>(function(){var el=document.getElementById('page-loader');function hide(){if(!el)return;var e=el;el=null;e.classList.add('done');setTimeout(function(){if(e.parentNode)e.parentNode.removeChild(e);},350);}window.hidePageLoader=hide;setTimeout(hide,10000);})();</script>
+<main>
 <a class="back" href="admin.html">&larr; Admin login</a>
 <h1>Set up your owner account</h1>
 <p>This is a one-time setup. No email is ever sent. Your email/password account becomes the owner as soon as you claim it below, and only your account can approve other admins.</p>

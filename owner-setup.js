@@ -21,7 +21,7 @@ function displaySetupUser(user) {
     });
   }
 }
-auth.onAuthStateChanged(displaySetupUser);
+auth.onAuthStateChanged(u => { Promise.resolve(displaySetupUser(u)).finally(() => { if (window.hidePageLoader) window.hidePageLoader(); }); });
 async function accountAction(create) {
   const form = document.getElementById('account');
   if (!form.reportValidity()) return;

@@ -168,48 +168,28 @@
   .pb-grid input:disabled{opacity:.4;}
   .pb-hint{font-size:12px;color:var(--muted);margin:10px 0 0;}
   .pb-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;}
-  /* ---------- A4 bid details sheet (handwritten bids) ---------- */
+  /* ---------- A4 photo sheet: every lot on one page ---------- */
   @page{size:A4;margin:0;} /* margin 0 = the browser has nowhere to print its date/time/title/address header and footer */
-  #bidsheet{display:none;}
-  .bs,.bs-info{box-sizing:border-box;}
-  .bs{font-family:'IBM Plex Sans',Arial,sans-serif;color:#000;font-size:12.5pt;line-height:1.35;padding:12mm;}
-  .bs-head{display:flex;align-items:center;gap:14px;border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:10px;}
-  .bs-head img{height:56px;width:auto;}
-  .bs-head h1{font-family:'Nunito','IBM Plex Sans',Arial,sans-serif;font-size:21pt;margin:0;font-weight:600;color:#000;}
-  .bs-head p{margin:2px 0 0;font-size:11pt;}
-  .bs h2{font-size:11pt;letter-spacing:.08em;text-transform:uppercase;margin:14px 0 4px;border-bottom:1px solid #000;padding-bottom:2px;color:#000;}
-  .bs-row{display:flex;align-items:flex-end;gap:10px;margin:11px 0;}
-  .bs-row label{flex:none;font-weight:600;}
-  .bs-line{flex:1;border-bottom:1px solid #000;min-height:22px;}
-  .bs-fill{font-weight:600;padding:0 4px;}
-  .bs-boxes{display:flex;gap:4px;}
-  .bs-boxes span{width:24px;height:28px;border:1px solid #000;display:block;}
-  .bs-sq{display:inline-block;width:16px;height:16px;border:1.5px solid #000;vertical-align:-3px;margin:0 6px 0 14px;}
-  .bs-note{font-size:10.5pt;margin:4px 0 0;}
-  /* Page 1 of a lot: photo + summary. Exactly one A4 page, so the bid sheet always lands on page 2 (double-sided friendly). */
-  .bs-info{font-family:'IBM Plex Sans',Arial,sans-serif;color:#000;height:296mm;max-height:296mm;padding:12mm;overflow:hidden;display:flex;flex-direction:column;
-    break-after:page;page-break-after:always;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-  .bs-info .bs-head{flex:none;}
-  .bs-lotline{flex:none;display:flex;align-items:baseline;gap:14px;margin:4px 0 8px;}
-  .bs-lotno{font-family:'Nunito','IBM Plex Sans',Arial,sans-serif;font-size:30pt;font-weight:800;line-height:1;white-space:nowrap;}
-  .bs-lottitle{font-family:'Nunito','IBM Plex Sans',Arial,sans-serif;font-size:21pt;font-weight:700;line-height:1.15;overflow-wrap:anywhere;}
-  .bs-cat{flex:none;font-size:10.5pt;letter-spacing:.08em;text-transform:uppercase;margin:0 0 8px;}
-  .bs-photo{flex:1 1 0;min-height:70mm;position:relative;border:1.5px solid #000;border-radius:6px;overflow:hidden;background:#fff;}
-  .bs-photo img{position:absolute;inset:0;margin:auto;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;display:block;}
-  .bs-photo .bs-nophoto{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12pt;color:#555;}
-  .bs-sum{flex:none;max-height:92mm;overflow:hidden;margin-top:10px;}
-  .bs-sum .bs-desc{font-size:13.5pt;line-height:1.4;font-weight:600;margin:0 0 6px;overflow-wrap:anywhere;white-space:pre-line;}
-  .bs-sum .bs-det{font-size:10.5pt;line-height:1.4;margin:0;overflow-wrap:anywhere;white-space:pre-line;}
-  .bs-sum.long .bs-det{font-size:9pt;line-height:1.32;}
-  .bs-prices{flex:none;display:flex;gap:22px;flex-wrap:wrap;margin-top:8px;padding-top:6px;border-top:1px solid #000;font-size:11.5pt;font-weight:600;}
-  .bs-foot{flex:none;font-size:10pt;margin-top:6px;}
-  .bs{break-after:page;page-break-after:always;}
-  .bs:last-child{break-after:auto;page-break-after:auto;}
-  body.print-bidsheet #qrsheet{display:none !important;}
+  #photosheet{display:none;}
+  .ps{box-sizing:border-box;width:210mm;height:296mm;max-height:296mm;overflow:hidden;padding:10mm;display:flex;flex-direction:column;
+    font-family:'IBM Plex Sans',Arial,sans-serif;color:#000;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .ps-head{flex:none;display:flex;align-items:center;gap:12px;border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:4mm;}
+  .ps-head img{height:44px;width:auto;}
+  .ps-head h1{font-family:'Nunito','IBM Plex Sans',Arial,sans-serif;font-size:22pt;line-height:1.1;margin:0;font-weight:800;color:#000;}
+  .ps-head p{margin:2px 0 0;font-size:10.5pt;}
+  .ps-grid{flex:1 1 0;min-height:0;display:grid;gap:3mm;}
+  .ps-cell{min-width:0;min-height:0;display:flex;flex-direction:column;}
+  .ps-photo{flex:1 1 0;min-height:0;position:relative;border:1px solid #000;border-radius:2mm;overflow:hidden;background:#f1f1f1;}
+  .ps-photo img{position:absolute;inset:0;margin:auto;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;display:block;}
+  .ps-photo span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#555;font-size:8pt;}
+  .ps-cap{flex:none;line-height:1.15;padding-top:1mm;overflow:hidden;}
+  .ps-cap b{font-family:'Nunito','IBM Plex Sans',Arial,sans-serif;font-weight:800;display:block;}
+  .ps-cap em{font-style:normal;display:block;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+  body.print-photosheet #qrsheet{display:none !important;}
   @media print{
-    body.print-bidsheet *{visibility:hidden;}
-    body.print-bidsheet #bidsheet, body.print-bidsheet #bidsheet *{visibility:visible;}
-    body.print-bidsheet #bidsheet{display:block !important;position:absolute;top:0;left:0;width:100%;}
+    body.print-photosheet *{visibility:hidden;}
+    body.print-photosheet #photosheet, body.print-photosheet #photosheet *{visibility:visible;}
+    body.print-photosheet #photosheet{display:block !important;position:absolute;top:0;left:0;width:100%;}
   }
 
   #qrsheet{display:none;}
@@ -405,24 +385,10 @@
       <h1>Bids &amp; winners</h1>
       <p class="sub">Rank bids per lot and mark the winner. See exactly who placed what, and revoke any bid you don't trust. It's removed for good and the leading bid recalculates automatically.</p>
       <div class="printbox">
-        <div class="pb-title">Paper bid sheets</div>
-        <div class="pb-grid">
-          <label>Lot
-            <select id="printLot" title="Lot to print the sheet for"><option value="">Blank sheet (no lot)</option></select>
-          </label>
-          <label>Pages per lot
-            <select id="printPages">
-              <option value="two">2 pages: photo + summary, then the bid sheet</option>
-              <option value="one">1 page: bid sheet only</option>
-            </select>
-          </label>
-          <label>Copies per lot
-            <input id="printCopies" type="number" min="1" max="50" value="1">
-          </label>
-        </div>
-        <p class="pb-hint" id="printHint">Each sheet is pre-printed with the lot number and name only. Everything else is written by hand. Nothing else is printed: no dates, times or page headers.</p>
+        <div class="pb-title">Paper photo sheet</div>
+        <p class="pb-hint" style="margin-top:0;">One A4 page with every lot photo, its lot number and name, headed "SBS Silent Auction". Bidders note the lot number and give the details to the desk.</p>
         <div class="pb-actions">
-          <button class="btn-ghost" id="printBidSheet">Print A4 bid sheet(s)</button>
+          <button class="btn-ghost" id="printPhotoSheet">Print A4 photo sheet (all lots)</button>
           <button class="btn-ghost" id="exportCsvBids">Export bids as CSV</button>
         </div>
       </div>
@@ -500,7 +466,7 @@
 </div>
 
 <div id="qrsheet"></div>
-<div id="bidsheet"></div>
+<div id="photosheet"></div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -726,7 +692,6 @@ function loadLots() {
     showAdminError('');
     lots = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     renderLots();
-    fillPrintLotSelect();
     renderDashboardStats();
     if (document.getElementById('panel-bids').classList.contains('active')) renderBidsPanel();
     resyncEditFormDeadline();
@@ -1226,110 +1191,39 @@ document.getElementById('lotForm').addEventListener('submit', async (e) => {
 
 
 // -----------------------------------------------------------------
-// A4 bid details sheet, for guests who want to handwrite their bid.
-// Blank fields for everything the online form asks for. Print it, copy
-// it, hand it out. Thresholds come from firebase-init.js so the printed
-// rules always match the live ones.
+// A4 photo sheet: every lot on ONE page (photo, lot number, name),
+// headed "SBS Silent Auction". Grid size is worked out from the number
+// of lots so the photos are as large as the page allows.
 // -----------------------------------------------------------------
-// Pre-printed sheets. Pick one lot, or "All lots" for a ready-to-hand-out batch. Each lot prints as 2 pages: page 1 is the photo + summary, page 2 is the bid sheet.
-// Lot number and name are always filled when a lot is chosen. The minimum raise is printed from the
-// lot's increment; the highest bid is left blank to write by hand unless you choose "from system" or
-// type a value in the optional boxes (typed values win; single lot only). No print timestamps.
-function fillPrintLotSelect() {
-  const sel = document.getElementById('printLot');
-  if (!sel) return;
-  const keep = sel.value;
-  sel.innerHTML = '<option value="">Blank sheet (no lot)</option><option value="__all__">All lots (one set each)</option>' + [...lots]
-    .sort((x, y) => (x.lotNumber || 0) - (y.lotNumber || 0))
-    .map(l => `<option value="${l.id}">Lot ${String(l.lotNumber).padStart(3, '0')} - ${escapeHtml(l.title || '')}</option>`).join('');
-  if (keep && (keep === '__all__' || lots.some(l => l.id === keep))) sel.value = keep;
-  syncPrintControls();
+function photoSheetLayout(n) {
+  const W = 190, H = 296 - 20 - 20, GAP = 3; // usable mm: page minus padding minus header
+  let best = null;
+  for (let c = 1; c <= n; c++) {
+    const r = Math.ceil(n / c);
+    const cw = (W - (c - 1) * GAP) / c;
+    const fs = Math.max(5, Math.min(11, cw * 0.17)); // caption font (pt) follows the cell width
+    const cap = fs * 0.3528 * 2.9 + 1;               // lot line + up to 2 name lines, in mm
+    const ch = (H - (r - 1) * GAP) / r;
+    const photo = Math.min(cw, ch - cap);
+    if (!best || photo > best.photo + 0.01) best = { c, r, fs, photo };
+  }
+  return best;
 }
-function syncPrintControls() { /* nothing to switch any more: every sheet is lot number + name, rest by hand */ }
-
-function bidSheetHtml(lot, mode, ovHigh, ovInc) {
-  const inr = n => '\u20B9' + Number(n).toLocaleString('en-IN');
-  const lotNumHtml = lot ? String(lot.lotNumber).padStart(3, '0') : '';
-  const lotNameHtml = lot ? escapeHtml(lot.title || '') : '';
-  let high = '', inc = '';
-  if (lot && mode === 'system') high = lot.currentBid || 0;
-  if (lot && mode !== 'lotonly') inc = lot.increment || 0;
-  if (ovHigh !== '') high = Number(ovHigh);
-  if (ovInc !== '') inc = Number(ovInc);
-  const highHtml = high === '' ? '' : inr(high);
-  const incHtml = inc === '' ? '' : inr(inc);
-  const minHtml = (high !== '' && inc !== '') ? inr(high + inc) : '';
-  const phoneBoxes = '<span></span>'.repeat(10);
-  return `
-    <div class="bs">
-      <div class="bs-head">
-        <img src="images/jashn-logo.png" alt="" onerror="this.style.display='none'">
-        <div>
-          <h1>Welcome to the SBS Silent Auction</h1>
-          <p>Bid details sheet. Please write clearly in capital letters.</p>
-        </div>
-      </div>
-
-      <h2>The item</h2>
-      <div class="bs-row"><label>Lot number</label><div class="bs-line bs-fill" style="max-width:150px;">${lotNumHtml}</div>
-        <label>Item name</label><div class="bs-line bs-fill">${lotNameHtml}</div></div>
-      <div class="bs-row"><label>Highest bid so far (\u20B9)</label><div class="bs-line bs-fill" style="max-width:190px;">${highHtml}</div>
-        <label>Minimum raise (\u20B9)</label><div class="bs-line bs-fill" style="max-width:150px;">${incHtml}</div></div>
-      <div class="bs-row"><label>Your bid must be at least (\u20B9)</label><div class="bs-line bs-fill" style="max-width:190px;">${minHtml}</div></div>
-
-      <h2>Your details</h2>
-      <div class="bs-row"><label>Your name</label><div class="bs-line"></div></div>
-      <div class="bs-row"><label>Mobile number</label><div class="bs-boxes">${phoneBoxes}</div></div>
-      <p class="bs-note">We will call this number to confirm your bid if needed. Please check it is correct.</p>
-      <div class="bs-row"><label>Child's name</label><div class="bs-line"></div></div>
-      <div class="bs-row"><label>Class &amp; Section</label><div class="bs-line" style="max-width:160px;"></div>
-        <span class="bs-note" style="margin:0;">e.g. 10-B</span></div>
-
-      <h2>Your bid</h2>
-      <div class="bs-row"><label>Bid amount (\u20B9)</label><div class="bs-line" style="max-width:200px;"></div></div>
-      <p class="bs-note">Your bid must be higher than the highest bid shown above, by at least the minimum raise.
-        Large bids will be confirmed by a phone call first.</p>
-
-      <h2>If you win</h2>
-      <div class="bs-row"><label>May we announce your name out loud?</label>
-        <span><span class="bs-sq"></span>Yes<span class="bs-sq"></span>No</span></div>
-
-      <h2>Confirmation</h2>
-      <p class="bs-note" style="margin-bottom:8px;"><span class="bs-sq" style="margin-left:0;"></span>I am 18 or older. I understand my bid is a promise to pay if I win.</p>
-      <div class="bs-row"><label>Signature</label><div class="bs-line"></div>
-        <label>Date</label><div class="bs-line" style="max-width:130px;"></div></div>
-    </div>`;
-}
-// Page 1 for a lot: logo, lot number + name, the photo of the object, and its write-up.
-function bidSheetInfoHtml(lot, photoUrl, mode) {
-  const inr = n => '\u20B9' + Number(n).toLocaleString('en-IN');
-  const lotNo = String(lot.lotNumber).padStart(3, '0');
-  const det = (lot.details || '').trim();
-  const prices = mode === 'lotonly' ? '' :
-    `<div class="bs-prices"><span>Starting bid: ${inr(lot.startingBid || 0)}</span><span>Minimum raise: ${inr(lot.increment || 0)}</span></div>`;
-  return `
-    <div class="bs-info">
-      <div class="bs-head">
-        <img src="images/jashn-logo.png" alt="" onerror="this.style.display='none'">
-        <div><h1>Welcome to the SBS Silent Auction</h1><p>About this item. The bid sheet is on the next page.</p></div>
-      </div>
-      <div class="bs-lotline"><span class="bs-lotno">LOT ${lotNo}</span><span class="bs-lottitle">${escapeHtml(lot.title || '')}</span></div>
-      ${lot.category ? `<p class="bs-cat">${escapeHtml(lot.category)}</p>` : ''}
-      <div class="bs-photo">${photoUrl ? `<img src="${escapeHtml(photoUrl)}" alt="">` : '<span class="bs-nophoto">No photo for this lot</span>'}</div>
-      <div class="bs-sum ${det.length > 1200 ? 'long' : ''}">
-        ${lot.description ? `<p class="bs-desc">${escapeHtml(lot.description)}</p>` : ''}
-        ${det ? `<p class="bs-det">${escapeHtml(det)}</p>` : ''}
-      </div>
-      ${prices}
-    </div>`;
-}
-// The small preview is always on the lot; the full-size photo (when there is one) sits in itemImages/{id}.
-async function fullPhotoFor(lot) {
-  try {
-    const d = await db.collection('itemImages').doc(lot.id).get();
-    if (d.exists && d.data().url) return d.data().url;
-  } catch (_) { /* fall back to the preview */ }
-  return lot.imageUrl || '';
+function photoSheetHtml(list) {
+  const L = photoSheetLayout(list.length);
+  const cells = list.map(lot => {
+    const no = String(lot.lotNumber).padStart(3, '0');
+    const img = lot.imageUrl ? `<img src="${escapeHtml(lot.imageUrl)}" alt="">` : '<span>No photo</span>';
+    return `<div class="ps-cell"><div class="ps-photo">${img}</div>` +
+      `<div class="ps-cap" style="font-size:${L.fs.toFixed(1)}pt;"><b>LOT ${no}</b><em>${escapeHtml(lot.title || '')}</em></div></div>`;
+  }).join('');
+  return `<div class="ps">
+    <div class="ps-head">
+      <img src="images/jashn-logo.png" alt="" onerror="this.style.display='none'">
+      <div><h1>SBS Silent Auction</h1><p>All lots. Note the lot number you want and give it to the desk with your details.</p></div>
+    </div>
+    <div class="ps-grid" style="grid-template-columns:repeat(${L.c},1fr);grid-template-rows:repeat(${L.r},1fr);">${cells}</div>
+  </div>`;
 }
 function imagesReady(root, timeoutMs) {
   const imgs = [...root.querySelectorAll('img')];
@@ -1337,43 +1231,26 @@ function imagesReady(root, timeoutMs) {
     new Promise(res => { img.addEventListener('load', res, { once: true }); img.addEventListener('error', res, { once: true }); }));
   return Promise.race([Promise.all(waits), new Promise(res => setTimeout(res, timeoutMs))]);
 }
-async function printBidSheet() {
-  const v = document.getElementById('printLot').value;
-  const mode = 'lotonly'; // lot number and name only; everything else is written by hand
-  const twoPage = document.getElementById('printPages').value === 'two';
-  const copies = Math.min(50, Math.max(1, parseInt(document.getElementById('printCopies').value, 10) || 1));
-  const ovHigh = '', ovInc = '';
-  const targets = v === '__all__'
-    ? [...lots].sort((x, y) => (x.lotNumber || 0) - (y.lotNumber || 0))
-    : [lots.find(l => l.id === v) || null];
-  if (!targets.length) { ui.toast('There are no lots to print yet.', 'info'); return; }
-  const doneBusy = ui.busy('Preparing sheets\u2026');
+async function printPhotoSheet() {
+  const list = [...lots].sort((x, y) => (x.lotNumber || 0) - (y.lotNumber || 0));
+  if (!list.length) { ui.toast('There are no lots to print yet.', 'info'); return; }
+  const doneBusy = ui.busy('Preparing the photo sheet\u2026');
   try {
-    // A blank sheet (no lot) has no photo to show, so it stays a single bid sheet.
-    const photos = {};
-    if (twoPage) await Promise.all(targets.filter(Boolean).map(async l => { photos[l.id] = await fullPhotoFor(l); }));
-    let html = '';
-    targets.forEach(lot => {
-      for (let i = 0; i < copies; i++) {
-        if (twoPage && lot) html += bidSheetInfoHtml(lot, photos[lot.id], mode);
-        html += bidSheetHtml(lot, mode, ovHigh, ovInc);
-      }
-    });
-    const box = document.getElementById('bidsheet');
-    box.innerHTML = html;
+    const box = document.getElementById('photosheet');
+    box.innerHTML = photoSheetHtml(list);
     await imagesReady(box, 6000);
   } catch (err) {
     doneBusy();
-    ui.toast('Could not prepare the sheets: ' + err.message, 'error');
+    ui.toast('Could not prepare the sheet: ' + err.message, 'error');
     return;
   }
   doneBusy();
-  document.body.classList.add('print-bidsheet');
-  const done = () => { document.body.classList.remove('print-bidsheet'); window.removeEventListener('afterprint', done); };
+  document.body.classList.add('print-photosheet');
+  const done = () => { document.body.classList.remove('print-photosheet'); window.removeEventListener('afterprint', done); };
   window.addEventListener('afterprint', done);
   setTimeout(() => window.print(), 250);
 }
-document.getElementById('printBidSheet').onclick = printBidSheet;
+document.getElementById('printPhotoSheet').onclick = printPhotoSheet;
 
 document.getElementById('printQr').onclick = () => {
   const sheet = document.getElementById('qrsheet');
@@ -1388,7 +1265,7 @@ document.getElementById('printQr').onclick = () => {
       width: 140, height: 140,
     });
   });
-  document.body.classList.remove('print-bidsheet');
+  document.body.classList.remove('print-photosheet');
   setTimeout(() => window.print(), 300);
 };
 

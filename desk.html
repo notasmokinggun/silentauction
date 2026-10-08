@@ -50,6 +50,12 @@
   .opt{display:flex;gap:14px;align-items:center;padding:13px 14px;margin-top:8px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:12px;min-height:56px;}
   .opt:has(input:checked){border-color:var(--gold);background:var(--surface2);}
   .opt input{width:28px;height:28px;flex:none;margin:0;padding:0;accent-color:var(--gold);}
+  .chk{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:2px;}
+  .chk li{display:flex;align-items:center;gap:12px;padding:7px 0;color:var(--muted);}
+  .chk li .dot{flex:none;width:24px;height:24px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:transparent;}
+  .chk li b{color:var(--text);font-weight:600;}
+  .chk li.done .dot{background:var(--green);border-color:var(--green);color:#10200F;}
+  .chk li.done{color:var(--text);}
   .lotrow{display:flex;gap:10px;}
   .lotrow input{width:104px;flex:none;text-align:center;}
   .lotrow select{flex:1;min-width:0;text-overflow:ellipsis;}
@@ -127,6 +133,20 @@
   <div class="head"><img src="images/jashn-logo.png" alt="" onerror="this.style.display='none'"><h1 class="serif">Paper bid desk</h1></div>
   <div class="who"><span id="who"></span><button class="linkbtn" id="signout" type="button">Sign out</button></div>
 
+  <div class="card" id="checklist">
+    <b>Details to enter for every lot</b>
+    <p class="hint" style="margin-top:4px;">Ask the bidder for these, in this order. Each ticks off as you fill it in.</p>
+    <ol class="chk" id="chk">
+      <li data-k="lot"><span class="dot">&#10003;</span><span><b>Lot number</b> they are bidding on</span></li>
+      <li data-k="name"><span class="dot">&#10003;</span><span><b>Bidder's name</b></span></li>
+      <li data-k="phone"><span class="dot">&#10003;</span><span><b>Mobile number</b>, 10 digits. Read it back to them</span></li>
+      <li data-k="child"><span class="dot">&#10003;</span><span><b>Child's name</b></span></li>
+      <li data-k="cls"><span class="dot">&#10003;</span><span><b>Class and section</b>, like 10-B</span></li>
+      <li data-k="amount"><span class="dot">&#10003;</span><span><b>Bid amount</b> in figures</span></li>
+      <li data-k="announce"><span class="dot">&#10003;</span><span><b>Announce their name</b> if they win? Yes or no</span></li>
+    </ol>
+  </div>
+
   <label class="f" for="lotno">Lot</label>
   <div class="lotrow">
     <input id="lotno" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" enterkeyhint="go" placeholder="No." aria-label="Type the lot number" maxlength="4">
@@ -140,7 +160,7 @@
 
   <label class="f" for="phone">Mobile number</label>
   <input id="phone" type="tel" inputmode="numeric" autocomplete="off" enterkeyhint="next" maxlength="16" placeholder="10 digits">
-  <p class="hint">Checked on the sheet? The organizers may call this number.</p>
+  <p class="hint">Read it back to the bidder. The organizers may call this number.</p>
 
   <label class="f" for="child">Child's name</label>
   <input id="child" type="text" autocomplete="off" autocapitalize="words" autocorrect="off" spellcheck="false" enterkeyhint="next" maxlength="79">
@@ -157,7 +177,7 @@
     <label class="opt"><input type="checkbox" id="ann-yes"><span>Yes, we may announce their name out loud</span></label>
     <label class="opt"><input type="checkbox" id="ann-no"><span>No, do not announce. Contact them privately on their phone number</span></label>
   </div>
-  <p class="hint">Tick whichever box they marked on the sheet.</p>
+  <p class="hint">Tick what the bidder tells you.</p>
 
   <div class="actionbar">
     <p class="err" id="form-err" role="alert"></p>
@@ -282,6 +302,7 @@ function renderLots() {
 }
 function minNext(it) { return (it.currentBid || 0) + (it.increment || 0); }
 function renderLotInfo() {
+  updateChecklist();
   const it = currentLot(), box = $('lotinfo');
   if (!it) { box.style.display = 'none'; $('amount-hint').textContent = ''; return; }
   box.style.display = 'block';
@@ -317,6 +338,23 @@ $('amount').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preven
 // ---------- Announce ticks (one at a time, neither pre-ticked) ----------
 $('ann-yes').onchange = () => { if ($('ann-yes').checked) $('ann-no').checked = false; };
 $('ann-no').onchange = () => { if ($('ann-no').checked) $('ann-yes').checked = false; };
+
+// ---------- Live checklist of what still needs entering ----------
+function updateChecklist() {
+  const amt = $('amount').value.replace(/[\s,\u20B9]/g, '').replace(/^Rs\.?/i, '');
+  const cls = $('cls').value.trim().toUpperCase().replace(/\s+/g, ' ');
+  const ok = {
+    lot: !!currentLot(),
+    name: !!$('name').value.trim(),
+    phone: isValidPhone(normalizePhoneInput($('phone').value)),
+    child: !!$('child').value.trim(),
+    cls: CLASS_SECTION_REGEX.test(cls) || /^\d{1,2}\s*[- ]?\s*[A-Z][A-Z0-9]{0,3}$/.test(cls),
+    amount: /^\d+$/.test(amt) && parseInt(amt, 10) > 0,
+    announce: $('ann-yes').checked || $('ann-no').checked,
+  };
+  document.querySelectorAll('#chk li').forEach(li => li.classList.toggle('done', !!ok[li.dataset.k]));
+}
+['input', 'change'].forEach(ev => $('desk').addEventListener(ev, updateChecklist));
 
 // ---------- Validate and review ----------
 function readForm() {
@@ -405,6 +443,7 @@ $('place-btn').onclick = async () => {
     closeModal(); pending = null;
     ['name', 'phone', 'child', 'cls', 'amount'].forEach(id => { $(id).value = ''; });
     $('ann-yes').checked = false; $('ann-no').checked = false;
+    updateChecklist();
     window.scrollTo({ top: 0 });
     $('lotno').value = String(d.it.lotNumber);
     toast(held ? `Held for a confirmation call: ${money(d.amount)} on Lot ${lotNo(d.it)}.` : `Placed: ${money(d.amount)} on Lot ${lotNo(d.it)} for ${d.name}.`);

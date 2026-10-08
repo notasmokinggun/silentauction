@@ -1576,7 +1576,11 @@ function renderItemView(it) {
   document.getElementById('item-title').textContent = it.title;
   document.getElementById('item-lotnum').textContent = 'LOT ' + String(it.lotNumber).padStart(3, '0');
   document.getElementById('item-desc').textContent = it.description || '';
-  setupReadMore('item-desc', 'item-details', 'item-readmore', it.details);
+  // No inline expand any more: the full write-up lives behind the photo.
+  const moreEl = document.getElementById('item-readmore');
+  moreEl.textContent = 'Tap the photo to read more';
+  moreEl.style.display = (it.details || '').trim() ? 'block' : 'none';
+  moreEl.onclick = openReadingMode;
   document.getElementById('item-badges').innerHTML = it.category ? `<span class="badge">${escapeHtml(it.category)}</span>` : '';
   document.getElementById('item-bid-label').textContent = closed ? 'Winning Bid' : 'Current Bid';
   document.getElementById('item-bid-value').textContent = money(closed ? winnerAmountOf(it) : it.currentBid);

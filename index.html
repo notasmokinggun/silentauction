@@ -18,7 +18,15 @@ html,body{overscroll-behavior-y:none;}
 <script>
 /* Bidding opens 10 Oct 2026, 3:00 PM IST. Until then only the countdown page shows. */
 window.__OPEN_AT = new Date('2026-10-10T15:00:00+05:30').getTime();
-if (Date.now() < window.__OPEN_AT) document.documentElement.classList.add('gated');
+window.__SKEW = 0; // server time minus this phone's clock, so a wrong phone clock cannot skip the gate
+window.__gateCheck = function () { document.documentElement.classList.toggle('gated', Date.now() + window.__SKEW < window.__OPEN_AT); };
+window.__gateCheck();
+try {
+  fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) {
+    var d = r.headers.get('Date');
+    if (d && !isNaN(new Date(d).getTime())) { window.__SKEW = new Date(d).getTime() - Date.now(); window.__gateCheck(); }
+  }).catch(function () {});
+} catch (e) {}
 </script>
 <style>
   #opening-gate{display:none;}
@@ -647,8 +655,11 @@ if (Date.now() < window.__OPEN_AT) document.documentElement.classList.add('gated
   var d=document.getElementById('og-d'),h=document.getElementById('og-h'),m=document.getElementById('og-m'),sc=document.getElementById('og-s'),sb=document.getElementById('og-sbox');
   function pad(n){return n<10?'0'+n:''+n;}
   function tick(){
-    var left=window.__OPEN_AT-Date.now();
-    if(left<=0){document.documentElement.classList.remove('gated');location.reload();return;}
+    var left=window.__OPEN_AT-(Date.now()+window.__SKEW);
+    if(left<=0){
+      if(document.documentElement.classList.contains('gated')){document.documentElement.classList.remove('gated');location.reload();}
+      return;
+    }
     var t=Math.floor(left/1000);
     d.textContent=pad(Math.floor(t/86400)); h.textContent=pad(Math.floor(t%86400/3600));
     m.textContent=pad(Math.floor(t%3600/60));
@@ -973,7 +984,7 @@ window.__ld = [
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="firebase-init.js?v=202610091809"></script>
+<script src="firebase-init.js?v=202610091826"></script>
 <script>
 // -----------------------------------------------------------------
 // Icons — small inline SVGs, stroke = currentColor
@@ -2046,7 +2057,7 @@ document.getElementById('sheet-confirm').onclick = async () => {
 // GitHub Pages lets browsers keep index.html for a while, so a phone can sit on an old page.
 // version.json is fetched fresh (never cached); if it differs from this page's version, reload once
 // with a new web address so the browser fetches the new page. Waits while a bid is being made.
-const SITE_VERSION = '202610091809';
+const SITE_VERSION = '202610091826';
 document.getElementById('site-version').textContent = SITE_VERSION;
 async function checkForNewVersion() {
   try {

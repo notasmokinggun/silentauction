@@ -1316,8 +1316,9 @@ function bidFormHtml() {
       <div class="bf-row"><label style="flex:0 1 auto;">May we announce your name out loud?</label>
         <span style="white-space:nowrap;"><span class="bf-sq" style="margin-left:2mm;"></span>Yes<span class="bf-sq" style="margin-left:3mm;"></span>No</span></div>`)}
     ${sec(5, 'Confirmation', `
-      <div class="bf-consent"><span class="bf-sq"></span><p>I am 18 or older. I understand my bid is a promise to pay if I win. I agree to give consent for the collection of my data until the auction is over, and then it will be promptly deleted.</p></div>
-      <div class="bf-row"><label>Signature</label><div class="bf-line"></div><label>Date</label><div class="bf-line" style="max-width:32mm;"></div></div>`, true)}
+      <div class="bf-consent"><span class="bf-sq"></span><p>I am 18 or older. I understand my bid is a promise to pay if I win.</p></div>
+      <div class="bf-consent"><span class="bf-sq"></span><p>I agree to give consent for the collection of my data until the auction is over, and then it will be promptly deleted.</p></div>
+      <div class="bf-row"><label>Date</label><div class="bf-line" style="max-width:32mm;"></div></div>`, true)}
   </div>`;
 }
 // One A4 page: header, every lot photo (lot number + name), then the compact bid form.

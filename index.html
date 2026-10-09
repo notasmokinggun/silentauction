@@ -15,6 +15,39 @@
 <style>
 html,body{overscroll-behavior-y:none;}
 </style>
+<script>
+/* Bidding opens 10 Oct 2026, 10:00 AM IST. Until then only the countdown page shows. */
+window.__OPEN_AT = new Date('2026-10-10T10:00:00+05:30').getTime();
+if (Date.now() < window.__OPEN_AT) document.documentElement.classList.add('gated');
+</script>
+<style>
+  #opening-gate{display:none;}
+  html.gated{overflow:hidden;height:100%;}
+  html.gated body > *:not(#opening-gate){display:none !important;}
+  html.gated #opening-gate{display:flex;}
+  #opening-gate{position:fixed;inset:0;z-index:2147483000;align-items:center;justify-content:center;text-align:center;
+    padding:calc(28px + env(safe-area-inset-top,0px)) 22px calc(28px + env(safe-area-inset-bottom,0px));overflow:hidden;
+    background:radial-gradient(120% 80% at 50% 0%, #2A2012 0%, #14100B 45%, #0A0807 100%);color:#F3EBDA;}
+  #opening-gate::before,#opening-gate::after{content:'';position:absolute;border-radius:50%;filter:blur(70px);opacity:.45;pointer-events:none;}
+  #opening-gate::before{width:60vmax;height:60vmax;left:-25vmax;top:-30vmax;background:#E3B75C;opacity:.16;animation:og-drift 14s ease-in-out infinite alternate;}
+  #opening-gate::after{width:50vmax;height:50vmax;right:-22vmax;bottom:-28vmax;background:#B9763A;opacity:.14;animation:og-drift 18s ease-in-out infinite alternate-reverse;}
+  @keyframes og-drift{to{transform:translate3d(6vmax,4vmax,0) scale(1.12);}}
+  .og-wrap{position:relative;z-index:1;width:100%;max-width:640px;display:flex;flex-direction:column;align-items:center;}
+  .og-logo{width:72px;height:72px;object-fit:contain;margin-bottom:18px;filter:drop-shadow(0 6px 18px rgba(227,183,92,.35));}
+  .og-eyebrow{font-family:'Playfair Display','Nunito',serif;font-size:clamp(18px,4.6vw,24px);letter-spacing:.04em;color:#E3B75C;margin:0 0 14px;font-weight:700;}
+  .og-title{font-family:'Nunito','IBM Plex Sans',system-ui,sans-serif;font-weight:800;font-size:clamp(26px,7.4vw,46px);line-height:1.12;margin:0 0 8px;color:#F3EBDA;text-wrap:balance;}
+  .og-title em{font-style:normal;color:#E3B75C;}
+  .og-sub{margin:0 0 clamp(26px,6vw,40px);color:#CBC0AF;font-size:clamp(14px,3.8vw,17px);}
+  .og-count{display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(8px,2.4vw,16px);width:100%;}
+  .og-box{background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.025));border:1px solid rgba(227,183,92,.28);
+    border-radius:18px;padding:clamp(14px,4vw,24px) 4px clamp(10px,3vw,16px);box-shadow:0 10px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.08);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);}
+  .og-num{display:block;font-family:'Nunito','IBM Plex Sans',system-ui,sans-serif;font-weight:800;font-size:clamp(30px,10vw,58px);line-height:1;color:#F3EBDA;font-variant-numeric:tabular-nums;letter-spacing:.01em;}
+  .og-lab{display:block;margin-top:8px;font-size:clamp(10px,2.8vw,12.5px);letter-spacing:.16em;text-transform:uppercase;color:#E3B75C;font-weight:600;}
+  .og-box.tick .og-num{animation:og-tick .35s ease;}
+  @keyframes og-tick{0%{transform:translateY(-6px);opacity:.3;}100%{transform:none;opacity:1;}}
+  .og-foot{margin:clamp(26px,6vw,40px) 0 0;color:#9C917F;font-size:13px;letter-spacing:.04em;}
+  @media (prefers-reduced-motion:reduce){#opening-gate::before,#opening-gate::after,.og-box.tick .og-num{animation:none;}}
+</style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
@@ -593,6 +626,37 @@ html,body{overscroll-behavior-y:none;}
 </style>
 </head>
 <body>
+<div id="opening-gate" role="status" aria-live="polite">
+  <div class="og-wrap">
+    <img class="og-logo" src="images/jashn-logo.png" alt="" onerror="this.style.display='none'">
+    <p class="og-eyebrow">SBS CAS Auction</p>
+    <h1 class="og-title">Bidding will open after <em>10:00 AM</em> on 10th October</h1>
+    <p class="og-sub">Come back when the clock hits zero.</p>
+    <div class="og-count" aria-label="Time left until bidding opens">
+      <div class="og-box"><span class="og-num" id="og-d">00</span><span class="og-lab">Days</span></div>
+      <div class="og-box"><span class="og-num" id="og-h">00</span><span class="og-lab">Hours</span></div>
+      <div class="og-box"><span class="og-num" id="og-m">00</span><span class="og-lab">Minutes</span></div>
+      <div class="og-box" id="og-sbox"><span class="og-num" id="og-s">00</span><span class="og-lab">Seconds</span></div>
+    </div>
+    <p class="og-foot">See you at the auction</p>
+  </div>
+</div>
+<script>
+(function(){
+  var gate=document.getElementById('opening-gate'); if(!gate) return;
+  var d=document.getElementById('og-d'),h=document.getElementById('og-h'),m=document.getElementById('og-m'),sc=document.getElementById('og-s'),sb=document.getElementById('og-sbox');
+  function pad(n){return n<10?'0'+n:''+n;}
+  function tick(){
+    var left=window.__OPEN_AT-Date.now();
+    if(left<=0){document.documentElement.classList.remove('gated');location.reload();return;}
+    var t=Math.floor(left/1000);
+    d.textContent=pad(Math.floor(t/86400)); h.textContent=pad(Math.floor(t%86400/3600));
+    m.textContent=pad(Math.floor(t%3600/60));
+    var sv=pad(t%60); if(sc.textContent!==sv){sc.textContent=sv; sb.classList.remove('tick'); void sb.offsetWidth; sb.classList.add('tick');}
+  }
+  tick(); setInterval(tick,250);
+})();
+</script>
 <button type="button" id="scroll-hint" aria-label="Scroll down"><span>Scroll down</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
 <script>
 // Welcome screen only: if there is more page below the fold, show a bouncing "Scroll down" hint until the person scrolls.

@@ -58,9 +58,9 @@ html,body{overscroll-behavior-y:none;}
   .badge{display:inline-block;padding:5px 11px;font-size:14px;border:1px solid var(--border);
     border-radius:20px;color:var(--muted);background:var(--surface);}
   /* press feedback: scale(.96), interruptible CSS transition, only on real buttons that are not disabled */
-  .cta,.pill,.tab,.load-error button,#app-loader button,#storage-notice button,.guest-email button,#fs-prompt .fs-btn,#fs-fab{transition:scale 150ms ease-out;}
-  .cta:not([disabled]):active,.pill:active,.tab:active,.load-error button:active,#app-loader button:active,#storage-notice button:active,.guest-email button:active,#fs-prompt .fs-btn:active,#fs-fab:active{scale:.96;}
-  @media (prefers-reduced-motion:reduce){.cta,.pill,.tab,.load-error button,#app-loader button,#storage-notice button,.guest-email button,#fs-prompt .fs-btn,#fs-fab{transition:none;}}
+  .cta,.pill,.tab,.load-error button,#app-loader button,#storage-notice button,.guest-email button{transition:scale 150ms ease-out;}
+  .cta:not([disabled]):active,.pill:active,.tab:active,.load-error button:active,#app-loader button:active,#storage-notice button:active,.guest-email button:active{scale:.96;}
+  @media (prefers-reduced-motion:reduce){.cta,.pill,.tab,.load-error button,#app-loader button,#storage-notice button,.guest-email button{transition:none;}}
   /* photo edges: 1px pure white (dark surfaces) or pure black (light surfaces) at 10%, inset so layout is unchanged */
   .card .img,.sheet-head img{outline:1px solid rgba(255,255,255,.1);outline-offset:-1px;}
   .cause-img{outline:1px solid rgba(0,0,0,.1);outline-offset:-1px;}
@@ -909,7 +909,7 @@ window.__ld = [
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="firebase-init.js?v=202610080331"></script>
+<script src="firebase-init.js?v=202610090508"></script>
 <script>
 // -----------------------------------------------------------------
 // Icons — small inline SVGs, stroke = currentColor
@@ -1982,7 +1982,7 @@ document.getElementById('sheet-confirm').onclick = async () => {
 // GitHub Pages lets browsers keep index.html for a while, so a phone can sit on an old page.
 // version.json is fetched fresh (never cached); if it differs from this page's version, reload once
 // with a new web address so the browser fetches the new page. Waits while a bid is being made.
-const SITE_VERSION = '202610080331';
+const SITE_VERSION = '202610090508';
 document.getElementById('site-version').textContent = SITE_VERSION;
 async function checkForNewVersion() {
   try {

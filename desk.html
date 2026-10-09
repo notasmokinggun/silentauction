@@ -97,6 +97,28 @@
     max-width:min(92vw,440px);padding:13px 18px;border-radius:12px;background:var(--surface2);border:1px solid var(--green);
     text-align:center;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:90;}
   .toast.show{opacity:1;transform:translate(-50%,0);}
+  /* ---- All lots at a glance ---- */
+  details.glance{padding:0;overflow:hidden;}
+  details.glance>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:14px 16px;min-height:52px;font-weight:700;}
+  details.glance>summary::-webkit-details-marker{display:none;}
+  details.glance>summary .chev{transition:rotate 150ms ease-out;color:var(--muted);}
+  details.glance[open]>summary .chev{rotate:180deg;}
+  .glance-body{padding:0 12px 12px;}
+  #glance-q{margin:2px 0 8px;}
+  .g-list{list-style:none;margin:0;padding:0;display:grid;gap:8px;}
+  .g-row{display:grid;grid-template-columns:56px 1fr auto;gap:12px;align-items:center;padding:8px;border-radius:14px;
+    background:var(--surface2);cursor:pointer;min-height:72px;}
+  .g-row:active{background:#2a251e;}
+  .g-row.closed{opacity:.55;cursor:default;}
+  .g-ph{width:56px;height:56px;border-radius:10px;object-fit:cover;background:var(--bg);outline:1px solid rgba(255,255,255,.1);outline-offset:-1px;}
+  .g-mid{min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .g-no{font-size:14px;font-weight:700;color:var(--gold);}
+  .g-name{font-weight:600;line-height:1.25;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .g-nums{display:grid;grid-template-columns:auto;text-align:right;line-height:1.2;}
+  .g-l{font-size:12px;color:var(--muted);margin-top:3px;}
+  .g-nums b{font-size:17px;}
+  .g-tag{font-size:12px;font-weight:700;color:var(--muted);}
 </style>
 </head>
 <body>
@@ -146,6 +168,15 @@
       <li data-k="announce"><span class="dot">&#10003;</span><span><b>Announce their name</b> if they win? Yes or no</span></li>
     </ol>
   </div>
+
+  <details class="card glance" id="glance-box">
+    <summary><span>All lots at a glance (<span id="glance-count">0</span>)</span><span class="chev" aria-hidden="true">&#9662;</span></summary>
+    <div class="glance-body">
+      <input id="glance-q" type="search" inputmode="search" autocomplete="off" placeholder="Filter by lot number or name" aria-label="Filter the lot list">
+      <ul class="g-list" id="glance"></ul>
+      <p class="hint" style="margin-top:8px;">Tap a lot to pick it for the bid below.</p>
+    </div>
+  </details>
 
   <label class="f" for="lotno">Lot</label>
   <div class="lotrow">
@@ -292,8 +323,43 @@ auth.onAuthStateChanged(async (u) => {
   lotsUnsub = db.collection('items').orderBy('lotNumber').onSnapshot(snap => {
     lots = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     renderLots();
+    renderGlance();
   }, e => { $('form-err').textContent = 'Could not load the lots: ' + e.message; });
 });
+
+
+// ---------- All lots at a glance ----------
+let glanceSig = '';
+function renderGlance() {
+  const list = $('glance'), q = ($('glance-q').value || '').trim().toLowerCase();
+  $('glance-count').textContent = lots.length;
+  const sig = JSON.stringify([q, lots.map(l => [l.id, l.lotNumber, l.title, (l.imageUrl || '').length, (l.imageUrl || '').slice(-24), l.currentBid, l.increment, l.bidCount, isClosed(l)])]);
+  if (sig === glanceSig) return;
+  glanceSig = sig;
+  if (!lots.length) { list.innerHTML = '<li class="hint">No lots yet.</li>'; return; }
+  const rows = lots.filter(l => !q || lotNo(l).includes(q) || String(l.lotNumber) === q || (l.title || '').toLowerCase().includes(q));
+  if (!rows.length) { list.innerHTML = '<li class="hint">No lot matches that.</li>'; return; }
+  list.innerHTML = rows.map(l => {
+    const closed = isClosed(l);
+    const hl = l.bidCount ? 'Highest bid' : 'Starting bid';
+    return `<li class="g-row${closed ? ' closed' : ''}" data-id="${l.id}" role="button" tabindex="0">
+      <img class="g-ph" src="${escapeHtml(l.imageUrl || '')}" alt="" width="56" height="56" loading="lazy" decoding="async" onerror="this.style.visibility='hidden'">
+      <div class="g-mid"><span class="g-no">Lot ${lotNo(l)}${closed ? ' &middot; <span class="g-tag">Closed</span>' : ''}</span><span class="g-name">${escapeHtml(l.title || '')}</span></div>
+      <div class="g-nums"><span class="g-l">${hl}</span><b>${money(l.currentBid)}</b><span class="g-l">Increment</span><b>${money(l.increment)}</b></div>
+    </li>`;
+  }).join('');
+}
+function pickFromGlance(row) {
+  if (!row || row.classList.contains('closed')) return;
+  $('lot').value = row.dataset.id;
+  $('lot').dispatchEvent(new Event('change'));
+  const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  $('lotno').scrollIntoView({ block: 'center', behavior: calm ? 'auto' : 'smooth' });
+  $('glance-box').open = false;
+}
+$('glance').addEventListener('click', e => pickFromGlance(e.target.closest('.g-row')));
+$('glance').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pickFromGlance(e.target.closest('.g-row')); } });
+$('glance-q').addEventListener('input', renderGlance);
 
 // ---------- Lots ----------
 const lotNo = it => String(it.lotNumber).padStart(3, '0');

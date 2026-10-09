@@ -345,6 +345,10 @@
           <form id="lotForm">
             <fieldset>
               <legend id="form-legend">Add a lot</legend>
+              <div class="form-row"><label for="f-lotno">Lot number</label>
+                <input id="f-lotno" type="number" min="1" max="9999" step="1" inputmode="numeric" placeholder="Auto">
+                <small id="f-lotno-hint" style="display:block;margin-top:4px;color:var(--muted);font-size:12px;"></small>
+              </div>
               <div class="form-row"><label for="f-title">Title</label><input id="f-title" required maxlength="120"></div>
               <div class="form-row"><label for="f-cat">Category</label>
                 <input id="f-cat" list="cat-options" placeholder="Art, Experiences, Sports…" maxlength="40">
@@ -1000,6 +1004,27 @@ let editingEndsAtMillis = null;
 let pendingFile = null;
 const fTitle = document.getElementById('f-title');
 const fCat = document.getElementById('f-cat');
+const fLotNo = document.getElementById('f-lotno');
+const padLot = n => String(n).padStart(3, '0');
+function updateLotNoHint() {
+  const next = lots.reduce((m, l) => Math.max(m, l.lotNumber || 0), 0) + 1;
+  document.getElementById('f-lotno-hint').textContent = editingId
+    ? 'Type another number to renumber this lot. If another lot already has it, you can swap the two.'
+    : 'Leave blank to use the next number (' + padLot(next) + '), or type the one you want.';
+  fLotNo.placeholder = editingId ? '' : 'Auto (' + padLot(next) + ')';
+}
+fLotNo.addEventListener('focus', updateLotNoHint);
+// Looks up the live database (not just this page's copy) for another lot that already uses this number.
+async function findLotByNumber(n, excludeId) {
+  try {
+    const snap = await db.collection('items').where('lotNumber', '==', n).limit(5).get();
+    const hit = snap.docs.find(d => d.id !== excludeId);
+    return hit ? { id: hit.id, ref: hit.ref, ...hit.data() } : null;
+  } catch (_) {
+    const l = lots.find(x => x.lotNumber === n && x.id !== excludeId);
+    return l ? { id: l.id, ref: db.collection('items').doc(l.id), ...l } : null;
+  }
+}
 const fDesc = document.getElementById('f-desc');
 const fDetails = document.getElementById('f-details');
 const fImg = document.getElementById('f-img');
@@ -1043,7 +1068,9 @@ function startEdit(id) {
   fInc.value = it.increment ?? 500;
   setEndsFields(it.endsAt && it.endsAt.toDate ? it.endsAt.toDate() : null);
   editingEndsAtMillis = it.endsAt && it.endsAt.toDate ? it.endsAt.toDate().getTime() : null;
+  fLotNo.value = it.lotNumber ?? '';
   document.getElementById('form-legend').textContent = 'Editing LOT ' + String(it.lotNumber).padStart(3, '0');
+  updateLotNoHint();
   submitBtn.textContent = 'Save changes';
   cancelEditBtn.style.display = 'inline-block';
   addErr.textContent = '';
@@ -1098,6 +1125,7 @@ function resetForm() {
   cancelEditBtn.style.display = 'none';
   addErr.textContent = '';
   fInc.value = 500;
+  updateLotNoHint();
 }
 cancelEditBtn.onclick = resetForm;
 
@@ -1154,6 +1182,12 @@ document.getElementById('lotForm').addEventListener('submit', async (e) => {
   if (start < 0 || inc <= 0) { addErr.textContent = "Starting bid can't be negative, and increment must be positive."; return; }
   if (start > 100000000 || inc > 100000000) { addErr.textContent = 'Starting bid and increment must each be ₹10,00,00,000 or less.'; return; }
 
+  let wantNo = null;
+  if (fLotNo.value.trim() !== '') {
+    wantNo = Number(fLotNo.value);
+    if (!Number.isInteger(wantNo) || wantNo < 1 || wantNo > 9999) { addErr.textContent = 'Lot number must be a whole number from 1 to 9999.'; return; }
+  }
+
   submitBtn.disabled = true;
   const prevLabel = submitBtn.textContent;
   submitBtn.textContent = editingId ? 'Saving…' : 'Adding…';
@@ -1181,13 +1215,40 @@ document.getElementById('lotForm').addEventListener('submit', async (e) => {
       if (fullUrl) patch.hasFullImage = true;
       else if (clearFull) patch.hasFullImage = false;
       const batch = db.batch();
+      let swapNote = '';
+      if (wantNo !== null && it && wantNo !== it.lotNumber) {
+        const clash = await findLotByNumber(wantNo, editingId);
+        if (clash) {
+          const ok = await ui.confirm({
+            title: 'LOT ' + padLot(wantNo) + ' is already taken',
+            message: '\u201C' + (clash.title || 'Untitled') + '\u201D is LOT ' + padLot(wantNo) + '.\nSwap the two?\n\u2022 \u201C' + title + '\u201D becomes LOT ' + padLot(wantNo) +
+              '\n\u2022 \u201C' + (clash.title || 'Untitled') + '\u201D becomes LOT ' + padLot(it.lotNumber),
+            yesText: 'Swap numbers' });
+          if (!ok) { submitBtn.textContent = prevLabel; return; }
+          batch.update(clash.ref, { lotNumber: it.lotNumber });
+          swapNote = 'Swapped LOT ' + padLot(it.lotNumber) + ' and LOT ' + padLot(wantNo) + '.';
+        } else {
+          swapNote = 'Lot renumbered to LOT ' + padLot(wantNo) + '.';
+        }
+        patch.lotNumber = wantNo;
+      }
       batch.update(db.collection('items').doc(editingId), patch);
       if (fullUrl) batch.set(db.collection('itemImages').doc(editingId), { url: fullUrl });
       else if (clearFull) batch.delete(db.collection('itemImages').doc(editingId));
       await batch.commit();
+      ui.toast(swapNote || 'Lot saved.', 'ok');
       editingEndsAtMillis = endsDate ? endsDate.getTime() : null;
     } else {
-      const nextLotNumber = lots.reduce((m, l) => Math.max(m, l.lotNumber || 0), 0) + 1;
+      let nextLotNumber = lots.reduce((m, l) => Math.max(m, l.lotNumber || 0), 0) + 1;
+      if (wantNo !== null) {
+        const clash = await findLotByNumber(wantNo, null);
+        if (clash) {
+          addErr.textContent = 'LOT ' + padLot(wantNo) + ' is already used by \u201C' + (clash.title || 'Untitled') + '\u201D. Pick another number, or leave it blank.';
+          submitBtn.textContent = prevLabel;
+          return;
+        }
+        nextLotNumber = wantNo;
+      }
       const newRef = db.collection('items').doc();
       const batch = db.batch();
       batch.set(newRef, {

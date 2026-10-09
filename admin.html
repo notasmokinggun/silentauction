@@ -197,6 +197,9 @@
   .bf-boxes{display:flex;gap:.8mm;}
   .bf-boxes span{width:4.8mm;height:6.5mm;border:1.1px solid #000;border-radius:.8mm;display:block;}
   .bf-sq{display:inline-block;width:4mm;height:4mm;border:1.3px solid #000;border-radius:.8mm;vertical-align:-.8mm;margin:0 1.5mm 0 4mm;}
+  .bf-consent{display:flex;align-items:flex-start;gap:2.5mm;}
+  .bf-consent .bf-sq{flex:none;margin:.4mm 0 0;}
+  .bf-consent p{margin:0;font-size:9pt;line-height:1.35;color:#000;text-wrap:pretty;}
   .bf-note{font-size:7.5pt;margin:0;color:#222;line-height:1.2;}
   body.print-photosheet #qrsheet{display:none !important;}
   @media print{
@@ -1313,7 +1316,7 @@ function bidFormHtml() {
       <div class="bf-row"><label style="flex:0 1 auto;">May we announce your name out loud?</label>
         <span style="white-space:nowrap;"><span class="bf-sq" style="margin-left:2mm;"></span>Yes<span class="bf-sq" style="margin-left:3mm;"></span>No</span></div>`)}
     ${sec(5, 'Confirmation', `
-      <p class="bf-note" style="font-size:9pt;color:#000;"><span class="bf-sq" style="margin-left:0;"></span>I am 18 or older. I understand my bid is a promise to pay if I win. Thank you for supporting the SBS CAS Auction.</p>
+      <div class="bf-consent"><span class="bf-sq"></span><p>I am 18 or older. I understand my bid is a promise to pay if I win. I agree to give consent for the collection of my data until the auction is over, and then it will be promptly deleted.</p></div>
       <div class="bf-row"><label>Signature</label><div class="bf-line"></div><label>Date</label><div class="bf-line" style="max-width:32mm;"></div></div>`, true)}
   </div>`;
 }

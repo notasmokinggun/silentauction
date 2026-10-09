@@ -138,11 +138,11 @@ const seedLot = async (id, extra = {}) => env.withSecurityRulesDisabled(async ct
     currentBidderName: '', currentBidderUid: '', ...extra,
   });
 });
-const placeBid = (db, lotId, uid, email, amount, bidCount = 0, over = {}) => {
+const placeBid = (db, lotId, uid, email, amount, bidCount = 0, over = {}, itemOver = {}) => {
   const b = writeBatch(db);
   const bidRef = doc(collection(db, 'items/' + lotId + '/bids'));
   b.update(doc(db, 'items/' + lotId), { currentBid: amount, currentBidderName: 'A', currentBidderUid: uid, bidCount: bidCount + 1,
-    prevBid: 100, prevBidderName: '', prevBidderUid: null, prevKnown: true, lastBidId: bidRef.id });
+    prevBid: 100, prevBidderName: '', prevBidderUid: null, prevKnown: true, lastBidId: bidRef.id, ...itemOver });
   b.set(bidRef, {
     name: 'A', phone: '9876543210', email, amount, uid, isGoogle: true, deviceId: 'dev_x',
     childName: 'Kid', classSection: '8-A', timestamp: serverTimestamp(), ...over,
@@ -191,7 +191,7 @@ test('nobody can write another uid\'s bidLimits, and bidBlocks are closed', asyn
   await assertFails(setDoc(doc(g, 'bidBlocks/dev_x'), { blockedUntil: new Date(Date.now() + 600000) }));
 });
 
-// ── 5x review hold ──
+// ── Review hold: a bid ₹4,000 or more above the lot's current price ──
 const holdFields = (uid, email, amount, over = {}) => ({
   name: 'A', phone: '9876543210', email, amount, uid, isGoogle: true, deviceId: 'dev_x',
   childName: 'Kid', classSection: '8-A', timestamp: serverTimestamp(), status: 'pending', ...over,
@@ -202,40 +202,53 @@ const placeHold = (db, lotId, uid, email, amount, over = {}, id = 'hold_' + uid)
   b.set(doc(db, 'bidLimits/' + uid), { lastBidAt: serverTimestamp() });
   return b.commit();
 };
-test('a bid 5x or more above the price can only be placed as a pending hold', async () => {
-  await seedLot('h1'); // currentBid 100 -> threshold 500
+test('a bid ₹4,000 or more above the price can only be placed as a pending hold', async () => {
+  await seedLot('h1'); // currentBid 100 -> hold from 4100
   const g = bidder('h1u', 'h1u@example.com');
-  await assertFails(placeBid(g, 'h1', 'h1u', 'h1u@example.com', 500)); // straight onto the lot
-  await assertSucceeds(placeHold(g, 'h1', 'h1u', 'h1u@example.com', 500));
+  await assertFails(placeBid(g, 'h1', 'h1u', 'h1u@example.com', 4100)); // straight onto the lot
+  await assertSucceeds(placeHold(g, 'h1', 'h1u', 'h1u@example.com', 4100));
 });
-test('a hold below 5x, a wrong id, a non-pending status or a hold on a closed lot is rejected', async () => {
+test('a hold under the margin, a wrong id, a non-pending status or a hold on a closed lot is rejected', async () => {
   await seedLot('h2');
   await seedLot('h2c', { active: false });
   const g = bidder('h2u', 'h2u@example.com');
-  await assertFails(placeHold(g, 'h2', 'h2u', 'h2u@example.com', 499));
-  await assertFails(placeHold(g, 'h2', 'h2u', 'h2u@example.com', 900, {}, 'hold_someoneelse'));
-  await assertFails(placeHold(g, 'h2', 'h2u', 'h2u@example.com', 900, { status: 'confirmed' }));
-  await assertFails(placeHold(g, 'h2c', 'h2u', 'h2u@example.com', 900));
+  await assertFails(placeHold(g, 'h2', 'h2u', 'h2u@example.com', 4099));
+  await assertFails(placeHold(g, 'h2', 'h2u', 'h2u@example.com', 4500, {}, 'hold_someoneelse'));
+  await assertFails(placeHold(g, 'h2', 'h2u', 'h2u@example.com', 4500, { status: 'confirmed' }));
+  await assertFails(placeHold(g, 'h2c', 'h2u', 'h2u@example.com', 4500));
 });
 test('a hold does not change the lot, and a bidder cannot confirm their own hold', async () => {
   await seedLot('h3');
   const g = bidder('h3u', 'h3u@example.com');
-  await assertSucceeds(placeHold(g, 'h3', 'h3u', 'h3u@example.com', 900));
-  await assertFails(setDoc(doc(g, 'items/h3/bids/hold_h3u'), holdFields('h3u', 'h3u@example.com', 900, { status: 'confirmed' })));
-  await assertFails(setDoc(doc(g, 'items/h3'), { currentBid: 900, currentBidderName: 'A', currentBidderUid: 'h3u', bidCount: 1 }, { merge: true }));
+  await assertSucceeds(placeHold(g, 'h3', 'h3u', 'h3u@example.com', 4500));
+  await assertFails(setDoc(doc(g, 'items/h3/bids/hold_h3u'), holdFields('h3u', 'h3u@example.com', 4500, { status: 'confirmed' })));
+  await assertFails(setDoc(doc(g, 'items/h3'), { currentBid: 4500, currentBidderName: 'A', currentBidderUid: 'h3u', bidCount: 1 }, { merge: true }));
   await assertSucceeds(setDoc(doc(account('admin', 'admin@example.com'), 'items/h3/bids/hold_h3u'), { status: 'confirmed' }, { merge: true }));
 });
 test('a bidder can withdraw a pending hold but not delete a confirmed one', async () => {
   await seedLot('h4');
   const g = bidder('h4u', 'h4u@example.com');
-  await assertSucceeds(placeHold(g, 'h4', 'h4u', 'h4u@example.com', 900));
+  await assertSucceeds(placeHold(g, 'h4', 'h4u', 'h4u@example.com', 4500));
   await assertSucceeds(deleteDoc(doc(g, 'items/h4/bids/hold_h4u')));
-  await assertSucceeds(placeHold(g, 'h4', 'h4u', 'h4u@example.com', 900));
+  await assertSucceeds(placeHold(g, 'h4', 'h4u', 'h4u@example.com', 4500));
   await env.withSecurityRulesDisabled(async ctx => {
     await setDoc(doc(ctx.firestore(), 'items/h4/bids/hold_h4u'), { status: 'confirmed', uid: 'h4u' }, { merge: true });
   });
   await assertFails(deleteDoc(doc(g, 'items/h4/bids/hold_h4u')));
   await assertFails(deleteDoc(doc(bidder('other', 'other@example.com'), 'items/h4/bids/hold_h4u')));
+});
+test('a bid just under the margin goes straight onto the lot, a hold just under is rejected', async () => {
+  await seedLot('h5'); // currentBid 100 -> straight bid up to 4099, hold from 4100
+  const g = bidder('h5u', 'h5u@example.com');
+  await assertFails(placeHold(g, 'h5', 'h5u', 'h5u@example.com', 4099));
+  await assertSucceeds(placeBid(g, 'h5', 'h5u', 'h5u@example.com', 4099));
+});
+test('the margin follows the price: a lot above \u20B910,000 still takes ordinary bids', async () => {
+  await seedLot('h6', { currentBid: 12000, increment: 500 });
+  const g = bidder('h6u', 'h6u@example.com');
+  await assertFails(placeHold(g, 'h6', 'h6u', 'h6u@example.com', 12500)); // only \u20B9500 above: not a hold
+  await assertFails(placeBid(g, 'h6', 'h6u', 'h6u@example.com', 16000, 0, {}, { prevBid: 12000 })); // \u20B94,000 above: must be held
+  await assertSucceeds(placeBid(g, 'h6', 'h6u', 'h6u@example.com', 12500, 0, {}, { prevBid: 12000 }));
 });
 test('a bidder can list only their own bids across lots (My Bids)', async () => {
   await seedLot('m1');
@@ -410,6 +423,16 @@ test('an active desk helper can place a paper bid, and it lands on the lot', asy
   const d = await deskHelper('dh1'); await seedLot('pp1');
   await assertSucceeds(paperBid(d, 'pp1', 'dh1', '9876543210'));
 });
+test('paper bids: the hold margin follows the lot price', async () => {
+  const d = await deskHelper('dh9');
+  await seedLot('pp9a', { currentBid: 12000, increment: 500 });
+  await assertSucceeds(paperBid(d, 'pp9a', 'dh9', '9876543210', { amount: 12500 }, { currentBid: 12500 })); // ordinary raise on a lot above 10,000
+  await seedLot('pp9b', { currentBid: 12000, increment: 500 });
+  await assertFails(paperBid(d, 'pp9b', 'dh9', '9876543210', { amount: 16000 }, { currentBid: 16000 })); // 4,000 above: must be held
+  await assertSucceeds(paperHold(d, 'pp9b', 'dh9', '9876543210', { amount: 16000 }));
+  await seedLot('pp9c', { currentBid: 12000, increment: 500 });
+  await assertFails(paperHold(d, 'pp9c', 'dh9', '9876543210', { amount: 15999 })); // under the margin: not a hold
+});
 test('a switched-off or unknown helper cannot place paper bids', async () => {
   const off = await deskHelper('dh2', false); await seedLot('pp2');
   await assertFails(paperBid(off, 'pp2', 'dh2', '9876543210'));
@@ -443,9 +466,9 @@ test('paper bids must be well-formed, honest about who entered them, and clear t
 test('paper bids honour the hold and ceiling limits, and closed lots', async () => {
   const d = await deskHelper('dh6');
   await seedLot('pp6a'); await assertSucceeds(paperHold(d, 'pp6a', 'dh6', '9876543210'));
-  await seedLot('pp6b'); await assertFails(paperBid(d, 'pp6b', 'dh6', '9876543210', { amount: 12000 }, { currentBid: 12000 })); // must be held, not applied
+  await seedLot('pp6b'); await assertFails(paperBid(d, 'pp6b', 'dh6', '9876543210', { amount: 12000 }, { currentBid: 12000 })); // 12000 is far above the 100 price: must be held, not applied
   await seedLot('pp6c'); await assertFails(paperHold(d, 'pp6c', 'dh6', '9876543210', { amount: 50000 }));
-  await seedLot('pp6d'); await assertFails(paperHold(d, 'pp6d', 'dh6', '9876543210', { amount: 5000 })); // small bids can't be 'held'
+  await seedLot('pp6d'); await assertFails(paperHold(d, 'pp6d', 'dh6', '9876543210', { amount: 2000 })); // small bids can't be 'held'
   await seedLot('pp6e', { endsAt: new Date(Date.now() - 60000) }); await assertFails(paperBid(d, 'pp6e', 'dh6', '9876543210'));
   await seedLot('pp6f', { active: false }); await assertFails(paperHold(d, 'pp6f', 'dh6', '9876543210'));
 });

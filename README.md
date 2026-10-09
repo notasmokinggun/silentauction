@@ -222,7 +222,7 @@ them in the same place and the login stops working immediately.
 
 - Paper bids behave like online ones: same phone, class and increment checks; they show in the admin
   Bids list tagged "Paper bid" and in the CSV (Source column).
-- Bids of ₹10,000 or more are **held** until you confirm by phone, exactly like online ones. Bids of
+- Bids ₹4,000 or more above the lot's current price are **held** until you confirm by phone, exactly like online ones. Bids of
   ₹50,000 or more cannot be entered by a helper.
 - A helper cannot edit or undo a bid. Fix a mistake with **Revoke** in the admin Bids list.
 - Publish the updated `firestore.rules` before using this (it adds the `desks` collection and the paper-bid

@@ -287,7 +287,7 @@ service cloud.firestore {
       );
       // A paper bid keyed in by a desk helper: a straight raise tied to the bid doc
       // created in the same write (same amount, name and 'paper:<phone>' bidder id).
-      // Under HOLD_THRESHOLD only; larger paper bids are held for a confirmation call,
+      // Under the hold margin (less than ₹4,000 above the price) only; larger paper bids are held for a confirmation call,
       // exactly like online ones. No undo (prevKnown false), no cooldown or ban (staff).
       function paperRaise() {
         return request.resource.data.diff(resource.data).affectedKeys()
@@ -303,7 +303,7 @@ service cloud.firestore {
           request.resource.data.currentBid is number &&
           underMaxBid(request.resource.data.currentBid) &&
           request.resource.data.currentBid >= resource.data.currentBid + resource.data.increment &&
-          request.resource.data.currentBid < 10000 &&
+          request.resource.data.currentBid < resource.data.currentBid + 4000 &&
           request.resource.data.bidCount == resource.data.get('bidCount', 0) + 1;
       }
       function bidderUndo() {
@@ -346,10 +346,10 @@ service cloud.firestore {
         underMaxBid(request.resource.data.currentBid) &&
         request.resource.data.currentBid >= resource.data.currentBid + resource.data.increment &&
         request.resource.data.bidCount == resource.data.get('bidCount', 0) + 1 &&
-        // Bids at or above HOLD_THRESHOLD (₹10,000) must go through the review
+        // Bids ₹4,000 or more above the current price must go through the review
         // hold (see bids below), never straight onto the lot. Keep this
-        // number in sync with HOLD_THRESHOLD in firebase-init.js.
-        request.resource.data.currentBid < 10000 &&
+        // number in sync with HOLD_MARGIN in firebase-init.js.
+        request.resource.data.currentBid < resource.data.currentBid + 4000 &&
         request.resource.data.currentBidderName is string &&
         request.resource.data.currentBidderName.size() > 0 &&
         request.resource.data.currentBidderName.size() < 80 &&
@@ -421,19 +421,19 @@ service cloud.firestore {
             !isBanned(request.auth.uid) &&
             getAfter(/databases/$(database)/documents/bidLimits/$(request.auth.uid)).data.lastBidAt == request.time;
         }
-        // A normal bid: below HOLD_THRESHOLD (₹10,000, so up to 9,999), tied to the
+        // A normal bid: less than ₹4,000 above the lot's current price, tied to the
         // item update in the same transaction (same amount, same bidder,
         // bidCount + 1).
         function normalBid() {
           return request.resource.data.keys().hasOnly(
               ['name', 'phone', 'email', 'amount', 'uid', 'isGoogle', 'deviceId', 'timestamp', 'childName', 'classSection', 'announceName']) &&
-            request.resource.data.amount < 10000 &&
+            request.resource.data.amount < get(/databases/$(database)/documents/items/$(itemId)).data.currentBid + 4000 &&
             getAfter(/databases/$(database)/documents/items/$(itemId)).data.currentBid == request.resource.data.amount &&
             getAfter(/databases/$(database)/documents/items/$(itemId)).data.currentBidderUid == request.auth.uid &&
             getAfter(/databases/$(database)/documents/items/$(itemId)).data.bidCount ==
               get(/databases/$(database)/documents/items/$(itemId)).data.get('bidCount', 0) + 1;
         }
-        // A held bid: at or above HOLD_THRESHOLD (and below BAN_THRESHOLD, see
+        // A held bid: ₹4,000 or more above the current price (and below BAN_THRESHOLD, see
         // commonBid). It never touches the lot. A reviewer calls the
         // bidder; only an admin can confirm it. One hold per bidder per lot.
         function heldBid() {
@@ -441,7 +441,7 @@ service cloud.firestore {
             request.resource.data.keys().hasOnly(
               ['name', 'phone', 'email', 'amount', 'uid', 'isGoogle', 'deviceId', 'timestamp', 'childName', 'classSection', 'announceName', 'status']) &&
             request.resource.data.status == 'pending' &&
-            request.resource.data.amount >= 10000 &&
+            request.resource.data.amount >= get(/databases/$(database)/documents/items/$(itemId)).data.currentBid + 4000 &&
             get(/databases/$(database)/documents/items/$(itemId)).data.active == true &&
             (get(/databases/$(database)/documents/items/$(itemId)).data.get('endsAt', null) == null ||
              request.time < get(/databases/$(database)/documents/items/$(itemId)).data.endsAt);
@@ -479,17 +479,17 @@ service cloud.firestore {
             (get(/databases/$(database)/documents/items/$(itemId)).data.get('endsAt', null) == null ||
              request.time < get(/databases/$(database)/documents/items/$(itemId)).data.endsAt) &&
             (
-              // under HOLD_THRESHOLD: goes straight onto the lot, together with paperRaise()
+              // less than ₹4,000 above the current price: goes straight onto the lot, together with paperRaise()
               (!('status' in request.resource.data) &&
-               request.resource.data.amount < 10000 &&
+               request.resource.data.amount < get(/databases/$(database)/documents/items/$(itemId)).data.currentBid + 4000 &&
                getAfter(/databases/$(database)/documents/items/$(itemId)).data.currentBid == request.resource.data.amount &&
                getAfter(/databases/$(database)/documents/items/$(itemId)).data.currentBidderUid == request.resource.data.uid &&
                getAfter(/databases/$(database)/documents/items/$(itemId)).data.lastBidId == bidId &&
                getAfter(/databases/$(database)/documents/items/$(itemId)).data.bidCount ==
                  get(/databases/$(database)/documents/items/$(itemId)).data.get('bidCount', 0) + 1) ||
-              // at or above HOLD_THRESHOLD: held for a confirmation call, never touches the lot
+              // ₹4,000 or more above the current price: held for a confirmation call, never touches the lot
               (request.resource.data.get('status', '') == 'pending' &&
-               request.resource.data.amount >= 10000)
+               request.resource.data.amount >= get(/databases/$(database)/documents/items/$(itemId)).data.currentBid + 4000)
             );
         }
         allow create: if (isVerifiedBidder() && commonBid() && (normalBid() || heldBid())) || paperBid();

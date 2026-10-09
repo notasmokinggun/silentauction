@@ -382,7 +382,7 @@ function renderLotInfo() {
   box.innerHTML = it.bidCount
     ? `Highest bid so far: <b>${money(it.currentBid)}</b><br>Next bid must be at least <b>${money(minNext(it))}</b>`
     : `No bids yet. Starting bid <b>${money(it.currentBid)}</b><br>First bid must be at least <b>${money(minNext(it))}</b>`;
-  $('amount-hint').textContent = `At least ${money(minNext(it))}. Bids of ${money(HOLD_THRESHOLD)} or more are held until the organizers confirm by phone.`;
+  $('amount-hint').textContent = `At least ${money(minNext(it))}. Bids of ${money(it.currentBid + HOLD_MARGIN)} or more (${money(HOLD_MARGIN)} above the current price) are held until the organizers confirm by phone.`;
 }
 $('lot').onchange = () => {
   const it = currentLot();
@@ -466,10 +466,10 @@ $('review-btn').onclick = () => {
     ['Announce name', d.announce ? 'Yes' : 'No, contact privately'],
   ];
   $('review').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${escapeHtml(v)}</dd>`).join('');
-  const held = d.amount >= HOLD_THRESHOLD;
+  const held = isHoldAmount(d.it, d.amount);
   $('held-note').style.display = held ? 'block' : 'none';
   $('held-note').textContent = held
-    ? `This is ${money(HOLD_THRESHOLD)} or more, so it is held and will not show on the lot until the organizers confirm it by phone.` : '';
+    ? `This is ${money(HOLD_MARGIN)} or more above the current price, so it is held and will not show on the lot until the organizers confirm it by phone.` : '';
   $('modal-err').textContent = '';
   $('modal').classList.add('open');
   document.body.classList.add('modal-open');
@@ -487,7 +487,7 @@ $('place-btn').onclick = async () => {
   const doneBusy = ui.busy('Placing bid\u2026');
   const itemRef = db.collection('items').doc(d.it.id);
   const bidRef = itemRef.collection('bids').doc();
-  const held = d.amount >= HOLD_THRESHOLD;
+  let held = isHoldAmount(d.it, d.amount);
   const uid = 'paper:' + d.phone;
   const bid = {
     name: d.name, phone: d.phone, email: '', amount: d.amount, uid, isGoogle: false, deviceId: 'paper',
@@ -501,6 +501,7 @@ $('place-btn').onclick = async () => {
       if (!snap.exists) throw new Error('That lot no longer exists.');
       const it = snap.data();
       if (isClosed(it)) throw new Error('This lot has just closed. The bid was not placed.');
+      held = isHoldAmount(it, d.amount); // decided on the price as it is right now
       if (held) { tx.set(bidRef, { ...bid, status: 'pending' }); return; }
       if (d.amount < (it.currentBid || 0) + (it.increment || 0)) {
         throw new Error(`Someone bid in the meantime. The highest bid is now ${money(it.currentBid)}; this bid must be at least ${money(it.currentBid + it.increment)}.`);

@@ -78,21 +78,23 @@ function money(n) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Bid guardrails. Two flat, absolute thresholds (not relative to the
-// current price — easy for anyone to reason about):
-//   - At or above HOLD_THRESHOLD (₹10,000): the bid is held, not applied to the
-//     lot, until our team calls to confirm it.
-//   - At or above BAN_THRESHOLD (₹50,000): rejected outright, and the
+// Bid guardrails.
+//   - A bid HOLD_MARGIN (₹4,000) or more above the lot's current price is held,
+//     not applied to the lot, until our team calls to confirm it. (Relative to
+//     the current price, so a lot can climb past ₹10,000 through ordinary
+//     bidding without every bid needing a call.)
+//   - BAN_THRESHOLD is a flat, absolute ceiling:
+//     at or above BAN_THRESHOLD (₹50,000): rejected outright, and the
 //     bidder's account (uid, not device — can't be dodged by clearing
 //     local storage) is temporarily banned from bidding for BAN_MINUTES.
 // Enforced here (for a fast, friendly message) AND in firestore.rules,
 // so a tampered client can't bypass either check.
 // ─────────────────────────────────────────────────────────────
-const HOLD_THRESHOLD = 10000; // ₹10,000
+const HOLD_MARGIN = 4000; // ₹4,000 above the current price. Keep in sync with firestore.rules.
 const BAN_THRESHOLD = 50000; // ₹50,000 (never shown to users)
 const BAN_MINUTES = 5;
 const MAX_BID_AMOUNT = 100000000; // ₹10,00,00,000 — absolute ceiling, same as firestore.rules
-function isHoldAmount(it, amount) { return amount >= HOLD_THRESHOLD; }
+function isHoldAmount(it, amount) { return amount >= (Number(it && it.currentBid) || 0) + HOLD_MARGIN; }
 function isBanAmount(amount) { return amount >= BAN_THRESHOLD; }
 
 function banRef(uid) {

@@ -16,8 +16,8 @@
 html,body{overscroll-behavior-y:none;}
 </style>
 <script>
-/* Bidding opens 10 Oct 2026, 3:00 PM IST. Until then only the countdown page shows. */
-window.__OPEN_AT = new Date('2026-10-10T15:00:00+05:30').getTime();
+/* Bidding opens 10 Oct 2026, 11:00 AM IST. Until then only the countdown page shows. */
+window.__OPEN_AT = new Date('2026-10-10T11:00:00+05:30').getTime();
 window.__SKEW = 0; // server time minus this phone's clock, so a wrong phone clock cannot skip the gate
 window.__gateCheck = function () { document.documentElement.classList.toggle('gated', Date.now() + window.__SKEW < window.__OPEN_AT); };
 window.__gateCheck();
@@ -638,7 +638,7 @@ try {
   <div class="og-wrap">
     <img class="og-logo" src="images/jashn-logo.png" alt="" onerror="this.style.display='none'">
     <p class="og-eyebrow">SBS CAS Auction</p>
-    <h1 class="og-title">Bidding will open after <em>3:00 PM</em> on 10th October</h1>
+    <h1 class="og-title">Bidding will open after <em>11:00 AM</em> on 10th October</h1>
     <p class="og-sub">Come back when the clock hits zero.</p>
     <div class="og-count" aria-label="Time left until bidding opens">
       <div class="og-box"><span class="og-num" id="og-d">00</span><span class="og-lab">Days</span></div>
@@ -984,7 +984,7 @@ window.__ld = [
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="firebase-init.js?v=202610091836"></script>
+<script src="firebase-init.js?v=202610100355"></script>
 <script>
 // -----------------------------------------------------------------
 // Icons — small inline SVGs, stroke = currentColor
@@ -2057,7 +2057,7 @@ document.getElementById('sheet-confirm').onclick = async () => {
 // GitHub Pages lets browsers keep index.html for a while, so a phone can sit on an old page.
 // version.json is fetched fresh (never cached); if it differs from this page's version, reload once
 // with a new web address so the browser fetches the new page. Waits while a bid is being made.
-const SITE_VERSION = '202610091836';
+const SITE_VERSION = '202610100355';
 document.getElementById('site-version').textContent = SITE_VERSION;
 async function checkForNewVersion() {
   try {

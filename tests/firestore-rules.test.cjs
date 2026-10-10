@@ -481,9 +481,9 @@ test('an ordinary guest cannot post a paper bid, and only admins manage helpers'
   await assertSucceeds(updateDocViaBatch(a, 'desks/newhelper', { active: false }));
   await assertSucceeds(getDocs(collection(a, 'desks')));
 });
-test('online bids are refused before the opening time (10 Oct 2026, 3 PM IST) and the rule is time-based', async () => {
+test('online bids are refused before the opening time (10 Oct 2026, 11 AM IST) and the rule is time-based', async () => {
   // The suite runs after the opening time on real clocks only; before it, every online bid must fail.
-  const opens = Date.UTC(2026, 9, 10, 9, 30, 0);
+  const opens = Date.UTC(2026, 9, 10, 5, 30, 0);
   await seedLot('open1');
   const g = bidder('open1u', 'open1u@example.com');
   const attempt = placeBid(g, 'open1', 'open1u', 'open1u@example.com', 110);

@@ -32,11 +32,11 @@ service cloud.firestore {
       return request.auth != null &&
         request.auth.token.firebase.sign_in_provider == 'anonymous';
     }
-    // Online bidding opens 10 Oct 2026, 3:00 PM IST (= 09:30 UTC). Until then the server refuses
+    // Online bidding opens 10 Oct 2026, 11:00 AM IST (= 05:30 UTC). Until then the server refuses
     // every online bid, whatever the page or the phone's clock says. Paper bids at the desk are not
     // affected. To change the opening time, edit this one line and publish the rules.
     function biddingIsOpen() {
-      return request.time >= timestamp.date(2026, 10, 10) + duration.time(9, 30, 0, 0);
+      return request.time >= timestamp.date(2026, 10, 10) + duration.time(5, 30, 0, 0);
     }
     function isVerifiedBidder() {
       return request.auth != null &&
